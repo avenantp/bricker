@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(prp:*)",
+      "Bash(where prp)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
