@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bricker is a React-based web application that enables users to visually design and generate Databricks automation scripts through an intuitive interface combining data modeling, template management, and workflow visualization.
+Urck is a React-based web application that enables users to visually design and generate Databricks automation scripts through an intuitive interface combining data modeling, template management, and workflow visualization.
 
 **Core Goal**: Democratize Databricks automation by providing a visual, template-driven approach to script generation that bridges the gap between data engineers and automation requirements.
 

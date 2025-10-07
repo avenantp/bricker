@@ -33,10 +33,19 @@ export interface DataModel {
   workspace_id: string;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
+  subscription_plan_id: string | null;
+  trial_ends_at: string | null;
+  created_at: Date;
+}
+
 export interface Workspace {
   id: string;
   name: string;
-  owner_id: string;
+  company_id: string;
   created_at: Date;
 }
 
@@ -53,7 +62,14 @@ export interface DataModelYAML {
   metadata?: Record<string, any>;
 }
 
+export type UserRole = 'owner' | 'admin' | 'contributor' | 'viewer';
+
 export interface AppState {
+  // Company
+  currentCompany: Company | null;
+  userRole: UserRole | null;
+  setCurrentCompany: (company: Company | null, role: UserRole | null) => void;
+
   // Workspace
   currentWorkspace: Workspace | null;
   workspaces: Workspace[];

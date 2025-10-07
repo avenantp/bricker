@@ -358,7 +358,7 @@ class PatternLibraryServer {
 
     // Scale-based recommendations
     if (scale === 'xlarge' || rowCount > 10000000) {
-      recommendations.forEach((rec) => {
+      recommendations.forEach((rec: any) => {
         if (!rec.optimizations) {
           rec.optimizations = optimizationRecommendations.high_volume_streaming;
         }

@@ -3,6 +3,11 @@ import { AppState, DataModel, Message, Workspace } from './types';
 import { Node, Edge } from '@xyflow/react';
 
 export const useStore = create<AppState>((set) => ({
+  // Company
+  currentCompany: null,
+  userRole: null,
+  setCurrentCompany: (company, role) => set({ currentCompany: company, userRole: role }),
+
   // Workspace
   currentWorkspace: null,
   workspaces: [],

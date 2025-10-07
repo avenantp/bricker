@@ -117,7 +117,7 @@ export class GitHubClient {
         ...(sha && { sha }), // Include sha if updating existing file
       });
 
-      return response.data.commit.sha;
+      return response.data.commit.sha || '';
     } catch (error: any) {
       throw new Error(`Failed to commit file ${path}: ${error.message}`);
     }

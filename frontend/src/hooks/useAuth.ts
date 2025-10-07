@@ -57,9 +57,9 @@ export function useAuth() {
     if (error) throw error;
   };
 
-  const signInWithGithub = async () => {
+  const signInWithOAuth = async (provider: 'github' | 'google' | 'azure') => {
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
+      provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -68,6 +68,10 @@ export function useAuth() {
     if (error) throw error;
     return data;
   };
+
+  const signInWithGithub = async () => signInWithOAuth('github');
+  const signInWithGoogle = async () => signInWithOAuth('google');
+  const signInWithMicrosoft = async () => signInWithOAuth('azure');
 
   const resetPassword = async (email: string) => {
     const { data, error} = await supabase.auth.resetPasswordForEmail(email, {
@@ -95,6 +99,8 @@ export function useAuth() {
     signUp,
     signOut,
     signInWithGithub,
+    signInWithGoogle,
+    signInWithMicrosoft,
     resetPassword,
     updatePassword,
   };

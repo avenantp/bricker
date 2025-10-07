@@ -43,25 +43,99 @@ export interface Database {
           last_login?: string | null;
         };
       };
-      workspaces: {
+      subscription_plans: {
         Row: {
           id: string;
           name: string;
+          display_name: string;
           description: string | null;
-          owner_id: string;
-          github_repo: string | null;
-          github_branch: string;
+          price_monthly: number | null;
+          price_yearly: number | null;
+          max_team_members: number | null;
+          max_projects: number | null;
+          max_workspaces: number | null;
+          features: any[];
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      companies: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string | null;
+          description: string | null;
+          logo_url: string | null;
+          website: string | null;
+          industry: string | null;
+          company_size: string | null;
+          subscription_plan_id: string | null;
+          subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
+          trial_ends_at: string | null;
+          subscription_starts_at: string | null;
+          subscription_ends_at: string | null;
+          billing_email: string | null;
           settings: Record<string, any>;
+          created_by: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           name: string;
+          slug?: string | null;
           description?: string | null;
-          owner_id: string;
+          subscription_plan_id?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          subscription_plan_id?: string | null;
+          subscription_status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
+        };
+      };
+      company_members: {
+        Row: {
+          company_id: string;
+          user_id: string;
+          role: 'owner' | 'admin' | 'contributor' | 'viewer';
+          permissions: Record<string, any>;
+          invited_by: string | null;
+          joined_at: string;
+        };
+        Insert: {
+          company_id: string;
+          user_id: string;
+          role: 'owner' | 'admin' | 'contributor' | 'viewer';
+          invited_by?: string | null;
+        };
+        Update: {
+          role?: 'owner' | 'admin' | 'contributor' | 'viewer';
+          permissions?: Record<string, any>;
+        };
+      };
+      workspaces: {
+        Row: {
+          id: string;
+          company_id: string;
+          name: string;
+          description: string | null;
+          github_repo: string | null;
+          github_branch: string;
+          settings: Record<string, any>;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          name: string;
+          description?: string | null;
           github_repo?: string | null;
           github_branch?: string;
           settings?: Record<string, any>;
+          created_by?: string | null;
         };
         Update: {
           name?: string;
@@ -71,25 +145,34 @@ export interface Database {
           settings?: Record<string, any>;
         };
       };
-      workspace_members: {
+      projects: {
         Row: {
+          id: string;
+          company_id: string;
           workspace_id: string;
-          user_id: string;
-          role: 'owner' | 'admin' | 'editor' | 'viewer';
-          joined_at: string;
+          name: string;
+          description: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
         };
         Insert: {
+          company_id: string;
           workspace_id: string;
-          user_id: string;
-          role: 'owner' | 'admin' | 'editor' | 'viewer';
+          name: string;
+          description?: string | null;
+          created_by: string;
         };
         Update: {
-          role?: 'owner' | 'admin' | 'editor' | 'viewer';
+          name?: string;
+          description?: string | null;
         };
       };
       data_models: {
         Row: {
           id: string;
+          project_id: string;
+          company_id: string;
           workspace_id: string;
           name: string;
           description: string | null;
@@ -103,6 +186,8 @@ export interface Database {
           is_archived: boolean;
         };
         Insert: {
+          project_id: string;
+          company_id: string;
           workspace_id: string;
           name: string;
           description?: string | null;
@@ -120,6 +205,34 @@ export interface Database {
           edges?: any[];
           metadata?: Record<string, any>;
           is_archived?: boolean;
+        };
+      };
+      invitations: {
+        Row: {
+          id: string;
+          company_id: string;
+          email: string;
+          role: 'admin' | 'contributor' | 'viewer';
+          invited_by: string;
+          token: string;
+          status: 'pending' | 'accepted' | 'expired' | 'revoked';
+          expires_at: string;
+          created_at: string;
+          accepted_at: string | null;
+        };
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          company_id: string | null;
+          user_id: string | null;
+          action: string;
+          resource_type: string | null;
+          resource_id: string | null;
+          metadata: Record<string, any>;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
         };
       };
     };

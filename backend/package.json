@@ -1,5 +1,5 @@
 {
-  "name": "@bricker/backend",
+  "name": "@urck/backend",
   "version": "1.0.0",
   "description": "Backend API server with Claude integration and MCP orchestration",
   "type": "module",

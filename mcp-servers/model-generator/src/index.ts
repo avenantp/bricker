@@ -351,7 +351,7 @@ class ModelGeneratorServer {
     // Add attributes from source tables
     dimensionAttributes.forEach((attr) => {
       attr.columns.forEach((col: string) => {
-        columns.push({
+        (columns as any).push({
           name: col,
           type: 'STRING', // Default type
           description: `From ${attr.source_table}`,
@@ -361,14 +361,14 @@ class ModelGeneratorServer {
 
     // Add SCD tracking columns
     if (scdType === '2') {
-      columns.push(
+      (columns as any).push(
         { name: 'effective_date', type: 'DATE', description: 'Effective start date' },
         { name: 'end_date', type: 'DATE', description: 'Effective end date' },
         { name: 'is_current', type: 'BOOLEAN', description: 'Current version flag' },
         { name: 'version_number', type: 'INT', description: 'Version sequence' }
       );
     } else if (scdType === '1') {
-      columns.push({
+      (columns as any).push({
         name: 'last_updated',
         type: 'TIMESTAMP',
         description: 'Last update timestamp',

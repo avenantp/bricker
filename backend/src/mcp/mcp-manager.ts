@@ -28,10 +28,25 @@ export class MCPServerManager {
       .filter(([_, status]) => status === 'connected')
       .map(([name]) => name);
 
-    console.log('[MCP Manager] Connected servers:', connectedServers);
+    const failedServers = Array.from(this.serverStatus.entries())
+      .filter(([_, status]) => status === 'error')
+      .map(([name]) => name);
+
+    console.log('[MCP Manager] Connected servers:', connectedServers.length > 0 ? connectedServers : 'none');
+
+    if (failedServers.length > 0) {
+      console.warn('[MCP Manager] Failed servers:', failedServers);
+      console.warn('[MCP Manager] AI assistant will have limited functionality');
+    }
+
+    if (connectedServers.length === 0) {
+      console.warn('[MCP Manager] WARNING: No MCP servers connected. AI features will not work.');
+    }
   }
 
   private async initializeServer(serverName: string): Promise<void> {
+    const TIMEOUT_MS = 10000; // 10 second timeout
+
     try {
       this.serverStatus.set(serverName, 'initializing');
 
@@ -57,13 +72,20 @@ export class MCPServerManager {
         }
       );
 
-      await client.connect(transport);
+      // Add timeout to connection
+      const connectPromise = client.connect(transport);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout')), TIMEOUT_MS);
+      });
+
+      await Promise.race([connectPromise, timeoutPromise]);
+
       this.clients.set(serverName, client);
       this.serverStatus.set(serverName, 'connected');
 
       console.log(`[MCP Manager] ✓ ${serverName} connected`);
-    } catch (error) {
-      console.error(`[MCP Manager] ✗ ${serverName} failed:`, error);
+    } catch (error: any) {
+      console.error(`[MCP Manager] ✗ ${serverName} failed:`, error?.message || error);
       this.serverStatus.set(serverName, 'error');
     }
   }

@@ -32,13 +32,13 @@ export function createAssistantRouter(
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        const stream = await assistantHandler.handleChat(chatRequest);
+        const stream = await assistantHandler.handleChat(chatRequest) as any;
 
-        stream.on('text', (text) => {
+        stream.on('text', (text: any) => {
           res.write(`data: ${JSON.stringify({ type: 'content', text })}\n\n`);
         });
 
-        stream.on('contentBlock', (block) => {
+        stream.on('contentBlock', (block: any) => {
           if (block.type === 'tool_use') {
             res.write(
               `data: ${JSON.stringify({ type: 'tool_use', tool: block.name, input: block.input })}\n\n`
@@ -46,11 +46,11 @@ export function createAssistantRouter(
           }
         });
 
-        stream.on('message', (message) => {
+        stream.on('message', (message: any) => {
           res.write(`data: ${JSON.stringify({ type: 'message_complete', message })}\n\n`);
         });
 
-        stream.on('error', (error) => {
+        stream.on('error', (error: any) => {
           console.error('[Assistant API] Stream error:', error);
           res.write(
             `data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`

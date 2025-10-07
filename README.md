@@ -1,11 +1,11 @@
-# Bricker
+# Urck
 
 A React-based web application that enables users to visually design and generate Databricks automation scripts through an intuitive interface combining data modeling, template management, and workflow visualization.
 
 ## Project Structure
 
 ```
-bricker/
+urck/
 ├── frontend/              # React frontend application
 ├── backend/              # Node.js backend API with Claude integration
 ├── mcp-servers/          # MCP servers for AI assistant
@@ -55,7 +55,7 @@ bricker/
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd bricker
+cd urck
 ```
 
 2. Install dependencies:
@@ -186,7 +186,7 @@ Each MCP server is a standalone Node.js process that exposes tools via the Model
 
 ## Testing
 
-Bricker includes comprehensive unit and integration tests for all MCP servers and backend components.
+Urck includes comprehensive unit and integration tests for all MCP servers and backend components.
 
 ```bash
 # Run all tests
@@ -243,8 +243,8 @@ The frontend can be deployed to:
 - [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) - Authentication & authorization guide
 - [docs/GITHUB_INTEGRATION.md](./docs/GITHUB_INTEGRATION.md) - GitHub integration guide
 - [CLAUDE.md](./CLAUDE.md) - Guidance for Claude Code
-- [PRD: Core App](./docs/prp/001-bricker-automation.md) - Original product requirements
-- [PRD: AI Assistant](./docs/prp/002-bricker-ai-assistant.md) - AI assistant specification
+- [PRD: Core App](./docs/prp/001-urck-automation.md) - Original product requirements
+- [PRD: AI Assistant](./docs/prp/002-urck-ai-assistant.md) - AI assistant specification
 
 ## License
 
