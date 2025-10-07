@@ -1,19 +1,25 @@
-import { Sparkles, Settings, LogOut, User } from 'lucide-react';
+import { Sparkles, Settings, LogOut, User, Code2, FlaskConical } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
+import { useDevMode } from '@/hooks/useDevMode';
 import { WorkspaceSelector } from '../Auth/WorkspaceSelector';
 import { SettingsModal } from '../Settings/SettingsModal';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export function Header() {
   const { toggleChat } = useStore();
   const { user, signOut } = useAuth();
+  const { isDevMode } = useDevMode();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Force reload to clear dev mode state
+      window.location.href = '/';
     } catch (error) {
       console.error('Failed to sign out:', error);
     }
@@ -36,6 +42,18 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* Workspace Selector */}
         <WorkspaceSelector />
+
+        {/* Dev Mode - Template Editor */}
+        {isDevMode && (
+          <button
+            onClick={() => navigate('/templates')}
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+            title="Template Editor (Dev Mode)"
+          >
+            <FlaskConical className="w-4 h-4" />
+            <span className="text-sm font-medium">Templates</span>
+          </button>
+        )}
 
         {/* AI Assistant Toggle */}
         <button
@@ -75,11 +93,25 @@ export function Header() {
               <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
                 <div className="p-3 border-b border-gray-200">
                   <div className="text-sm font-medium text-gray-900 truncate">
-                    {user?.email}
+                    {user?.email || 'Dev User'}
                   </div>
-                  <div className="text-xs text-gray-500">Signed in</div>
+                  <div className="text-xs text-gray-500">
+                    {isDevMode ? 'Dev Mode' : 'Signed in'}
+                  </div>
                 </div>
                 <div className="p-2">
+                  {isDevMode && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        navigate('/templates');
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-purple-50 text-purple-600 transition-colors mb-1"
+                    >
+                      <FlaskConical className="w-4 h-4" />
+                      <span className="text-sm font-medium">Templates</span>
+                    </button>
+                  )}
                   <button
                     onClick={handleSignOut}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"

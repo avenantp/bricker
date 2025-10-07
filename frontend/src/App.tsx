@@ -8,6 +8,8 @@ import { ChatInterface } from './components/Chat/ChatInterface';
 import { AuthPage } from './components/Auth/AuthPage';
 import { HomePage } from './components/Home/HomePage';
 import { AdminPanel } from './components/Admin/AdminPanel';
+import { TemplateEditorPage } from './pages/TemplateEditorPage';
+import { TemplateLibrary } from './components/Templates/TemplateLibrary';
 import { useAuth } from './hooks/useAuth';
 import { useDevMode } from './hooks/useDevMode';
 import { useStore } from './store/useStore';
@@ -15,10 +17,10 @@ import { Loader2 } from 'lucide-react';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
-  const { isDevMode, isReady: devModeReady } = useDevMode();
+  const { isDevMode, isReady: devModeReady, hasAdminAccess } = useDevMode();
 
   // Show loading screen while checking auth and dev mode
-  if (authLoading || (user && !devModeReady)) {
+  if (!hasAdminAccess && (authLoading || (user && !devModeReady))) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -26,13 +28,16 @@ function App() {
           <p className="text-gray-600">
             {isDevMode && user ? 'Setting up dev mode...' : 'Loading...'}
           </p>
+          <p className="text-xs text-gray-500 mt-2">
+            If this takes too long, check browser console for errors
+          </p>
         </div>
       </div>
     );
   }
 
-  // Show auth page if not logged in
-  if (!user) {
+  // Show auth page if not logged in (unless dev mode with admin access)
+  if (!user && !hasAdminAccess) {
     return <AuthPage />;
   }
 
@@ -44,6 +49,11 @@ function App() {
 
         {/* Admin panel - only for owners and admins */}
         <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+
+        {/* Template Management - Dev Mode Only */}
+        <Route path="/templates" element={<DevModeRoute><TemplateLibrary /></DevModeRoute>} />
+        <Route path="/templates/new" element={<DevModeRoute><TemplateEditorPage /></DevModeRoute>} />
+        <Route path="/templates/:compositionId" element={<DevModeRoute><TemplateEditorPage /></DevModeRoute>} />
 
         {/* Workspace flow canvas - for creating new project */}
         <Route
@@ -103,6 +113,17 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!userRole || (userRole !== 'owner' && userRole !== 'admin')) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Dev mode only route protection
+function DevModeRoute({ children }: { children: React.ReactNode }) {
+  const { isDevMode } = useDevMode();
+
+  if (!isDevMode) {
     return <Navigate to="/" replace />;
   }
 

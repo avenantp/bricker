@@ -1,0 +1,152 @@
+# Example Template Composition YAML
+# This shows the complete structure for a "process-staging-table" template
+
+metadata:
+  id: 550e8400-e29b-41d4-a716-446655440000
+  name: "process-staging-table"
+  description: "Process data from staging to curated layer with validation"
+  language: sql
+  version: "1.0.0"
+  author: "admin@urck.io"
+  created_at: "2025-10-07T10:00:00Z"
+  updated_at: "2025-10-07T10:00:00Z"
+  is_system_template: false
+  cloned_from: null
+  tags:
+    - staging
+    - etl
+    - data-quality
+
+flow:
+  nodes:
+    - id: start
+      type: start
+      position:
+        x: 400
+        y: 50
+      data:
+        label: "Start"
+
+    - id: header-fragment
+      type: fragment
+      position:
+        x: 400
+        y: 150
+      data:
+        label: "Header"
+        fragment_id: header-fragment-uuid
+        fragment_name: "Standard Header"
+        is_enabled: true
+
+    - id: validation-condition
+      type: condition
+      position:
+        x: 400
+        y: 300
+      data:
+        label: "Should Validate?"
+        condition: "{% if enable_validation %}"
+
+    - id: validation-fragment
+      type: fragment
+      position:
+        x: 200
+        y: 450
+      data:
+        label: "Table Validation"
+        fragment_id: validation-fragment-uuid
+        fragment_name: "Table Exists"
+        is_enabled: true
+
+    - id: merge-point
+      type: merge
+      position:
+        x: 400
+        y: 550
+      data:
+        label: "Merge Paths"
+
+    - id: transform-fragment
+      type: fragment
+      position:
+        x: 400
+        y: 650
+      data:
+        label: "Data Transformation"
+        fragment_id: transform-fragment-uuid
+        fragment_name: "Staging Transform"
+        is_enabled: true
+
+    - id: end
+      type: end
+      position:
+        x: 400
+        y: 800
+      data:
+        label: "End"
+
+  edges:
+    - id: e1
+      source: start
+      target: header-fragment
+      type: default
+
+    - id: e2
+      source: header-fragment
+      target: validation-condition
+      type: default
+
+    - id: e3
+      source: validation-condition
+      target: validation-fragment
+      source_handle: "true"
+      label: "Yes"
+
+    - id: e4
+      source: validation-condition
+      target: merge-point
+      source_handle: "false"
+      label: "No"
+
+    - id: e5
+      source: validation-fragment
+      target: merge-point
+      type: default
+
+    - id: e6
+      source: merge-point
+      target: transform-fragment
+      type: default
+
+    - id: e7
+      source: transform-fragment
+      target: end
+      type: default
+
+compiled_template: |
+  -- Fragment: Header
+  -- Process Staging Table
+  -- Generated: 2025-10-07
+
+  {% if enable_validation %}
+  -- Fragment: Table Validation
+  SELECT CASE
+    WHEN COUNT(*) = 0 THEN 'ERROR: Table does not exist'
+    ELSE 'Table exists'
+  END AS validation_result
+  FROM information_schema.tables
+  WHERE table_catalog = '{{ catalog_name }}'
+    AND table_schema = '{{ schema_name }}'
+    AND table_name = '{{ table_name }}';
+  {% endif %}
+
+  -- Fragment: Data Transformation
+  CREATE OR REPLACE TABLE {{ catalog_name }}.{{ schema_name }}.{{ table_name }}_processed AS
+  SELECT * FROM {{ catalog_name }}.{{ schema_name }}.{{ table_name }}
+  WHERE updated_at > CURRENT_DATE - INTERVAL '{{ lookback_days }}' DAYS;
+
+validation:
+  is_valid: true
+  errors: []
+  warnings: []
+  last_validated_at: "2025-10-07T10:30:00Z"

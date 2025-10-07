@@ -1,0 +1,55 @@
+# Example Template Fragment YAML
+# This shows the complete structure for a validation fragment
+
+metadata:
+  id: 550e8400-e29b-41d4-a716-446655440001
+  name: "Table Existence Validation"
+  description: "Validates that a table exists before processing"
+  category: validation
+  language: sql
+  version: "1.0.0"
+  author: "admin@urck.io"
+  created_at: "2025-10-07T10:00:00Z"
+  updated_at: "2025-10-07T10:00:00Z"
+  is_system_template: false
+  cloned_from: null
+
+variables:
+  - name: validate_existence
+    type: boolean
+    required: false
+    default: true
+    description: "Enable table existence validation"
+
+  - name: table_name
+    type: string
+    required: true
+    default: null
+    description: "Name of the table to validate"
+
+  - name: catalog_name
+    type: string
+    required: true
+    default: "main"
+    description: "Catalog name"
+
+  - name: schema_name
+    type: string
+    required: true
+    default: "default"
+    description: "Schema name"
+
+dependencies: []
+
+content: |
+  -- Validate table exists
+  {% if validate_existence %}
+  SELECT CASE
+    WHEN COUNT(*) = 0 THEN 'ERROR: Table does not exist'
+    ELSE 'Table exists'
+  END AS validation_result
+  FROM information_schema.tables
+  WHERE table_catalog = '{{ catalog_name }}'
+    AND table_schema = '{{ schema_name }}'
+    AND table_name = '{{ table_name }}';
+  {% endif %}
