@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -9,33 +10,32 @@ export default {
         body: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
-        // Primary - Deep Teal/Green
+        // Primary - uses CSS variables that change based on dark mode
         primary: {
-          50: '#e6f2f2',
-          100: '#cce5e5',
-          200: '#99cbcb',
-          300: '#66b0b0',
-          400: '#339696',
-          500: '#0d4d4d', // Main brand teal
-          600: '#0a3e3e',
-          700: '#082e2e',
-          800: '#051f1f',
-          900: '#030f0f',
-          950: '#020a0a',
+          50: 'var(--color-primary-50)',
+          100: 'var(--color-primary-100)',
+          200: 'var(--color-primary-200)',
+          300: 'var(--color-primary-300)',
+          400: 'var(--color-primary-400)',
+          500: 'var(--color-primary-500)',
+          600: 'var(--color-primary-600)',
+          700: 'var(--color-primary-700)',
+          800: 'var(--color-primary-800)',
+          900: 'var(--color-primary-900)',
         },
         // Secondary - Vibrant Orange
         secondary: {
-          50: '#fff4f0',
-          100: '#ffe8e0',
-          200: '#ffd1c1',
-          300: '#ffb9a1',
-          400: '#ffa282',
-          500: '#ff4420', // Main brand orange
-          600: '#e63d1c',
-          700: '#cc3619',
-          800: '#b32e15',
-          900: '#992712',
-          950: '#801f0e',
+          50: "#FFF0F0",
+          100: "#FFDEDC",
+          200: "#FFBFBC",
+          300: "#FF9B94",
+          400: "#FF7165",
+          500: "#FF3D12",
+          600: "#CC2B00",
+          700: "#9C1F00",
+          800: "#6E1300",
+          900: "#410700",
+          950: "#2E0400"
         },
         // Accent - Warm Beige
         accent: {

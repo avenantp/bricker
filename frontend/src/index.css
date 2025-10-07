@@ -3,6 +3,34 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Light mode primary colors */
+    --color-primary-50: #7BFEE5;
+    --color-primary-100: #32EACE;
+    --color-primary-200: #25BAA3;
+    --color-primary-300: #198B7A;
+    --color-primary-400: #0E6053;
+    --color-primary-500: #053830;
+    --color-primary-600: #02251F;
+    --color-primary-700: #082e2e;
+    --color-primary-800: #011C17;
+    --color-primary-900: #01110E;
+  }
+
+  .dark {
+    /* Dark mode primary colors */
+    --color-primary-50: #FFF0F0;
+    --color-primary-100: #FFDEDC;
+    --color-primary-200: #FFBFBC;
+    --color-primary-300: #FF9B94;
+    --color-primary-400: #FF7165;
+    --color-primary-500: #FF3D12;
+    --color-primary-600: #CC2B00;
+    --color-primary-700: #9C1F00;
+    --color-primary-800: #6E1300;
+    --color-primary-900: #410700;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900;
   }
@@ -10,11 +38,16 @@
 
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    color: white;
   }
 
   .btn-secondary {
     @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
   }
 
   .input-field {

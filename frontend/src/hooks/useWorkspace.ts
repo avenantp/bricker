@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Database } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { hasDevAdminAccess } from '@/config/env';
 
 type Workspace = Database['public']['Tables']['workspaces']['Row'];
 type WorkspaceMember = Database['public']['Tables']['workspace_members']['Row'];
@@ -12,6 +13,13 @@ export function useWorkspace() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // In dev mode, skip workspace loading
+    if (hasDevAdminAccess()) {
+      setWorkspaces([]);
+      setLoading(false);
+      return;
+    }
+
     if (user) {
       loadWorkspaces();
     } else {

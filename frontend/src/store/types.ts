@@ -103,7 +103,9 @@ export interface AppState {
   isChatOpen: boolean;
   isPropertiesPanelOpen: boolean;
   selectedNodeId: string | null;
+  isDarkMode: boolean;
   toggleChat: () => void;
   togglePropertiesPanel: () => void;
   setSelectedNodeId: (id: string | null) => void;
+  toggleDarkMode: () => void;
 }

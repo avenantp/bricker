@@ -14,10 +14,25 @@ import { useAuth } from './hooks/useAuth';
 import { useDevMode } from './hooks/useDevMode';
 import { useStore } from './store/useStore';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
   const { isDevMode, isReady: devModeReady, hasAdminAccess } = useDevMode();
+  const { isDarkMode } = useStore();
+
+  // Apply dark mode class to html element
+  useEffect(() => {
+    console.log('[App] isDarkMode changed:', isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      console.log('[App] Added dark class to html');
+    } else {
+      document.documentElement.classList.remove('dark');
+      console.log('[App] Removed dark class from html');
+    }
+    console.log('[App] HTML classes:', document.documentElement.className);
+  }, [isDarkMode]);
 
   // Show loading screen while checking auth and dev mode
   if (!hasAdminAccess && (authLoading || (user && !devModeReady))) {

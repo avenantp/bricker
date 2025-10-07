@@ -71,8 +71,13 @@ export const useStore = create<AppState>((set) => ({
   isChatOpen: true,
   isPropertiesPanelOpen: true,
   selectedNodeId: null,
+  isDarkMode: false,
   toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
   togglePropertiesPanel: () =>
     set((state) => ({ isPropertiesPanelOpen: !state.isPropertiesPanelOpen })),
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+  toggleDarkMode: () => set((state) => {
+    console.log('[Store] toggleDarkMode called, current:', state.isDarkMode, 'new:', !state.isDarkMode);
+    return { isDarkMode: !state.isDarkMode };
+  }),
 }));

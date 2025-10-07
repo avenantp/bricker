@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Settings, LogOut, User, ChevronRight, FolderOpen, Shield, Boxes } from 'lucide-react';
+import { Plus, Search, Settings, LogOut, User, ChevronRight, FolderOpen, Shield, Boxes, FlaskConical, Moon, Sun } from 'lucide-react';
 import { UrckLogo } from '../Logo/UrckLogo';
 import { DevModeBanner } from '../DevMode/DevModeBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { useCanAccessAdmin } from '@/hooks/useDevMode';
+import { useCanAccessAdmin, useDevMode } from '@/hooks/useDevMode';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 
@@ -22,8 +22,9 @@ export function HomePage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { workspaces, loading: workspacesLoading } = useWorkspace();
-  const { currentWorkspace, setCurrentWorkspace, userRole } = useStore();
+  const { currentWorkspace, setCurrentWorkspace, userRole, isDarkMode, toggleDarkMode } = useStore();
   const canAccessAdmin = useCanAccessAdmin();
+  const { isDevMode } = useDevMode();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,34 +73,62 @@ export function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Dev Mode Banner */}
       <DevModeBanner />
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <UrckLogo size="sm" />
 
           <div className="flex items-center gap-4">
+            {/* Dev Mode - Template Editor */}
+            {isDevMode && (
+              <button
+                onClick={() => navigate('/templates')}
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+                title="Template Editor (Dev Mode)"
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span className="text-sm font-medium">Templates</span>
+              </button>
+            )}
+
             {canAccessAdmin && (
               <button
                 onClick={() => navigate('/admin')}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Shield className="w-4 h-4" />
                 Admin
               </button>
             )}
 
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <Settings className="w-5 h-5 text-gray-600" />
+            <button
+              onClick={() => {
+                console.log('[HomePage] Dark mode button clicked!');
+                console.log('[HomePage] Current isDarkMode:', isDarkMode);
+                toggleDarkMode();
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDarkMode ? (
+                <Sun className="w-5 h-5 text-yellow-600" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              )}
+            </button>
+
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
@@ -107,16 +136,16 @@ export function HomePage() {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.email}</p>
                     {userRole && (
-                      <p className="text-xs text-gray-600 capitalize">{userRole}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">{userRole}</p>
                     )}
                   </div>
                   <button
                     onClick={() => signOut()}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign Out
@@ -132,10 +161,10 @@ export function HomePage() {
         <div className="flex gap-8">
           {/* Sidebar */}
           <aside className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-4 border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Workspaces</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Workspaces</h3>
                   <button
                     onClick={handleCreateWorkspace}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -148,9 +177,9 @@ export function HomePage() {
 
               <div className="p-2">
                 {workspacesLoading ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Loading...</div>
                 ) : workspaces.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500">No workspaces</div>
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No workspaces</div>
                 ) : (
                   workspaces.map((workspace) => (
                     <button
@@ -163,8 +192,8 @@ export function HomePage() {
                       })}
                       className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
                         currentWorkspace?.id === workspace.id
-                          ? 'bg-primary-50 text-primary-900 font-medium'
-                          : 'hover:bg-gray-50 text-gray-700'
+                          ? 'bg-primary-50/30 text-primary-900 font-medium'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -181,12 +210,12 @@ export function HomePage() {
           {/* Main Content */}
           <main className="flex-1">
             {!currentWorkspace ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+                <FolderOpen className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   No Workspace Selected
                 </h2>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Select a workspace from the sidebar or create a new one to get started.
                 </p>
                 <button
@@ -200,10 +229,10 @@ export function HomePage() {
               <>
                 {/* Header */}
                 <div className="mb-6">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                     {currentWorkspace.name}
                   </h1>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     Manage your Databricks automation projects
                   </p>
                 </div>
@@ -231,12 +260,12 @@ export function HomePage() {
 
                 {/* Projects List */}
                 {filteredProjects.length === 0 ? (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <Boxes className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+                    <Boxes className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       No Projects Yet
                     </h2>
-                    <p className="text-gray-600 mb-6">
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
                       Create your first project to start building Databricks automation.
                     </p>
                     <button
@@ -252,19 +281,19 @@ export function HomePage() {
                       <button
                         key={project.id}
                         onClick={() => handleProjectClick(project.id)}
-                        className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left group"
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow text-left group"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-primary-600">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-primary-600">
                               {project.name}
                             </h3>
                             {project.description && (
-                              <p className="text-gray-600 text-sm mb-3">
+                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
                                 {project.description}
                               </p>
                             )}
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
                               Updated {new Date(project.updated_at).toLocaleDateString()}
                             </p>
                           </div>

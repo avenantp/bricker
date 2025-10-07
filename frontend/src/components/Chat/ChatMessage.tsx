@@ -47,8 +47,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div
         className={`max-w-[85%] rounded-lg p-4 ${
           isUser
-            ? 'bg-primary-600 text-white'
-            : 'bg-gray-100 text-gray-900'
+            ? 'bg-primary-600 text-white dark:text-gray-900'
+            : 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
         }`}
       >
         {/* Message Header */}
@@ -132,7 +132,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <div className="flex gap-2 pt-2 border-t">
                 <button
                   onClick={handleApplySuggestion}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 dark:text-gray-900 transition-colors text-sm font-medium"
                 >
                   Apply to Canvas
                 </button>

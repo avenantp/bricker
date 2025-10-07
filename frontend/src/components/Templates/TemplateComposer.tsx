@@ -27,21 +27,26 @@ import {
   Copy,
   AlertCircle,
   CheckCircle2,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { nodeTypes } from './nodes';
 import { CompositionNodeData, TemplateFragment, TemplateComposition } from '../../types/template';
 import { compileTemplate } from '../../services/template-compiler';
 import { canEditComposition } from '../../services/template-clone-service';
 import { useDevMode } from '../../hooks/useDevMode';
+import { useAuth } from '../../hooks/useAuth';
+import { useStore } from '../../store/useStore';
 import YAMLValidator from './YAMLValidator';
+import { FragmentLibraryPanel } from './FragmentLibraryPanel';
+import { FragmentEditorPanel } from './FragmentEditorPanel';
 
 interface TemplateComposerProps {
   composition?: TemplateComposition;
   fragments?: TemplateFragment[];
   onSave?: (composition: TemplateComposition) => Promise<void>;
   onClone?: (composition: TemplateComposition) => Promise<void>;
-  workspaceId: string;
-  userId: string;
+  isDevMode?: boolean;
 }
 
 const initialNodes: Node<CompositionNodeData>[] = [
@@ -64,10 +69,12 @@ export function TemplateComposer({
   fragments = [],
   onSave,
   onClone,
-  workspaceId,
-  userId,
+  isDevMode: isDevModeProp,
 }: TemplateComposerProps) {
-  const { isDevMode } = useDevMode();
+  const { isDevMode: isDevModeHook } = useDevMode();
+  const isDevMode = isDevModeProp ?? isDevModeHook;
+  const { user } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useStore();
   const [nodes, setNodes, onNodesChange] = useNodesState(
     composition?.flow_data?.nodes || initialNodes
   );
@@ -83,16 +90,20 @@ export function TemplateComposer({
   const [canEdit, setCanEdit] = useState(true);
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(false);
   const [showYAMLValidator, setShowYAMLValidator] = useState(false);
+  const [codeFragments, setCodeFragments] = useState<any[]>([]);
+  const [showFragmentEditor, setShowFragmentEditor] = useState(false);
+  const [selectedCodeFragment, setSelectedCodeFragment] = useState<any | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Check edit permissions
   useEffect(() => {
-    if (composition?.id) {
+    if (composition?.id && user?.id) {
       setIsCheckingPermissions(true);
-      canEditComposition(composition.id, userId, isDevMode)
+      canEditComposition(composition.id, user.id, isDevMode)
         .then(setCanEdit)
         .finally(() => setIsCheckingPermissions(false));
     }
-  }, [composition?.id, userId, isDevMode]);
+  }, [composition?.id, user?.id, isDevMode]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -158,6 +169,92 @@ export function TemplateComposer({
     setNodes((nds) => [...nds, newNode]);
   };
 
+  // Add a code fragment node
+  const addCodeFragmentNode = (fragment: any) => {
+    const newNode: Node<CompositionNodeData> = {
+      id: `code-fragment-${Date.now()}`,
+      type: 'codeFragment',
+      position: { x: Math.random() * 400 + 200, y: Math.random() * 300 + 200 },
+      data: {
+        id: fragment.id,
+        type: 'codeFragment',
+        position: { x: 0, y: 0 },
+        data: {
+          label: fragment.name,
+          fragmentName: fragment.name,
+          fragmentType: fragment.type,
+          jinjaCode: fragment.code,
+        },
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
+  };
+
+  // Handle node click to open editor
+  const handleNodeClick = (event: any, node: Node) => {
+    if (node.type === 'codeFragment') {
+      setSelectedNodeId(node.id);
+      const fragmentData = codeFragments.find((f) => f.id === node.data.id);
+      setSelectedCodeFragment(fragmentData || {
+        id: node.data.id,
+        name: node.data.data?.fragmentName || 'Untitled',
+        type: node.data.data?.fragmentType || 'staging',
+        code: node.data.data?.jinjaCode || '',
+      });
+      setShowFragmentEditor(true);
+    }
+  };
+
+  // Handle fragment save
+  const handleFragmentSave = (data: { name: string; type: string; code: string }) => {
+    if (selectedCodeFragment?.id) {
+      // Update existing fragment
+      setCodeFragments((frags) =>
+        frags.map((f) => (f.id === selectedCodeFragment.id ? { ...f, ...data } : f))
+      );
+
+      // Update node data
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === selectedNodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  data: {
+                    ...node.data.data,
+                    fragmentName: data.name,
+                    fragmentType: data.type,
+                    jinjaCode: data.code,
+                  },
+                },
+              }
+            : node
+        )
+      );
+    } else {
+      // Create new fragment
+      const newFragment = {
+        id: `fragment-${Date.now()}`,
+        ...data,
+      };
+      setCodeFragments((frags) => [...frags, newFragment]);
+      addCodeFragmentNode(newFragment);
+    }
+  };
+
+  // Handle adding new fragment from library panel
+  const handleAddNewFragment = () => {
+    setSelectedCodeFragment(null);
+    setSelectedNodeId(null);
+    setShowFragmentEditor(true);
+  };
+
+  // Handle fragment click from library
+  const handleFragmentClick = (fragment: any) => {
+    addCodeFragmentNode(fragment);
+  };
+
   // Compile the template
   const handleCompile = async () => {
     setIsCompiling(true);
@@ -184,7 +281,7 @@ export function TemplateComposer({
     try {
       const compositionData: TemplateComposition = {
         id: composition?.id || '',
-        workspace_id: workspaceId,
+        workspace_id: composition?.workspace_id || null,
         name: compositionName,
         description: composition?.description || null,
         language: 'sql', // or detect from fragments
@@ -198,13 +295,7 @@ export function TemplateComposer({
             label: e.label,
           })),
         },
-        is_system_template: composition?.is_system_template || false,
-        cloned_from_id: composition?.cloned_from_id || null,
-        github_path: composition?.github_path || null,
-        yaml_valid: true,
-        yaml_errors: [],
-        last_validated_at: null,
-        created_by: composition?.created_by || userId,
+        created_by: composition?.created_by || user?.id || '',
         created_at: composition?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
         is_archived: false,
@@ -247,25 +338,25 @@ export function TemplateComposer({
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Top Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
         {/* Read-only banner for system templates */}
         {composition?.is_system_template && !canEdit && (
-          <div className="mb-3 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-3">
-            <Lock className="w-4 h-4 text-yellow-600" />
+          <div className="mb-3 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg flex items-center gap-3">
+            <Lock className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-yellow-900">
+              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
                 System Template (Read-Only)
               </p>
-              <p className="text-xs text-yellow-700">
+              <p className="text-xs text-yellow-700 dark:text-yellow-400">
                 This is a system template. {isDevMode ? 'Save changes to create a new version.' : 'Clone to your workspace to customize it.'}
               </p>
             </div>
             {!isDevMode && onClone && (
               <button
                 onClick={handleClone}
-                className="flex items-center gap-2 px-3 py-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
+                className="flex items-center gap-2 px-3 py-1.5 bg-yellow-600 dark:bg-yellow-700 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600 transition-colors text-sm"
               >
                 <Copy className="w-4 h-4" />
                 Clone to Workspace
@@ -281,7 +372,7 @@ export function TemplateComposer({
               value={compositionName}
               onChange={(e) => setCompositionName(e.target.value)}
               disabled={!canEdit}
-              className="text-lg font-semibold bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="text-lg font-semibold bg-transparent text-gray-900 dark:text-gray-100 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 disabled:opacity-60 disabled:cursor-not-allowed"
             />
             {composition?.is_system_template && (
               <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
@@ -359,61 +450,12 @@ export function TemplateComposer({
 
       <div className="flex-1 flex">
         {/* Left Sidebar - Fragment Library */}
-        <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Template Fragments</h3>
-
-            {/* Add Node Buttons */}
-            <div className="space-y-2 mb-4">
-              <button
-                onClick={addConditionNode}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
-              >
-                <GitBranch className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm font-medium text-gray-700">Add Condition</span>
-              </button>
-
-              <button
-                onClick={addMergeNode}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
-              >
-                <MergeIcon className="w-4 h-4 text-indigo-600" />
-                <span className="text-sm font-medium text-gray-700">Add Merge</span>
-              </button>
-            </div>
-
-            <div className="border-t border-gray-200 pt-4">
-              {fragments.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">
-                  No fragments available. Create some fragments first.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {fragments.map((fragment) => (
-                    <button
-                      key={fragment.id}
-                      onClick={() => addFragmentNode(fragment)}
-                      className="w-full text-left px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
-                    >
-                      <div className="flex items-start gap-2">
-                        <FileCode className="w-4 h-4 text-purple-600 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">
-                            {fragment.name}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {fragment.category}
-                          </div>
-                        </div>
-                        <Plus className="w-4 h-4 text-purple-600" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <FragmentLibraryPanel
+          fragments={codeFragments}
+          onFragmentClick={handleFragmentClick}
+          onAddFragment={handleAddNewFragment}
+          selectedFragmentId={selectedCodeFragment?.id}
+        />
 
         {/* Main Canvas */}
         <div className="flex-1 relative">
@@ -423,6 +465,7 @@ export function TemplateComposer({
             onNodesChange={canEdit ? onNodesChange : undefined}
             onEdgesChange={canEdit ? onEdgesChange : undefined}
             onConnect={canEdit ? onConnect : undefined}
+            onNodeClick={handleNodeClick}
             nodeTypes={nodeTypes}
             nodesDraggable={canEdit}
             nodesConnectable={canEdit}
@@ -444,12 +487,12 @@ export function TemplateComposer({
 
         {/* Right Sidebar - Preview */}
         {showPreview && (
-          <div className="w-96 bg-white border-l border-gray-200 overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-700">Compiled Template</h3>
+          <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Compiled Template</h3>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <pre className="p-4 text-xs font-mono text-gray-800 whitespace-pre-wrap">
+              <pre className="p-4 text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                 {compiledTemplate}
               </pre>
             </div>
@@ -466,6 +509,19 @@ export function TemplateComposer({
           onClose={() => setShowYAMLValidator(false)}
         />
       )}
+
+      {/* Fragment Editor Panel */}
+      <FragmentEditorPanel
+        isOpen={showFragmentEditor}
+        fragmentId={selectedCodeFragment?.id}
+        initialData={selectedCodeFragment ? {
+          name: selectedCodeFragment.name,
+          type: selectedCodeFragment.type,
+          code: selectedCodeFragment.code,
+        } : undefined}
+        onClose={() => setShowFragmentEditor(false)}
+        onSave={handleFragmentSave}
+      />
     </div>
   );
 }

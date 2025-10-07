@@ -46,7 +46,7 @@ export interface TemplateComposition {
 
 export interface CompositionNodeData {
   id: string;
-  type: 'fragment' | 'condition' | 'start' | 'end' | 'merge';
+  type: 'fragment' | 'condition' | 'start' | 'end' | 'merge' | 'codeFragment';
   position: { x: number; y: number };
   data: {
     label: string;
@@ -55,6 +55,9 @@ export interface CompositionNodeData {
     condition?: string;
     isEnabled?: boolean;
     editorContent?: string; // For inline editing
+    fragmentName?: string; // For code fragment nodes
+    fragmentType?: string; // For code fragment nodes
+    jinjaCode?: string; // For code fragment nodes
   };
 }
 
