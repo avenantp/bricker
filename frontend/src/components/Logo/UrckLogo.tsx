@@ -33,7 +33,7 @@ export function UrckLogo({
 
   return (
     <div className="flex items-center gap-3">
-      <div className={`${sizeClasses[size]} bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg`}>
+      <div className={`${sizeClasses[size]} bg-orange-500 rounded-xl flex items-center justify-center shadow-lg`}>
         <Boxes className={`${iconSizeClasses[size]} text-white`} />
       </div>
       {showText && (

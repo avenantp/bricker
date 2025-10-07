@@ -87,7 +87,7 @@ export function HomePage() {
             {isDevMode && (
               <button
                 onClick={() => navigate('/templates')}
-                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+                className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-sm"
                 title="Template Editor (Dev Mode)"
               >
                 <FlaskConical className="w-4 h-4" />
@@ -117,12 +117,12 @@ export function HomePage() {
               {isDarkMode ? (
                 <Sun className="w-5 h-5 text-yellow-600" />
               ) : (
-                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               )}
             </button>
 
             <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
             <div className="relative">
@@ -130,7 +130,7 @@ export function HomePage() {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
               </button>
@@ -140,7 +140,7 @@ export function HomePage() {
                   <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.email}</p>
                     {userRole && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">{userRole}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 capitalize">{userRole}</p>
                     )}
                   </div>
                   <button
@@ -177,9 +177,9 @@ export function HomePage() {
 
               <div className="p-2">
                 {workspacesLoading ? (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">Loading...</div>
                 ) : workspaces.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No workspaces</div>
+                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">No workspaces</div>
                 ) : (
                   workspaces.map((workspace) => (
                     <button
@@ -215,7 +215,7 @@ export function HomePage() {
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   No Workspace Selected
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
                   Select a workspace from the sidebar or create a new one to get started.
                 </p>
                 <button
@@ -232,7 +232,7 @@ export function HomePage() {
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                     {currentWorkspace.name}
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-300">
                     Manage your Databricks automation projects
                   </p>
                 </div>
@@ -265,7 +265,7 @@ export function HomePage() {
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       No Projects Yet
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    <p className="text-gray-600 dark:text-gray-300 mb-6">
                       Create your first project to start building Databricks automation.
                     </p>
                     <button
@@ -285,11 +285,11 @@ export function HomePage() {
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-primary-600">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1 group-hover:text-primary-500">
                               {project.name}
                             </h3>
                             {project.description && (
-                              <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                              <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
                                 {project.description}
                               </p>
                             )}
@@ -297,7 +297,7 @@ export function HomePage() {
                               Updated {new Date(project.updated_at).toLocaleDateString()}
                             </p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 flex-shrink-0" />
+                          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 flex-shrink-0" />
                         </div>
                       </button>
                     ))}

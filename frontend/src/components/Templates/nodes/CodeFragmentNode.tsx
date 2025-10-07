@@ -12,15 +12,15 @@ const CodeFragmentNode = memo(({ data, selected }: CodeFragmentNodeProps) => {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'data_vault':
-        return 'from-blue-50 to-indigo-50 border-blue-300';
+        return 'bg-blue-50 border-blue-300';
       case 'staging':
-        return 'from-green-50 to-emerald-50 border-green-300';
+        return 'bg-green-50 border-green-300';
       case 'dimensional':
-        return 'from-purple-50 to-violet-50 border-purple-300';
+        return 'bg-purple-50 border-purple-300';
       case 'utility':
-        return 'from-orange-50 to-amber-50 border-orange-300';
+        return 'bg-orange-50 border-orange-300';
       default:
-        return 'from-gray-50 to-slate-50 border-gray-300';
+        return 'bg-gray-50 border-gray-300';
     }
   };
 
@@ -55,10 +55,10 @@ const CodeFragmentNode = memo(({ data, selected }: CodeFragmentNodeProps) => {
       />
 
       {/* Node Header */}
-      <div className={`px-4 py-3 border-b border-gray-200 bg-gradient-to-r ${getTypeColor(fragmentType)}`}>
+      <div className={`px-4 py-3 border-b border-gray-200 ${getTypeColor(fragmentType)}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1">
-            <FileCode className="w-4 h-4 text-primary-600" />
+            <FileCode className="w-4 h-4 text-primary-500" />
             <span className="font-semibold text-gray-800 truncate">{fragmentName}</span>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded font-medium ${getTypeBadgeColor(fragmentType)}`}>

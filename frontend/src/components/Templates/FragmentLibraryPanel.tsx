@@ -88,18 +88,18 @@ export function FragmentLibraryPanel({
   return (
     <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Fragment Library</h3>
           <button
             onClick={onAddFragment}
-            className="p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:text-gray-900 transition-colors"
+            className="btn-primary p-1.5"
             title="Add new fragment"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-gray-600 dark:text-gray-400">Drag fragments to canvas</p>
+        <p className="text-xs text-gray-600 dark:text-gray-300">Drag fragments to canvas</p>
       </div>
 
       {/* Fragment Categories */}
@@ -131,7 +131,7 @@ export function FragmentLibraryPanel({
                     <span className={`text-sm font-medium ${category.color} dark:brightness-125`}>
                       {category.label}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{categoryFragments.length} fragments</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300">{categoryFragments.length} fragments</span>
                   </div>
                 </div>
               </button>
@@ -140,7 +140,7 @@ export function FragmentLibraryPanel({
               {isExpanded && (
                 <div className="ml-6 mt-1 space-y-1">
                   {categoryFragments.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                    <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-300 italic">
                       No fragments yet
                     </div>
                   ) : (
@@ -175,7 +175,7 @@ export function FragmentLibraryPanel({
 
       {/* Footer Info */}
       <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-        <p className="text-xs text-gray-600 dark:text-gray-400">
+        <p className="text-xs text-gray-600 dark:text-gray-300">
           <span className="font-medium">{fragments.length}</span> total fragments
         </p>
         <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">

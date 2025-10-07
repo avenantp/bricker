@@ -75,16 +75,16 @@ export function FragmentEditorPanel({
       {/* Panel */}
       <div className="fixed right-0 top-0 bottom-0 w-[600px] bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-primary-50 dark:bg-primary-900/20">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-100 rounded-lg">
-              <FileCode className="w-5 h-5 text-primary-600" />
+              <FileCode className="w-5 h-5 text-primary-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {fragmentId ? 'Edit' : 'Create'} Code Fragment
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Define Jinja template fragment</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Define Jinja template fragment</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ export function FragmentEditorPanel({
               onClick={onClose}
               className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <X className="w-5 h-5 text-gray-500 dark:text-gray-300" />
             </button>
           </div>
         </div>
@@ -142,7 +142,7 @@ export function FragmentEditorPanel({
               </label>
               <button
                 onClick={() => setShowFullscreenEditor(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-primary-500 hover:bg-primary-50 rounded transition-colors"
                 title="Open in fullscreen editor"
               >
                 <Maximize2 className="w-3 h-3" />
@@ -174,7 +174,7 @@ export function FragmentEditorPanel({
                 }}
               />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <p className="text-xs text-gray-500 dark:text-gray-300 mt-2">
               Double-click or click "Fullscreen" to open in fullscreen mode. Use {`{{ variable }}`} for variables and {`{% ... %}`} for logic.
             </p>
           </div>
@@ -191,7 +191,7 @@ export function FragmentEditorPanel({
           <button
             onClick={handleSave}
             disabled={!fragmentName || !jinjaCode || isSaving}
-            className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn-primary flex items-center gap-2 px-6"
           >
             <Save className="w-4 h-4" />
             {isSaving ? 'Saving...' : 'Save Fragment'}

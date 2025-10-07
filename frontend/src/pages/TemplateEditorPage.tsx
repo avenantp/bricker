@@ -131,7 +131,7 @@ export function TemplateEditorPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-neutral-100">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
           <p className="text-gray-600">Loading template editor...</p>
         </div>
       </div>

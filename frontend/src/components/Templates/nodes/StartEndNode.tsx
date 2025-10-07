@@ -13,10 +13,10 @@ const StartEndNode = memo(({ data, selected }: StartEndNodeProps) => {
       className={`
         rounded-full border-2 shadow-lg w-20 h-20 flex items-center justify-center
         ${selected
-          ? isStart ? 'border-green-500' : 'border-red-500'
-          : isStart ? 'border-green-300' : 'border-red-300'
+          ? isStart ? 'border-green-600' : 'border-red-600'
+          : isStart ? 'border-green-400' : 'border-red-400'
         }
-        ${isStart ? 'bg-gradient-to-br from-green-50 to-green-100' : 'bg-gradient-to-br from-red-50 to-red-100'}
+        ${isStart ? 'bg-green-100' : 'bg-red-100'}
       `}
     >
       {isStart ? (

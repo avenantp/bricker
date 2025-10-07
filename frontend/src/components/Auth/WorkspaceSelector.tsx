@@ -102,7 +102,7 @@ export function WorkspaceSelector() {
                         </div>
                       </div>
                       {currentWorkspace?.id === workspace.id && (
-                        <Check className="w-4 h-4 text-primary-600" />
+                        <Check className="w-4 h-4 text-primary-500" />
                       )}
                     </button>
                   ))}
@@ -114,7 +114,7 @@ export function WorkspaceSelector() {
                       setShowCreateModal(true);
                       setIsOpen(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-primary-600"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-primary-500"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="text-sm font-medium">Create Workspace</span>

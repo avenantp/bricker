@@ -29,7 +29,7 @@ const ConditionNode = memo(({ data, selected }: ConditionNodeProps) => {
       />
 
       {/* Node Header */}
-      <div className="px-4 py-3 border-b border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
+      <div className="px-4 py-3 border-b border-yellow-200 bg-yellow-50">
         <div className="flex items-center gap-2">
           <GitBranch className="w-4 h-4 text-yellow-600" />
           <span className="font-semibold text-gray-800">{data.label}</span>

@@ -42,7 +42,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             onClick={() => setActiveTab('github')}
             className={`px-6 py-3 font-medium transition-colors ${
               activeTab === 'github'
-                ? 'text-primary-600 border-b-2 border-primary-600'
+                ? 'text-primary-500 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -52,7 +52,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             onClick={() => setActiveTab('general')}
             className={`px-6 py-3 font-medium transition-colors ${
               activeTab === 'general'
-                ? 'text-primary-600 border-b-2 border-primary-600'
+                ? 'text-primary-500 border-b-2 border-primary-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >

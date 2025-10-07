@@ -46,7 +46,7 @@ const FragmentNode = memo(({ data, selected }: FragmentNodeProps) => {
       />
 
       {/* Node Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+      <div className="px-4 py-3 border-b border-gray-200 bg-purple-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1">
             <Code2 className="w-4 h-4 text-purple-600" />

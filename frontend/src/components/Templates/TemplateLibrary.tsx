@@ -68,13 +68,13 @@ export function TemplateLibrary() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Template Library</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
               Manage Jinja template compositions and reusable fragments
             </p>
           </div>
           <button
             onClick={() => navigate('/templates/new')}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:text-gray-900 transition-colors"
+            className="btn-primary flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>New Composition</span>
@@ -94,7 +94,7 @@ export function TemplateLibrary() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <Filter className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             <select
               value={filterLanguage}
               onChange={(e) => setFilterLanguage(e.target.value as any)}
@@ -114,8 +114,8 @@ export function TemplateLibrary() {
             onClick={() => setActiveTab('compositions')}
             className={`pb-2 px-1 font-medium transition-colors ${
               activeTab === 'compositions'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                ? 'text-primary-500 border-b-2 border-primary-600'
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
             }`}
           >
             Compositions ({filteredCompositions.length})
@@ -124,8 +124,8 @@ export function TemplateLibrary() {
             onClick={() => setActiveTab('fragments')}
             className={`pb-2 px-1 font-medium transition-colors ${
               activeTab === 'fragments'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                ? 'text-primary-500 border-b-2 border-primary-600'
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
             }`}
           >
             Fragments ({filteredFragments.length})
@@ -139,7 +139,7 @@ export function TemplateLibrary() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Loading templates...</p>
+              <p className="text-gray-600 dark:text-gray-300">Loading templates...</p>
             </div>
           </div>
         ) : activeTab === 'compositions' ? (
@@ -147,10 +147,10 @@ export function TemplateLibrary() {
             {filteredCompositions.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <FileCode className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-600 dark:text-gray-400">No compositions found</p>
+                <p className="text-gray-600 dark:text-gray-300">No compositions found</p>
                 <button
                   onClick={() => navigate('/templates/new')}
-                  className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+                  className="mt-4 text-primary-500 hover:text-primary-700 font-medium"
                 >
                   Create your first composition
                 </button>
@@ -169,11 +169,11 @@ export function TemplateLibrary() {
                     </span>
                   </div>
                   {composition.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                       {composition.description}
                     </p>
                   )}
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
                     <span className="flex items-center gap-1">
                       <GitBranch className="w-3 h-3" />
                       {composition.flow_data?.nodes?.length || 0} nodes
@@ -191,7 +191,7 @@ export function TemplateLibrary() {
             {filteredFragments.length === 0 ? (
               <div className="col-span-full text-center py-12">
                 <FileCode className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-600 dark:text-gray-400">No fragments found</p>
+                <p className="text-gray-600 dark:text-gray-300">No fragments found</p>
               </div>
             ) : (
               filteredFragments.map((fragment) => (
@@ -206,11 +206,11 @@ export function TemplateLibrary() {
                     </span>
                   </div>
                   {fragment.description && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
                       {fragment.description}
                     </p>
                   )}
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
                     <span className="uppercase font-medium">{fragment.language}</span>
                     {fragment.is_system_template && (
                       <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">

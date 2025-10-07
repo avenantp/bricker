@@ -186,7 +186,7 @@ export function GitHubSettings() {
                 href="https://github.com/settings/tokens/new?scopes=repo"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-700 underline"
+                className="text-primary-500 hover:text-primary-700 underline"
               >
                 Create a token
               </a>{' '}

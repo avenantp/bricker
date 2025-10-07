@@ -29,7 +29,7 @@ export function Header() {
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
       {/* Logo and Title */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-lg flex items-center justify-center">
+        <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
           <Sparkles className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -47,7 +47,7 @@ export function Header() {
         {isDevMode && (
           <button
             onClick={() => navigate('/templates')}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-sm"
             title="Template Editor (Dev Mode)"
           >
             <FlaskConical className="w-4 h-4" />
@@ -79,7 +79,7 @@ export function Header() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
               {user?.email?.charAt(0).toUpperCase() || 'U'}
             </div>
           </button>

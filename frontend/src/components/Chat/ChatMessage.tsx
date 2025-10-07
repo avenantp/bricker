@@ -132,7 +132,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <div className="flex gap-2 pt-2 border-t">
                 <button
                   onClick={handleApplySuggestion}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 dark:text-gray-900 transition-colors text-sm font-medium"
+                  className="btn-primary flex-1 text-sm font-medium"
                 >
                   Apply to Canvas
                 </button>

@@ -61,7 +61,7 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 flex flex-col">
+    <div className="min-h-screen bg-orange-50 flex flex-col">
       {/* Dev Mode Header */}
       {isDevMode && (
         <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
@@ -70,7 +70,7 @@ export function AuthPage() {
           </div>
           <button
             onClick={() => navigate('/templates')}
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-sm"
             title="Template Editor (Dev Mode)"
           >
             <FlaskConical className="w-4 h-4" />
@@ -199,7 +199,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode('reset')}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-primary-500 hover:text-primary-700 font-medium"
                 >
                   Forgot password?
                 </button>
@@ -283,7 +283,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode('signup')}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-primary-500 hover:text-primary-700 font-medium"
                 >
                   Sign up
                 </button>
@@ -295,7 +295,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode('signin')}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-primary-500 hover:text-primary-700 font-medium"
                 >
                   Sign in
                 </button>
@@ -307,7 +307,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode('signin')}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-primary-500 hover:text-primary-700 font-medium"
                 >
                   Sign in
                 </button>
@@ -319,11 +319,11 @@ export function AuthPage() {
         {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-8">
           By continuing, you agree to our{' '}
-          <a href="#" className="text-primary-600 hover:text-primary-700">
+          <a href="#" className="text-primary-500 hover:text-primary-700">
             Terms of Service
           </a>{' '}
           and{' '}
-          <a href="#" className="text-primary-600 hover:text-primary-700">
+          <a href="#" className="text-primary-500 hover:text-primary-700">
             Privacy Policy
           </a>
         </p>

@@ -11,7 +11,7 @@ const MergeNode = memo(({ data, selected }: MergeNodeProps) => {
       className={`
         bg-white rounded-lg border-2 shadow-lg w-32 h-16 flex items-center justify-center
         ${selected ? 'border-indigo-500' : 'border-indigo-300'}
-        bg-gradient-to-r from-indigo-50 to-purple-50
+        bg-indigo-50
       `}
     >
       {/* Multiple Input Handles */}

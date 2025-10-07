@@ -65,7 +65,7 @@ export function ChatInterface() {
       } bg-white rounded-lg shadow-2xl flex flex-col transition-all duration-300 z-40`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-secondary-600 to-primary-600 text-white rounded-t-lg">
+      <div className="flex items-center justify-between p-4 border-b bg-primary-600 text-white rounded-t-lg">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5" />
           <div>
