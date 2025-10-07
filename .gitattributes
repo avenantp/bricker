@@ -1,0 +1,14 @@
+# Force CRLF line endings for all text files on Windows
+* text=auto eol=crlf
+
+# Denote binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
