@@ -1,16 +1,16 @@
 import { Boxes } from 'lucide-react';
 
-interface UrckLogoProps {
+interface UroqLogoProps {
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
   variant?: 'light' | 'dark';
 }
 
-export function UrckLogo({
+export function UroqLogo({
   size = 'md',
   showText = true,
   variant = 'dark'
-}: UrckLogoProps) {
+}: UroqLogoProps) {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-12 h-12',
@@ -38,7 +38,7 @@ export function UrckLogo({
       </div>
       {showText && (
         <span className={`${textSizeClasses[size]} font-bold ${textColor}`}>
-          Urck
+          Uroq
         </span>
       )}
     </div>

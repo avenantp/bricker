@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AppState, DataModel, Message, Workspace } from './types';
+import { AppState, DataModel, Message, Workspace, Project } from './types';
 import { Node, Edge } from '@xyflow/react';
 
 export const useStore = create<AppState>((set) => ({
@@ -12,6 +12,11 @@ export const useStore = create<AppState>((set) => ({
   currentWorkspace: null,
   workspaces: [],
   setCurrentWorkspace: (workspace) => set({ currentWorkspace: workspace }),
+
+  // Project
+  currentProject: null,
+  projects: [],
+  setCurrentProject: (project) => set({ currentProject: project }),
 
   // Model
   currentModel: null,

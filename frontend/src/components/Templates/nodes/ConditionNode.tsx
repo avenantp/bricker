@@ -25,7 +25,7 @@ const ConditionNode = memo(({ data, selected }: ConditionNodeProps) => {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-yellow-500"
+        className="w-1.5 h-1.5 !bg-yellow-500"
       />
 
       {/* Node Header */}
@@ -84,13 +84,13 @@ const ConditionNode = memo(({ data, selected }: ConditionNodeProps) => {
         type="source"
         position={Position.Bottom}
         id="true"
-        className="w-3 h-3 !bg-green-500 !left-[30%]"
+        className="w-1.5 h-1.5 !bg-green-500 !left-[30%]"
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="false"
-        className="w-3 h-3 !bg-red-500 !left-[70%]"
+        className="w-1.5 h-1.5 !bg-red-500 !left-[70%]"
       />
     </div>
   );

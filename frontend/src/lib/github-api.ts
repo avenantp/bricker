@@ -206,11 +206,111 @@ export class GitHubClient {
           name: repo,
           private: isPrivate,
           auto_init: true,
-          description: 'Urck metadata repository',
+          description: 'Uroq metadata repository',
         });
       } else {
         throw error;
       }
+    }
+  }
+
+  // Check if there's a conflict (file was modified after we last read it)
+  async detectConflict(
+    owner: string,
+    repo: string,
+    path: string,
+    expectedSha: string,
+    branch: string = 'main'
+  ): Promise<boolean> {
+    try {
+      const { sha: currentSha } = await this.getFileContent(owner, repo, path, branch);
+      return currentSha !== expectedSha;
+    } catch (error: any) {
+      if (error.status === 404) {
+        // File was deleted
+        return true;
+      }
+      throw error;
+    }
+  }
+
+  // Get commit information for a specific SHA
+  async getCommitInfo(
+    owner: string,
+    repo: string,
+    sha: string
+  ): Promise<{
+    message: string;
+    author: string;
+    timestamp: string;
+  }> {
+    try {
+      const response = await this.octokit.repos.getCommit({
+        owner,
+        repo,
+        ref: sha,
+      });
+
+      return {
+        message: response.data.commit.message,
+        author: response.data.commit.author?.name || 'Unknown',
+        timestamp: response.data.commit.author?.date || new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get commit info: ${error.message}`);
+    }
+  }
+
+  // Get file content at a specific commit SHA
+  async getFileContentAtCommit(
+    owner: string,
+    repo: string,
+    path: string,
+    commitSha: string
+  ): Promise<{ content: string; sha: string }> {
+    try {
+      const response = await this.octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref: commitSha,
+      });
+
+      if ('content' in response.data) {
+        const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+        return { content, sha: response.data.sha };
+      }
+
+      throw new Error('File not found or is a directory');
+    } catch (error: any) {
+      throw new Error(`Failed to get file at commit: ${error.message}`);
+    }
+  }
+
+  // Compare two commits to find common ancestor
+  async findCommonAncestor(
+    owner: string,
+    repo: string,
+    commit1: string,
+    commit2: string
+  ): Promise<string | null> {
+    try {
+      const response = await this.octokit.repos.compareCommits({
+        owner,
+        repo,
+        base: commit1,
+        head: commit2,
+      });
+
+      // If commits are the same or directly related, return the base
+      if (response.data.merge_base_commit) {
+        return response.data.merge_base_commit.sha;
+      }
+
+      return null;
+    } catch (error: any) {
+      console.error('Failed to find common ancestor:', error);
+      return null;
     }
   }
 }

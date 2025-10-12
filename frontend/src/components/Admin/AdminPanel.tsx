@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Users, Settings, CreditCard, BarChart, Shield } from 'lucide-react';
+import { Users, Settings, CreditCard, BarChart, Shield, FolderOpen } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { SubscriptionManagement } from './SubscriptionManagement';
+import { WorkspaceManagement } from './WorkspaceManagement';
 
-type AdminTab = 'users' | 'subscription' | 'settings' | 'analytics' | 'audit';
+type AdminTab = 'workspaces' | 'users' | 'subscription' | 'settings' | 'analytics' | 'audit';
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<AdminTab>('users');
+  const [activeTab, setActiveTab] = useState<AdminTab>('workspaces');
 
   const tabs = [
+    { id: 'workspaces' as const, label: 'Workspaces', icon: FolderOpen },
     { id: 'users' as const, label: 'User Management', icon: Users },
     { id: 'subscription' as const, label: 'Subscription', icon: CreditCard },
     { id: 'settings' as const, label: 'Company Settings', icon: Settings },
@@ -52,6 +54,7 @@ export function AdminPanel() {
           </div>
 
           <div className="p-6">
+            {activeTab === 'workspaces' && <WorkspaceManagement />}
             {activeTab === 'users' && <UserManagement />}
             {activeTab === 'subscription' && <SubscriptionManagement />}
             {activeTab === 'settings' && <CompanySettings />}

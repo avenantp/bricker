@@ -112,7 +112,7 @@ export function PropertiesPanel() {
             {selectedNode.data?.optimizations && (
               <div className="pt-4 border-t border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2">
-                  Databricks Optimizations
+                  Optimizations
                 </h4>
                 <div className="space-y-2 text-sm">
                   {selectedNode.data.optimizations.liquid_clustering && (

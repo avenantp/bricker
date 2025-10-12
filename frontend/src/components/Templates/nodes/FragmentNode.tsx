@@ -42,7 +42,7 @@ const FragmentNode = memo(({ data, selected }: FragmentNodeProps) => {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-blue-500"
+        className="w-1.5 h-1.5 !bg-blue-500"
       />
 
       {/* Node Header */}
@@ -152,7 +152,7 @@ const FragmentNode = memo(({ data, selected }: FragmentNodeProps) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-blue-500"
+        className="w-1.5 h-1.5 !bg-blue-500"
       />
     </div>
   );

@@ -1,11 +1,11 @@
-# Urck
+# Uroq
 
 A React-based web application that enables users to visually design and generate Databricks automation scripts through an intuitive interface combining data modeling, template management, and workflow visualization.
 
 ## Project Structure
 
 ```
-urck/
+uroq/
 ├── frontend/              # React frontend application
 ├── backend/              # Node.js backend API with Claude integration
 ├── mcp-servers/          # MCP servers for AI assistant
@@ -55,7 +55,7 @@ urck/
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd urck
+cd uroq
 ```
 
 2. Install dependencies:
@@ -186,7 +186,7 @@ Each MCP server is a standalone Node.js process that exposes tools via the Model
 
 ## Testing
 
-Urck includes comprehensive unit and integration tests for all MCP servers and backend components.
+Uroq includes comprehensive unit and integration tests for all components.
 
 ```bash
 # Run all tests
@@ -199,21 +199,28 @@ npm run test:watch
 npm run test:coverage
 
 # Test specific packages
-npm run test:mcp                                      # All MCP servers
+npm test --workspace=backend          # Backend integration tests
+npm test --workspace=frontend         # Frontend unit tests
 npm test --workspace=mcp-servers/schema-analyzer      # Schema Analyzer only
 npm test --workspace=mcp-servers/pattern-library      # Pattern Library only
 npm test --workspace=mcp-servers/model-generator      # Model Generator only
 npm test --workspace=mcp-servers/databricks-optimizer # Databricks Optimizer only
-npm run test:backend                                  # Backend integration tests
 ```
 
 ### Test Coverage
 
+- **Frontend**: GitHub API client, YAML utilities, React components
+- **Backend**: MCP communication, end-to-end workflows, error handling
 - **Schema Analyzer**: Table analysis, relationship detection, pattern recognition
 - **Pattern Library**: Data Vault, Kimball, Databricks optimizations
 - **Model Generator**: Dimensional/Data Vault model generation, React Flow models
 - **Databricks Optimizer**: Partitioning, clustering, Delta features, performance estimation
-- **Backend Integration**: MCP communication, end-to-end workflows, error handling
+
+### Testing Frameworks
+
+- **Frontend**: Vitest + React Testing Library
+- **Backend**: Jest + Node test utilities
+- **MCP Servers**: Jest
 
 See [TESTING.md](./TESTING.md) for comprehensive testing documentation.
 
@@ -236,15 +243,25 @@ The frontend can be deployed to:
 
 ## Documentation
 
+### Getting Started
+- [README.md](./README.md) - Project overview and quick start (this file)
 - [SETUP.md](./SETUP.md) - Complete setup guide with troubleshooting
+- [docs/DEVELOPER_ONBOARDING.md](./docs/DEVELOPER_ONBOARDING.md) - New developer onboarding guide
+
+### Architecture & Development
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture and data flow
 - [TESTING.md](./TESTING.md) - Comprehensive testing guide
-- [supabase/SETUP_GUIDE.md](./supabase/SETUP_GUIDE.md) - Supabase setup instructions
+- [docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) - Complete API reference
+- [CLAUDE.md](./CLAUDE.md) - Guidance for Claude Code
+
+### Feature Documentation
 - [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) - Authentication & authorization guide
 - [docs/GITHUB_INTEGRATION.md](./docs/GITHUB_INTEGRATION.md) - GitHub integration guide
-- [CLAUDE.md](./CLAUDE.md) - Guidance for Claude Code
-- [PRD: Core App](./docs/prp/001-urck-automation.md) - Original product requirements
-- [PRD: AI Assistant](./docs/prp/002-urck-ai-assistant.md) - AI assistant specification
+- [supabase/SETUP_GUIDE.md](./supabase/SETUP_GUIDE.md) - Supabase setup instructions
+
+### Product Requirements
+- [docs/prp/000-task-list.md](./docs/prp/000-task-list.md) - Complete task list with phases
+- [docs/prp/001-technical-specifications.md](./docs/prp/001-technical-specifications.md) - Technical specifications
 
 ## License
 

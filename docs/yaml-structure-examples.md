@@ -30,7 +30,7 @@ metadata:
   workspace_id: 456e4567-e89b-12d3-a456-426614174000
 
   # GitHub tracking
-  github_repo: mycompany/urck-metadata
+  github_repo: mycompany/uroq-metadata
   github_branch: main
   github_path: metadata/projects/customer-data-pipeline.yml
 
@@ -105,7 +105,7 @@ metadata:
   workspace_id: 456e4567-e89b-12d3-a456-426614174000
 
   # GitHub tracking
-  github_repo: mycompany/urck-metadata
+  github_repo: mycompany/uroq-metadata
   github_branch: main
   github_path: metadata/models/customer-dimension.yml
 

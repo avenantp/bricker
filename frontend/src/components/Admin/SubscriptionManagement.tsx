@@ -70,7 +70,7 @@ export function SubscriptionManagement() {
             <h3 className="font-medium text-orange-900">Trial Period</h3>
             <p className="text-sm text-orange-700 mt-1">
               You have {trialDaysRemaining} days remaining in your free trial.
-              Upgrade to continue using Urck after your trial ends.
+              Upgrade to continue using Uroq after your trial ends.
             </p>
           </div>
         </div>

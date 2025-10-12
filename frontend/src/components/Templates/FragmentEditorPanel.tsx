@@ -18,9 +18,11 @@ interface FragmentEditorPanelProps {
 
 const FRAGMENT_TYPES = [
   { value: 'data_vault', label: 'Data Vault', color: 'text-blue-600' },
+  { value: 'data_mart', label: 'Data Mart', color: 'text-purple-600' },
   { value: 'staging', label: 'Staging', color: 'text-green-600' },
-  { value: 'dimensional', label: 'Dimensional', color: 'text-purple-600' },
-  { value: 'utility', label: 'Utility', color: 'text-orange-600' },
+  { value: 'landing', label: 'Landing', color: 'text-cyan-600' },
+  { value: 'jobs', label: 'Jobs', color: 'text-orange-600' },
+  { value: 'pipelines', label: 'Pipelines', color: 'text-indigo-600' },
   { value: 'custom', label: 'Custom', color: 'text-gray-600' },
 ];
 
@@ -75,7 +77,7 @@ export function FragmentEditorPanel({
       {/* Panel */}
       <div className="fixed right-0 top-0 bottom-0 w-[600px] bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-primary-50 dark:bg-primary-900/20">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-100 rounded-lg">
               <FileCode className="w-5 h-5 text-primary-500" />

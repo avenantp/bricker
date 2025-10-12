@@ -22,6 +22,23 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    // Build optimizations
+    build: {
+      target: 'es2020',
+      minify: 'esbuild',
+      sourcemap: mode === 'development',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'flow': ['@xyflow/react'],
+            'supabase': ['@supabase/supabase-js'],
+            'editor': ['@monaco-editor/react'],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    },
     // Expose VITE_ prefixed variables from root .env to the client
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL),

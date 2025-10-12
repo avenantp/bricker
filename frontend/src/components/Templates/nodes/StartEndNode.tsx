@@ -11,7 +11,7 @@ const StartEndNode = memo(({ data, selected }: StartEndNodeProps) => {
   return (
     <div
       className={`
-        rounded-full border-2 shadow-lg w-20 h-20 flex items-center justify-center
+        rounded-full border-2 shadow-lg w-10 h-10 flex items-center justify-center
         ${selected
           ? isStart ? 'border-green-600' : 'border-red-600'
           : isStart ? 'border-green-400' : 'border-red-400'
@@ -21,20 +21,20 @@ const StartEndNode = memo(({ data, selected }: StartEndNodeProps) => {
     >
       {isStart ? (
         <>
-          <Play className="w-8 h-8 text-green-600" />
+          <Play className="w-4 h-4 text-green-600" />
           <Handle
             type="source"
             position={Position.Bottom}
-            className="w-3 h-3 !bg-green-500"
+            className="w-1.5 h-1.5 !bg-green-500"
           />
         </>
       ) : (
         <>
-          <StopCircle className="w-8 h-8 text-red-600" />
+          <StopCircle className="w-4 h-4 text-red-600" />
           <Handle
             type="target"
             position={Position.Top}
-            className="w-3 h-3 !bg-red-500"
+            className="w-1.5 h-1.5 !bg-red-500"
           />
         </>
       )}

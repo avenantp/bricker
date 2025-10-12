@@ -45,8 +45,19 @@ export interface Company {
 export interface Workspace {
   id: string;
   name: string;
-  company_id: string;
+  owner_id: string;
   created_at: Date;
+}
+
+export interface Project {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  project_type: 'Standard' | 'DataVault' | 'Dimensional';
+  configuration?: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface DataModelYAML {
@@ -74,6 +85,11 @@ export interface AppState {
   currentWorkspace: Workspace | null;
   workspaces: Workspace[];
   setCurrentWorkspace: (workspace: Workspace | null) => void;
+
+  // Project
+  currentProject: Project | null;
+  projects: Project[];
+  setCurrentProject: (project: Project | null) => void;
 
   // Model
   currentModel: DataModel | null;

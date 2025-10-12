@@ -19,13 +19,13 @@ const MergeNode = memo(({ data, selected }: MergeNodeProps) => {
         type="target"
         position={Position.Top}
         id="input-1"
-        className="w-3 h-3 !bg-indigo-500 !left-[30%]"
+        className="w-1.5 h-1.5 !bg-indigo-500 !left-[30%]"
       />
       <Handle
         type="target"
         position={Position.Top}
         id="input-2"
-        className="w-3 h-3 !bg-indigo-500 !left-[70%]"
+        className="w-1.5 h-1.5 !bg-indigo-500 !left-[70%]"
       />
 
       <div className="flex flex-col items-center">
@@ -37,7 +37,7 @@ const MergeNode = memo(({ data, selected }: MergeNodeProps) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-indigo-500"
+        className="w-1.5 h-1.5 !bg-indigo-500"
       />
     </div>
   );

@@ -11,8 +11,10 @@ import {
   Node,
   Edge,
   Panel,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import dagre from 'dagre';
 import {
   Save,
   Play,
@@ -29,6 +31,7 @@ import {
   CheckCircle2,
   Moon,
   Sun,
+  Network,
 } from 'lucide-react';
 import { nodeTypes } from './nodes';
 import { CompositionNodeData, TemplateFragment, TemplateComposition } from '../../types/template';
@@ -37,6 +40,7 @@ import { canEditComposition } from '../../services/template-clone-service';
 import { useDevMode } from '../../hooks/useDevMode';
 import { useAuth } from '../../hooks/useAuth';
 import { useStore } from '../../store/useStore';
+import { supabase } from '../../lib/supabase';
 import YAMLValidator from './YAMLValidator';
 import { FragmentLibraryPanel } from './FragmentLibraryPanel';
 import { FragmentEditorPanel } from './FragmentEditorPanel';
@@ -75,6 +79,7 @@ export function TemplateComposer({
   const isDevMode = isDevModeProp ?? isDevModeHook;
   const { user } = useAuth();
   const { isDarkMode, toggleDarkMode } = useStore();
+  const { fitView } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(
     composition?.flow_data?.nodes || initialNodes
   );
@@ -95,6 +100,34 @@ export function TemplateComposer({
   const [selectedCodeFragment, setSelectedCodeFragment] = useState<any | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
+  // Load fragments from database on mount
+  useEffect(() => {
+    const loadFragments = async () => {
+      const { data, error } = await supabase
+        .from('template_fragments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading fragments:', error);
+        return;
+      }
+
+      if (data) {
+        const formattedFragments = data.map((frag) => ({
+          id: frag.id,
+          name: frag.name,
+          type: frag.category,
+          code: frag.fragment_content,
+        }));
+        console.log('Loaded fragments:', formattedFragments);
+        setCodeFragments(formattedFragments);
+      }
+    };
+
+    loadFragments();
+  }, []);
+
   // Check edit permissions
   useEffect(() => {
     if (composition?.id && user?.id) {
@@ -109,6 +142,47 @@ export function TemplateComposer({
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  // Auto-layout function using dagre
+  const autoLayout = useCallback(() => {
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+    dagreGraph.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 75 });
+
+    // Add nodes to dagre
+    nodes.forEach((node) => {
+      const width = node.type === 'start' || node.type === 'end' ? 40 : 200;
+      const height = node.type === 'start' || node.type === 'end' ? 40 : 80;
+      dagreGraph.setNode(node.id, { width, height });
+    });
+
+    // Add edges to dagre
+    edges.forEach((edge) => {
+      dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    // Calculate layout
+    dagre.layout(dagreGraph);
+
+    // Update node positions
+    const layoutedNodes = nodes.map((node) => {
+      const nodeWithPosition = dagreGraph.node(node.id);
+      return {
+        ...node,
+        position: {
+          x: nodeWithPosition.x - nodeWithPosition.width / 2,
+          y: nodeWithPosition.y - nodeWithPosition.height / 2,
+        },
+      };
+    });
+
+    setNodes(layoutedNodes);
+
+    // Fit view after layout with a slight delay to ensure nodes are updated
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    }, 0);
+  }, [nodes, edges, setNodes, fitView]);
 
   // Add a new fragment node
   const addFragmentNode = (fragment: TemplateFragment) => {
@@ -171,6 +245,7 @@ export function TemplateComposer({
 
   // Add a code fragment node
   const addCodeFragmentNode = (fragment: any) => {
+    console.log('addCodeFragmentNode called with:', fragment);
     const newNode: Node<CompositionNodeData> = {
       id: `code-fragment-${Date.now()}`,
       type: 'codeFragment',
@@ -179,14 +254,12 @@ export function TemplateComposer({
         id: fragment.id,
         type: 'codeFragment',
         position: { x: 0, y: 0 },
-        data: {
-          label: fragment.name,
-          fragmentName: fragment.name,
-          fragmentType: fragment.type,
-          jinjaCode: fragment.code,
-        },
+        fragmentName: fragment.name,
+        fragmentType: fragment.type,
+        jinjaCode: fragment.code,
       },
     };
+    console.log('Creating node with data:', newNode.data);
     setNodes((nds) => [...nds, newNode]);
   };
 
@@ -206,9 +279,25 @@ export function TemplateComposer({
   };
 
   // Handle fragment save
-  const handleFragmentSave = (data: { name: string; type: string; code: string }) => {
+  const handleFragmentSave = async (data: { name: string; type: string; code: string }) => {
     if (selectedCodeFragment?.id) {
-      // Update existing fragment
+      // Update existing fragment in database
+      const { error } = await supabase
+        .from('template_fragments')
+        .update({
+          name: data.name,
+          category: data.type,
+          fragment_content: data.code,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedCodeFragment.id);
+
+      if (error) {
+        console.error('Error updating fragment:', error);
+        throw error;
+      }
+
+      // Update local state
       setCodeFragments((frags) =>
         frags.map((f) => (f.id === selectedCodeFragment.id ? { ...f, ...data } : f))
       );
@@ -221,26 +310,56 @@ export function TemplateComposer({
                 ...node,
                 data: {
                   ...node.data,
-                  data: {
-                    ...node.data.data,
-                    fragmentName: data.name,
-                    fragmentType: data.type,
-                    jinjaCode: data.code,
-                  },
+                  fragmentName: data.name,
+                  fragmentType: data.type,
+                  jinjaCode: data.code,
                 },
               }
             : node
         )
       );
     } else {
-      // Create new fragment
+      // Create new fragment in database
+      console.log('Current user:', user);
+      console.log('User ID:', user?.id);
+
+      if (!user?.id) {
+        throw new Error('User not authenticated. Please log in to create fragments.');
+      }
+
+      const { data: insertedFragment, error } = await supabase
+        .from('template_fragments')
+        .insert({
+          name: data.name,
+          category: data.type,
+          fragment_content: data.code,
+          language: composition?.language || 'sql',
+          variables: [],
+          dependencies: [],
+          is_public: false,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating fragment:', error);
+        throw error;
+      }
+
+      // Add to local state with database ID
       const newFragment = {
-        id: `fragment-${Date.now()}`,
-        ...data,
+        id: insertedFragment.id,
+        name: data.name,
+        type: data.type,
+        code: data.code,
       };
+      console.log('Creating new fragment node with data:', newFragment);
       setCodeFragments((frags) => [...frags, newFragment]);
       addCodeFragmentNode(newFragment);
     }
+
+    setShowFragmentEditor(false);
   };
 
   // Handle adding new fragment from library panel
@@ -399,6 +518,15 @@ export function TemplateComposer({
             )}
 
             <button
+              onClick={autoLayout}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              title="Auto-arrange nodes"
+            >
+              <Network className="w-4 h-4" />
+              Auto Layout
+            </button>
+
+            <button
               onClick={handleCompile}
               disabled={isCompiling}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
@@ -470,11 +598,45 @@ export function TemplateComposer({
             nodesDraggable={canEdit}
             nodesConnectable={canEdit}
             elementsSelectable={true}
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              markerEnd: {
+                type: 'arrowclosed',
+                width: 10,
+                height: 10,
+              },
+              style: {
+                strokeWidth: 1.5,
+              },
+            }}
             fitView
           >
             <Background />
             <Controls />
             <MiniMap />
+
+            <svg style={{ position: 'absolute', top: 0, left: 0 }}>
+              <defs>
+                <marker
+                  id="arrowclosed"
+                  markerWidth="10"
+                  markerHeight="10"
+                  viewBox="-10 -10 20 20"
+                  orient="auto"
+                  refX="0"
+                  refY="0"
+                >
+                  <polyline
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                    fill="currentColor"
+                    points="-4,-3 0,0 -4,3 -4,-3"
+                  />
+                </marker>
+              </defs>
+            </svg>
 
             <Panel position="top-left" className="bg-white rounded-lg shadow-lg p-3">
               <div className="text-xs text-gray-600">

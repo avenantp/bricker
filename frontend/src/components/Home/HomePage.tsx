@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Settings, LogOut, User, ChevronRight, FolderOpen, Shield, Boxes, FlaskConical, Moon, Sun } from 'lucide-react';
-import { UrckLogo } from '../Logo/UrckLogo';
+import { Plus, Search, Settings, LogOut, User, ChevronRight, FolderOpen, Shield, Boxes, FlaskConical, Moon, Sun, Loader2 } from 'lucide-react';
+import { UroqLogo } from '../Logo/UroqLogo';
 import { DevModeBanner } from '../DevMode/DevModeBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -21,7 +21,7 @@ interface Project {
 export function HomePage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { workspaces, loading: workspacesLoading } = useWorkspace();
+  const { workspaces, loading: workspacesLoading, createWorkspace } = useWorkspace();
   const { currentWorkspace, setCurrentWorkspace, userRole, isDarkMode, toggleDarkMode } = useStore();
   const canAccessAdmin = useCanAccessAdmin();
   const { isDevMode } = useDevMode();
@@ -30,6 +30,9 @@ export function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
+  const [creating, setCreating] = useState(false);
 
   // Load projects for current workspace
   useEffect(() => {
@@ -67,9 +70,26 @@ export function HomePage() {
     navigate(`/workspace/${currentWorkspace?.id}/project/${projectId}`);
   };
 
-  const handleCreateWorkspace = async () => {
-    // TODO: Implement workspace creation modal
-    setShowCreateWorkspace(true);
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+
+    try {
+      const workspace = await createWorkspace(newWorkspaceName, newWorkspaceDescription);
+      setCurrentWorkspace({
+        id: workspace.id,
+        name: workspace.name,
+        owner_id: workspace.owner_id,
+        created_at: new Date(workspace.created_at),
+      });
+      setShowCreateWorkspace(false);
+      setNewWorkspaceName('');
+      setNewWorkspaceDescription('');
+    } catch (error) {
+      console.error('Failed to create workspace:', error);
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -80,7 +100,7 @@ export function HomePage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <UrckLogo size="sm" />
+          <UroqLogo size="sm" />
 
           <div className="flex items-center gap-4">
             {/* Dev Mode - Template Editor */}
@@ -164,44 +184,74 @@ export function HomePage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Workspaces</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {currentWorkspace ? 'Projects' : 'Workspaces'}
+                  </h3>
                   <button
-                    onClick={handleCreateWorkspace}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                    title="Create Workspace"
+                    onClick={() => currentWorkspace ? navigate(`/workspace/${currentWorkspace.id}/new`) : setShowCreateWorkspace(true)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                    title={currentWorkspace ? "Create Project" : "Create Workspace"}
                   >
-                    <Plus className="w-4 h-4 text-gray-600" />
+                    <Plus className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                   </button>
                 </div>
               </div>
 
               <div className="p-2">
-                {workspacesLoading ? (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">Loading...</div>
-                ) : workspaces.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">No workspaces</div>
+                {currentWorkspace ? (
+                  // Show projects when workspace is selected
+                  projects.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">
+                      No projects yet.
+                    </div>
+                  ) : (
+                    projects.map((project) => (
+                      <button
+                        key={project.id}
+                        onClick={() => navigate(`/workspace/${currentWorkspace.id}/project/${project.id}`)}
+                        className="w-full px-3 py-2 rounded-lg text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Boxes className="w-4 h-4" />
+                          <span className="text-sm truncate">{project.name}</span>
+                        </div>
+                        {project.description && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                            {project.description}
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  )
                 ) : (
-                  workspaces.map((workspace) => (
-                    <button
-                      key={workspace.id}
-                      onClick={() => setCurrentWorkspace({
-                        id: workspace.id,
-                        name: workspace.name,
-                        owner_id: workspace.owner_id,
-                        created_at: new Date(workspace.created_at)
-                      })}
-                      className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                        currentWorkspace?.id === workspace.id
-                          ? 'bg-primary-50/30 text-primary-900 font-medium'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <FolderOpen className="w-4 h-4" />
-                        <span className="text-sm truncate">{workspace.name}</span>
-                      </div>
-                    </button>
-                  ))
+                  // Show workspaces when no workspace is selected
+                  workspacesLoading ? (
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">Loading...</div>
+                  ) : workspaces.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-300">No workspaces</div>
+                  ) : (
+                    workspaces.map((workspace) => (
+                      <button
+                        key={workspace.id}
+                        onClick={() => setCurrentWorkspace({
+                          id: workspace.id,
+                          name: workspace.name,
+                          owner_id: workspace.owner_id,
+                          created_at: new Date(workspace.created_at)
+                        })}
+                        className={`w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                          currentWorkspace?.id === workspace.id
+                            ? 'bg-primary-50/30 text-primary-900 font-medium'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="w-4 h-4" />
+                          <span className="text-sm truncate">{workspace.name}</span>
+                        </div>
+                      </button>
+                    ))
+                  )
                 )}
               </div>
             </div>
@@ -219,7 +269,7 @@ export function HomePage() {
                   Select a workspace from the sidebar or create a new one to get started.
                 </p>
                 <button
-                  onClick={handleCreateWorkspace}
+                  onClick={() => setShowCreateWorkspace(true)}
                   className="btn-primary"
                 >
                   Create Your First Workspace
@@ -233,7 +283,7 @@ export function HomePage() {
                     {currentWorkspace.name}
                   </h1>
                   <p className="text-gray-600 dark:text-gray-300">
-                    Manage your Databricks automation projects
+                    Manage your automation projects
                   </p>
                 </div>
 
@@ -266,7 +316,7 @@ export function HomePage() {
                       No Projects Yet
                     </h2>
                     <p className="text-gray-600 dark:text-gray-300 mb-6">
-                      Create your first project to start building Databricks automation.
+                      Create your first project to start building automation.
                     </p>
                     <button
                       onClick={() => navigate(`/workspace/${currentWorkspace.id}/new`)}
@@ -308,6 +358,71 @@ export function HomePage() {
           </main>
         </div>
       </div>
+
+      {/* Create Workspace Modal */}
+      {showCreateWorkspace && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Create New Workspace
+            </h2>
+
+            <form onSubmit={handleCreateWorkspace} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Workspace Name *
+                </label>
+                <input
+                  type="text"
+                  value={newWorkspaceName}
+                  onChange={(e) => setNewWorkspaceName(e.target.value)}
+                  className="input-field w-full"
+                  placeholder="My Workspace"
+                  required
+                  disabled={creating}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={newWorkspaceDescription}
+                  onChange={(e) => setNewWorkspaceDescription(e.target.value)}
+                  className="input-field w-full resize-none"
+                  rows={3}
+                  placeholder="Data models for our data warehouse..."
+                  disabled={creating}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateWorkspace(false);
+                    setNewWorkspaceName('');
+                    setNewWorkspaceDescription('');
+                  }}
+                  className="btn-secondary flex-1"
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
+                  disabled={creating}
+                >
+                  {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -83,6 +83,14 @@ router.post('/connect', async (req, res) => {
     // Get repo info
     const repoInfo = await client.getRepoInfo();
 
+    // Initialize repository structure (create directories if needed)
+    try {
+      await client.initializeRepositoryStructure();
+    } catch (initError) {
+      console.warn('[GitHub] Failed to initialize repository structure:', initError);
+      // Don't fail the connection if initialization fails
+    }
+
     // Update workspace with GitHub settings
     const { error } = await supabase
       .from('workspaces')

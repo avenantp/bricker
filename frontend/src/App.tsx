@@ -10,6 +10,7 @@ import { HomePage } from './components/Home/HomePage';
 import { AdminPanel } from './components/Admin/AdminPanel';
 import { TemplateEditorPage } from './pages/TemplateEditorPage';
 import { TemplateLibrary } from './components/Templates/TemplateLibrary';
+import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
 import { useAuth } from './hooks/useAuth';
 import { useDevMode } from './hooks/useDevMode';
 import { useStore } from './store/useStore';
@@ -34,36 +35,34 @@ function App() {
     console.log('[App] HTML classes:', document.documentElement.className);
   }, [isDarkMode]);
 
-  // Show loading screen while checking auth and dev mode
-  if (!hasAdminAccess && (authLoading || (user && !devModeReady))) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
-          <p className="text-gray-600">
-            {isDevMode && user ? 'Setting up dev mode...' : 'Loading...'}
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            If this takes too long, check browser console for errors
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show auth page if not logged in (unless dev mode with admin access)
-  if (!user && !hasAdminAccess) {
-    return <AuthPage />;
-  }
-
   return (
     <BrowserRouter>
+      {/* Show loading screen while checking auth */}
+      {(authLoading || (user && !devModeReady)) ? (
+        <div className="h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+            <p className="text-gray-600">
+              {isDevMode && user ? 'Setting up dev mode...' : 'Loading...'}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              If this takes too long, check browser console for errors
+            </p>
+          </div>
+        </div>
+      ) : !user ? (
+        /* Show auth page if not logged in (even in dev mode) */
+        <AuthPage />
+      ) : (
       <Routes>
         {/* Home page with projects list */}
         <Route path="/" element={<HomePage />} />
 
         {/* Admin panel - only for owners and admins */}
         <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+
+        {/* Workspace settings */}
+        <Route path="/workspace/:workspaceId/settings" element={<WorkspaceSettingsPage />} />
 
         {/* Template Management - Dev Mode Only */}
         <Route path="/templates" element={<DevModeRoute><TemplateLibrary /></DevModeRoute>} />
@@ -113,6 +112,7 @@ function App() {
         {/* Catch-all redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      )}
     </BrowserRouter>
   );
 }

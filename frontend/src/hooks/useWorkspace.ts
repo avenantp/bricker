@@ -13,13 +13,6 @@ export function useWorkspace() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // In dev mode, skip workspace loading
-    if (hasDevAdminAccess()) {
-      setWorkspaces([]);
-      setLoading(false);
-      return;
-    }
-
     if (user) {
       loadWorkspaces();
     } else {
@@ -33,26 +26,11 @@ export function useWorkspace() {
       setLoading(true);
       setError(null);
 
-      // Get workspaces where user is a member
-      const { data: memberData, error: memberError } = await supabase
-        .from('workspace_members')
-        .select('workspace_id, role')
-        .eq('user_id', user!.id);
-
-      if (memberError) throw memberError;
-
-      if (!memberData || memberData.length === 0) {
-        setWorkspaces([]);
-        return;
-      }
-
-      const workspaceIds = memberData.map((m) => m.workspace_id);
-
-      // Get workspace details
+      // Query workspaces directly - RLS policy handles filtering to user's workspaces
+      // The policy checks workspace_members (which now has RLS disabled, so no recursion)
       const { data: workspacesData, error: workspacesError } = await supabase
         .from('workspaces')
         .select('*')
-        .in('id', workspaceIds)
         .order('created_at', { ascending: false });
 
       if (workspacesError) throw workspacesError;
@@ -70,29 +48,28 @@ export function useWorkspace() {
     if (!user) throw new Error('User not authenticated');
 
     try {
-      // Create workspace
-      const { data: workspace, error: workspaceError } = await supabase
-        .from('workspaces')
-        .insert({
-          name,
-          description,
-          owner_id: user.id,
+      // Use RPC function to create workspace and add owner as member in one transaction
+      // This bypasses RLS policies and avoids circular dependency issues
+      const { data: workspaceData, error: workspaceError } = await supabase
+        .rpc('create_workspace_with_owner', {
+          p_name: name,
+          p_description: description || null,
+          p_github_repo_url: null,
         })
-        .select()
         .single();
 
       if (workspaceError) throw workspaceError;
 
-      // Add creator as owner in workspace_members
-      const { error: memberError } = await supabase
-        .from('workspace_members')
-        .insert({
-          workspace_id: workspace.id,
-          user_id: user.id,
-          role: 'owner',
-        });
-
-      if (memberError) throw memberError;
+      // Map the returned fields to the expected structure
+      const workspace = {
+        id: workspaceData.workspace_id,
+        name: workspaceData.workspace_name,
+        description: workspaceData.workspace_description,
+        owner_id: workspaceData.workspace_owner_id,
+        github_repo_url: workspaceData.workspace_github_repo_url,
+        created_at: workspaceData.workspace_created_at,
+        updated_at: workspaceData.workspace_updated_at,
+      };
 
       await loadWorkspaces();
       return workspace;

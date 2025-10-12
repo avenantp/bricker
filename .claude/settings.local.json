@@ -16,7 +16,9 @@
       "Bash(git add:*)",
       "Bash(git rm:*)",
       "Bash(npm update:*)",
-      "Bash(npm outdated)"
+      "Bash(npm outdated)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

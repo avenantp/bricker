@@ -12,8 +12,7 @@ CREATE TABLE public.template_fragments (
   name TEXT NOT NULL,
   description TEXT,
   category TEXT NOT NULL CHECK (category IN (
-    'header', 'validation', 'transformation', 'error_handling',
-    'logging', 'footer', 'initialization', 'cleanup', 'custom'
+    'data_vault', 'data_mart', 'staging', 'landing', 'jobs', 'pipelines', 'custom'
   )),
   language TEXT NOT NULL CHECK (language IN ('sql', 'python', 'scala')),
   fragment_content TEXT NOT NULL,

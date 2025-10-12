@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { Mail, Lock, User, Github, AlertCircle, Loader2, FlaskConical } from 'lucide-react';
-import { UrckLogo } from '../Logo/UrckLogo';
+import { Mail, Lock, User, Github, AlertCircle, Loader2 } from 'lucide-react';
+import { UroqLogo } from '../Logo/UroqLogo';
 import { useAuth } from '@/hooks/useAuth';
-import { useDevMode } from '@/hooks/useDevMode';
-import { useNavigate } from 'react-router-dom';
 
 export function AuthPage() {
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
@@ -15,8 +13,6 @@ export function AuthPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const { signIn, signUp, signInWithGithub, signInWithGoogle, signInWithMicrosoft, resetPassword } = useAuth();
-  const { isDevMode } = useDevMode();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,44 +58,15 @@ export function AuthPage() {
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
-      {/* Dev Mode Header */}
-      {isDevMode && (
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <UrckLogo size="sm" showText={true} />
-          </div>
-          <button
-            onClick={() => navigate('/templates')}
-            className="flex items-center gap-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-sm"
-            title="Template Editor (Dev Mode)"
-          >
-            <FlaskConical className="w-4 h-4" />
-            <span className="text-sm font-medium">Templates</span>
-          </button>
-        </div>
-      )}
-
       {/* Auth Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           {/* Logo */}
-          {!isDevMode && (
-            <div className="text-center mb-8 flex flex-col items-center">
-              <UrckLogo size="lg" showText={false} />
-              <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">Welcome to Urck</h1>
-              <p className="text-gray-600">Databricks Automation Builder</p>
-            </div>
-          )}
-          {isDevMode && (
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Urck</h1>
-              <p className="text-gray-600">Databricks Automation Builder</p>
-              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
-                <FlaskConical className="w-3 h-3" />
-                Dev Mode Active
-              </div>
-            </div>
-          )}
+          <div className="text-center mb-8 flex flex-col items-center">
+            <UroqLogo size="lg" showText={false} />
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">Welcome to Uroq</h1>
+            <p className="text-gray-600">Automation Builder</p>
+          </div>
 
           {/* Auth Card */}
           <div className="bg-white rounded-2xl shadow-xl p-8">

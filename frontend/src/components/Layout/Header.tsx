@@ -3,12 +3,13 @@ import { useStore } from '@/store/useStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useDevMode } from '@/hooks/useDevMode';
 import { WorkspaceSelector } from '../Auth/WorkspaceSelector';
+import { ProjectSelector } from '../Project/ProjectSelector';
 import { SettingsModal } from '../Settings/SettingsModal';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export function Header() {
-  const { toggleChat } = useStore();
+  const { toggleChat, currentWorkspace } = useStore();
   const { user, signOut } = useAuth();
   const { isDevMode } = useDevMode();
   const navigate = useNavigate();
@@ -34,14 +35,17 @@ export function Header() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Bricker</h1>
-          <p className="text-xs text-gray-500">Databricks Automation Builder</p>
+          <p className="text-xs text-gray-500">Automation Builder</p>
         </div>
       </div>
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
-        {/* Workspace Selector */}
+        {/* Workspace Selector - always shown */}
         <WorkspaceSelector />
+
+        {/* Project Selector - shown when a workspace is selected */}
+        {currentWorkspace && <ProjectSelector />}
 
         {/* Dev Mode - Template Editor */}
         {isDevMode && (

@@ -19,8 +19,8 @@ export const hasDevAdminAccess = () => config.devAdminAccess && isDevMode();
 
 // Debug helper
 if (isDevMode()) {
-  console.log('[Urck] Running in development mode');
+  console.log('[Uroq] Running in development mode');
   if (hasDevAdminAccess()) {
-    console.log('[Urck] Dev admin access enabled - all features unlocked');
+    console.log('[Uroq] Dev admin access enabled - all features unlocked');
   }
 }

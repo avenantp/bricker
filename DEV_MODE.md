@@ -2,7 +2,7 @@
 
 ## Overview
 
-Urck includes a development mode that bypasses all subscription and access control restrictions, allowing you to test all features without setting up companies, subscriptions, or role-based permissions.
+Uroq includes a development mode that bypasses all subscription and access control restrictions, allowing you to test all features without setting up companies, subscriptions, or role-based permissions.
 
 ## Enabling Dev Mode
 

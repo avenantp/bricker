@@ -40,7 +40,7 @@ export function ChatInterface() {
 
   const examplePrompts = [
     'Create a dimension from product and category tables',
-    'Recommend a data vault model optimized for Databricks',
+    'Recommend an optimized data vault model',
     'Generate a Type 2 SCD for customers',
   ];
 
@@ -107,7 +107,7 @@ export function ChatInterface() {
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               Describe your data model requirements in plain English and I'll help you
-              design optimized Databricks models.
+              design optimized models.
             </p>
             <div className="text-xs text-gray-500">
               Try one of these examples:

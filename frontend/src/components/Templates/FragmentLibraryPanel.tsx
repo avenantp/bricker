@@ -36,28 +36,52 @@ const FRAGMENT_CATEGORIES = [
     description: 'Hubs, Links, Satellites, PITs, Bridges',
   },
   {
-    id: 'staging',
-    label: 'Staging',
-    icon: Layers,
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    description: 'Landing, Raw, Staging tables',
-  },
-  {
-    id: 'dimensional',
-    label: 'Dimensional',
+    id: 'data_mart',
+    label: 'Data Mart',
     icon: Box,
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
     description: 'Facts, Dimensions, Data Marts',
   },
   {
-    id: 'utility',
-    label: 'Utility',
+    id: 'staging',
+    label: 'Staging',
+    icon: Layers,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    description: 'Staging area transformations',
+  },
+  {
+    id: 'landing',
+    label: 'Landing',
+    icon: FolderOpen,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+    description: 'Landing zone ingestion',
+  },
+  {
+    id: 'jobs',
+    label: 'Jobs',
     icon: Wrench,
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
-    description: 'Common utilities and helpers',
+    description: 'Job definitions and orchestration',
+  },
+  {
+    id: 'pipelines',
+    label: 'Pipelines',
+    icon: FileCode,
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    description: 'Pipeline workflows',
+  },
+  {
+    id: 'custom',
+    label: 'Custom',
+    icon: FileCode,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    description: 'Custom fragments',
   },
 ];
 
@@ -68,7 +92,7 @@ export function FragmentLibraryPanel({
   selectedFragmentId,
 }: FragmentLibraryPanelProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['data_vault', 'staging', 'dimensional', 'utility'])
+    new Set(['data_vault', 'data_mart', 'staging', 'landing', 'jobs', 'pipelines', 'custom'])
   );
 
   const toggleCategory = (categoryId: string) => {

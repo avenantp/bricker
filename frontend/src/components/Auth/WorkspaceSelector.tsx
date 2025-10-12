@@ -144,7 +144,7 @@ export function WorkspaceSelector() {
                   value={newWorkspaceName}
                   onChange={(e) => setNewWorkspaceName(e.target.value)}
                   className="input-field w-full"
-                  placeholder="My Databricks Project"
+                  placeholder="My Workspace"
                   required
                   disabled={creating}
                 />
