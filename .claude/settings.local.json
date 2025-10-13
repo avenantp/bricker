@@ -1,24 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(prp:*)",
-      "Bash(where prp)",
-      "Bash(test:*)",
-      "Bash(npm run build:*)",
-      "Bash(npm install)",
-      "Bash(cat:*)",
-      "Bash(npm run dev:*)",
-      "Bash(node:*)",
-      "Bash(taskkill:*)",
-      "Bash(npm install:*)",
-      "Bash(find:*)",
-      "Bash(git config:*)",
-      "Bash(git add:*)",
-      "Bash(git rm:*)",
-      "Bash(npm update:*)",
-      "Bash(npm outdated)",
-      "Bash(npm run type-check:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

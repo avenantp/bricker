@@ -1,21 +1,22 @@
 /**
  * Conflict Resolution Dialog
- * Shows when a node has been modified concurrently by multiple users
+ * Shows when a dataset has been modified concurrently by multiple users
+ * Provides options to resolve merge conflicts between local and remote versions
  */
 
 import { useState } from 'react';
 import { AlertTriangle, User, Clock, GitBranch, Check, X } from 'lucide-react';
 import type {
-  NodeConflict,
+  DatasetConflict,
   ConflictResolutionStrategy,
-  Node,
-} from '../../types/node';
+  Dataset,
+} from '../../types/dataset';
 
 interface ConflictResolutionDialogProps {
-  conflict: NodeConflict;
+  conflict: DatasetConflict;
   isOpen: boolean;
   onClose: () => void;
-  onResolve: (strategy: ConflictResolutionStrategy, mergedNode?: Node) => Promise<void>;
+  onResolve: (strategy: ConflictResolutionStrategy, mergedDataset?: Dataset) => Promise<void>;
 }
 
 export function ConflictResolutionDialog({
@@ -58,7 +59,7 @@ export function ConflictResolutionDialog({
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Conflict Detected</h2>
               <p className="text-sm text-gray-600 mt-1">
-                This node has been modified by another user while you were editing it.
+                This dataset has been modified by another user while you were editing it.
               </p>
             </div>
           </div>
@@ -66,10 +67,10 @@ export function ConflictResolutionDialog({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Node Info */}
+          {/* Dataset Info */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <div className="font-medium text-gray-900">{conflict.fqn}</div>
-            <div className="text-sm text-gray-500 mt-1">UUID: {conflict.uuid}</div>
+            <div className="font-medium text-gray-900">{conflict.dataset_name}</div>
+            <div className="text-sm text-gray-500 mt-1">ID: {conflict.dataset_id}</div>
           </div>
 
           {/* Version Comparison */}

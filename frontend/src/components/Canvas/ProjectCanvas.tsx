@@ -28,7 +28,7 @@ import {
   Grid3x3,
   Save,
 } from 'lucide-react';
-import { DataNode } from './DataNode';
+import { DatasetNode } from './DatasetNode';
 import { RelationshipEdge } from './RelationshipEdge';
 import type {
   CanvasNode,
@@ -40,7 +40,7 @@ import type {
 
 // Define node and edge types
 const nodeTypes = {
-  dataNode: DataNode,
+  dataNode: DatasetNode, // Using DatasetNode (renamed from DataNode)
 };
 
 const edgeTypes = {

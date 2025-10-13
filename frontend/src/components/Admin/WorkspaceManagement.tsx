@@ -8,8 +8,8 @@ interface WorkspaceWithDetails {
   name: string;
   description: string | null;
   owner_id: string;
-  github_repo_url: string | null;
-  github_connection_status: string | null;
+  source_control_repo_url: string | null;
+  source_control_connection_status: string | null;
   created_at: string;
   updated_at: string;
   owner_email?: string;
@@ -217,12 +217,12 @@ export function WorkspaceManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      {workspace.github_repo_url ? (
+                      {workspace.source_control_repo_url ? (
                         <>
                           <div className={`w-2 h-2 rounded-full ${
-                            workspace.github_connection_status === 'connected' ? 'bg-green-500' :
-                            workspace.github_connection_status === 'error' ? 'bg-red-500' :
-                            workspace.github_connection_status === 'pending' ? 'bg-yellow-500' :
+                            workspace.source_control_connection_status === 'connected' ? 'bg-green-500' :
+                            workspace.source_control_connection_status === 'error' ? 'bg-red-500' :
+                            workspace.source_control_connection_status === 'pending' ? 'bg-yellow-500' :
                             'bg-gray-300'
                           }`} />
                           <GitBranch className="w-4 h-4 text-gray-400" />

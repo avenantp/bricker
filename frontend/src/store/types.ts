@@ -75,6 +75,15 @@ export interface DataModelYAML {
 
 export type UserRole = 'owner' | 'admin' | 'contributor' | 'viewer';
 
+export interface SyncStatus {
+  hasUncommittedChanges: boolean;
+  uncommittedCount: number;
+  conflictCount: number;
+  isSyncing: boolean;
+  lastSyncTime: Date | null;
+  syncError: string | null;
+}
+
 export interface AppState {
   // Company
   currentCompany: Company | null;
@@ -108,6 +117,15 @@ export interface AppState {
   updateNode: (id: string, updates: Partial<Node>) => void;
   deleteNode: (id: string) => void;
 
+  // Source Control Sync State
+  syncStatus: SyncStatus;
+  setSyncStatus: (status: Partial<SyncStatus>) => void;
+  resetSyncStatus: () => void;
+
+  // Dataset State
+  selectedDatasetId: string | null;
+  setSelectedDatasetId: (id: string | null) => void;
+
   // Chat/Assistant
   messages: Message[];
   isAssistantTyping: boolean;
@@ -120,8 +138,10 @@ export interface AppState {
   isPropertiesPanelOpen: boolean;
   selectedNodeId: string | null;
   isDarkMode: boolean;
+  isSourceControlSyncPanelOpen: boolean;
   toggleChat: () => void;
   togglePropertiesPanel: () => void;
+  toggleSourceControlSyncPanel: () => void;
   setSelectedNodeId: (id: string | null) => void;
   toggleDarkMode: () => void;
 }

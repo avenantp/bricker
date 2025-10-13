@@ -11,8 +11,8 @@ export function WorkspaceSettings() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [githubRepo, setGithubRepo] = useState('');
-  const [githubConnectionStatus, setGithubConnectionStatus] = useState('');
+  const [sourceControlRepo, setSourceControlRepo] = useState('');
+  const [sourceControlConnectionStatus, setSourceControlConnectionStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -24,8 +24,8 @@ export function WorkspaceSettings() {
     if (currentWorkspace) {
       setName(currentWorkspace.name);
       setDescription(currentWorkspace.description || '');
-      setGithubRepo(currentWorkspace.github_repo_url || '');
-      setGithubConnectionStatus(currentWorkspace.github_connection_status || 'disconnected');
+      setSourceControlRepo(currentWorkspace.source_control_repo_url || '');
+      setSourceControlConnectionStatus(currentWorkspace.source_control_connection_status || 'disconnected');
 
       getUserRole(currentWorkspace.id).then(role => setUserRole(role));
     }
@@ -42,7 +42,7 @@ export function WorkspaceSettings() {
       await updateWorkspace(currentWorkspace.id, {
         name,
         description: description || null,
-        github_repo_url: githubRepo || null,
+        source_control_repo_url: sourceControlRepo || null,
       });
 
       setSuccess('Workspace settings updated successfully');
@@ -135,28 +135,28 @@ export function WorkspaceSettings() {
         </div>
       </div>
 
-      {/* GitHub Integration */}
+      {/* Source Control Integration */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <GitBranch className="w-5 h-5 text-gray-700" />
-          <h3 className="text-lg font-semibold text-gray-900">GitHub Integration</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Source Control Integration</h3>
         </div>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              GitHub Repository URL
+              Source Control Repository URL
             </label>
             <input
               type="text"
-              value={githubRepo}
-              onChange={(e) => setGithubRepo(e.target.value)}
+              value={sourceControlRepo}
+              onChange={(e) => setSourceControlRepo(e.target.value)}
               className="input-field w-full"
               placeholder="https://github.com/username/repo"
               disabled={!canEdit || saving}
             />
             <p className="mt-1 text-xs text-gray-500">
-              Repository where node definitions will be stored
+              Repository where dataset definitions will be stored
             </p>
           </div>
 
@@ -166,13 +166,13 @@ export function WorkspaceSettings() {
             </label>
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${
-                githubConnectionStatus === 'connected' ? 'bg-green-500' :
-                githubConnectionStatus === 'error' ? 'bg-red-500' :
-                githubConnectionStatus === 'pending' ? 'bg-yellow-500' :
+                sourceControlConnectionStatus === 'connected' ? 'bg-green-500' :
+                sourceControlConnectionStatus === 'error' ? 'bg-red-500' :
+                sourceControlConnectionStatus === 'pending' ? 'bg-yellow-500' :
                 'bg-gray-300'
               }`} />
               <span className="text-sm text-gray-700 capitalize">
-                {githubConnectionStatus || 'Not connected'}
+                {sourceControlConnectionStatus || 'Not connected'}
               </span>
             </div>
           </div>

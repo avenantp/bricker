@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "params": {
+        "read_only": "true",
+        "project_ref": "dhclhobnxhdkkxrbtmkb",
+        "features": "database,docs"
+      }
+    }
+  }
+}

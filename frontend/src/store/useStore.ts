@@ -62,6 +62,35 @@ export const useStore = create<AppState>((set) => ({
       edges: state.edges.filter((e) => e.source !== id && e.target !== id),
     })),
 
+  // Source Control Sync State
+  syncStatus: {
+    hasUncommittedChanges: false,
+    uncommittedCount: 0,
+    conflictCount: 0,
+    isSyncing: false,
+    lastSyncTime: null,
+    syncError: null,
+  },
+  setSyncStatus: (status) =>
+    set((state) => ({
+      syncStatus: { ...state.syncStatus, ...status },
+    })),
+  resetSyncStatus: () =>
+    set({
+      syncStatus: {
+        hasUncommittedChanges: false,
+        uncommittedCount: 0,
+        conflictCount: 0,
+        isSyncing: false,
+        lastSyncTime: null,
+        syncError: null,
+      },
+    }),
+
+  // Dataset State
+  selectedDatasetId: null,
+  setSelectedDatasetId: (id) => set({ selectedDatasetId: id }),
+
   // Chat/Assistant
   messages: [],
   isAssistantTyping: false,
@@ -77,9 +106,12 @@ export const useStore = create<AppState>((set) => ({
   isPropertiesPanelOpen: true,
   selectedNodeId: null,
   isDarkMode: false,
+  isSourceControlSyncPanelOpen: false,
   toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
   togglePropertiesPanel: () =>
     set((state) => ({ isPropertiesPanelOpen: !state.isPropertiesPanelOpen })),
+  toggleSourceControlSyncPanel: () =>
+    set((state) => ({ isSourceControlSyncPanelOpen: !state.isSourceControlSyncPanelOpen })),
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
   toggleDarkMode: () => set((state) => {
     console.log('[Store] toggleDarkMode called, current:', state.isDarkMode, 'new:', !state.isDarkMode);

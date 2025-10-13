@@ -78,8 +78,14 @@ export interface CanvasNodeData {
   // AI confidence score
   ai_confidence_score?: number;
 
-  // Git tracking
+  // Git tracking (legacy)
   git_commit_hash?: string;
+
+  // Source control sync status (new)
+  sync_status?: 'synced' | 'pending' | 'conflict' | 'error' | 'not_synced';
+  has_uncommitted_changes?: boolean;
+  source_commit_sha?: string;
+  last_synced_at?: string;
 
   // Timestamps
   created_at: string;

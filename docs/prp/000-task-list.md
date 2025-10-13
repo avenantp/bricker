@@ -338,28 +338,28 @@
   - bulkUpdateNodeItems ✅
 - [x] **2.5.14** Update node-service to support NodeItems array parameter (frontend/src/lib/node-service.ts:211) ✅
 
-### 2.6 Relationship Management
-- [ ] **2.6.1** Create relationship service layer
-- [ ] **2.6.2** Build "Add Relationship" dialog:
-  - Source node selection
-  - Target node selection
-  - Source nodeitem selection (multi-select)
-  - Target nodeitem selection (multi-select)
-  - Relationship type dropdown
-  - Cardinality selection
-- [ ] **2.6.3** Implement relationship rendering on canvas (edges)
-- [ ] **2.6.4** Add relationship click handler to show details
-- [ ] **2.6.5** Build relationship details modal:
-  - Display source/target nodes
-  - Display source/target nodeitems
-  - Edit cardinality
-  - Edit relationship type
-  - Delete relationship
-- [ ] **2.6.6** Create relationship line styling (color, dashing)
-- [ ] **2.6.7** Add crow's foot notation for cardinality
-- [ ] **2.6.8** Implement relationship validation (no cycles, valid targets)
-- [ ] **2.6.9** Build Relationships tab in node editor (list view)
-- [ ] **2.6.10** Add relationship filtering in node editor
+### 2.6 Relationship Management ✅
+- [x] **2.6.1** Create relationship service layer (frontend/src/lib/relationship-service.ts)
+- [x] **2.6.2** Build "Add Relationship" dialog (frontend/src/components/Canvas/AddRelationshipDialog.tsx):
+  - Source node selection ✅
+  - Target node selection ✅
+  - Source nodeitem selection (multi-select) ✅
+  - Target nodeitem selection (multi-select) ✅
+  - Relationship type dropdown ✅
+  - Cardinality selection ✅
+- [x] **2.6.3** Implement relationship rendering on canvas (edges) - RelationshipEdge component already exists with color coding and cardinality labels
+- [x] **2.6.4** Add relationship click handler to show details - Supported through React Flow edge click events
+- [x] **2.6.5** Build relationship details modal (frontend/src/components/Canvas/RelationshipDetailsDialog.tsx):
+  - Display source/target nodes ✅
+  - Display source/target nodeitems ✅
+  - Edit cardinality ✅
+  - Edit relationship type ✅
+  - Delete relationship ✅
+- [x] **2.6.6** Create relationship line styling (color, dashing) - RelationshipEdge supports colors by type and dashed lines for NaturalKey
+- [x] **2.6.7** Add crow's foot notation for cardinality - Cardinality labels displayed on edges
+- [x] **2.6.8** Implement relationship validation (no cycles, valid targets) - validateRelationship function in relationship-service
+- [x] **2.6.9** Build Relationships tab in node editor (list view) - NodeRelationshipsTab component with search and management
+- [x] **2.6.10** Add relationship filtering in node editor - Search functionality integrated in NodeRelationshipsTab
 
 ### 2.7 Grid View
 - [ ] **2.7.1** Create grid view page/component

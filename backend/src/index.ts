@@ -5,6 +5,16 @@ import { MCPServerManager } from './mcp/mcp-manager.js';
 import { AssistantHandler } from './assistant/handler.js';
 import { createAssistantRouter } from './routes/assistant.js';
 import githubRouter from './routes/github.js';
+import datasetsRouter from './routes/datasets.js';
+import sourceControlSyncRouter from './routes/source-control-sync.js';
+import {
+  changeTrackingMiddleware,
+  requestLoggerMiddleware,
+} from './middleware/change-tracking.js';
+import {
+  errorHandler,
+  notFoundHandler,
+} from './middleware/error-handler.js';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +25,8 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(requestLoggerMiddleware);
+app.use(changeTrackingMiddleware);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -42,6 +54,8 @@ async function startServer() {
     // Set up routes
     app.use('/api/assistant', createAssistantRouter(assistantHandler, mcpManager));
     app.use('/api/github', githubRouter);
+    app.use('/api/datasets', datasetsRouter);
+    app.use('/api/source-control-sync', sourceControlSyncRouter);
 
     // Root endpoint
     app.get('/', (req, res) => {
@@ -53,18 +67,17 @@ async function startServer() {
           health: '/health',
           assistant: '/api/assistant/*',
           github: '/api/github/*',
+          datasets: '/api/datasets/*',
+          sourceControlSync: '/api/source-control-sync/*',
         },
       });
     });
 
-    // Error handling middleware
-    app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-      console.error('[Server] Unhandled error:', err);
-      res.status(500).json({
-        error: 'Internal server error',
-        message: err.message,
-      });
-    });
+    // 404 handler (must be after all routes)
+    app.use(notFoundHandler);
+
+    // Error handling middleware (must be last)
+    app.use(errorHandler);
 
     // Start server
     const server = app.listen(PORT, () => {

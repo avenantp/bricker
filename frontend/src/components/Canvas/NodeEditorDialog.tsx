@@ -32,6 +32,7 @@ import type {
 } from '../../types/canvas';
 import { NodeItemsTable } from './NodeItemsTable';
 import { CreateNodeItemDialog } from './CreateNodeItemDialog';
+import { NodeRelationshipsTab } from './NodeRelationshipsTab';
 
 type TabType = 'properties' | 'nodeitems' | 'mappings' | 'relationships' | 'ai_insights' | 'history';
 
@@ -46,6 +47,9 @@ interface NodeEditorDialogProps {
   onUpdateNodeItem: (nodeUuid: string, itemUuid: string, updates: UpdateNodeItemPayload) => Promise<void>;
   onDeleteNodeItem: (nodeUuid: string, itemUuid: string) => Promise<void>;
   onDeleteMultipleNodeItems: (nodeUuid: string, itemUuids: string[]) => Promise<void>;
+  githubToken?: string;
+  githubRepo?: string;
+  onAddRelationship?: (nodeUuid: string) => void;
   defaultCatalog?: string;
   defaultSchema?: string;
 }
@@ -61,6 +65,9 @@ export function NodeEditorDialog({
   onUpdateNodeItem,
   onDeleteNodeItem,
   onDeleteMultipleNodeItems,
+  githubToken = '',
+  githubRepo = '',
+  onAddRelationship,
   defaultCatalog = 'main',
   defaultSchema,
 }: NodeEditorDialogProps) {
@@ -325,7 +332,7 @@ export function NodeEditorDialog({
     { id: 'properties', label: 'Properties', icon: FileText },
     { id: 'nodeitems', label: 'Columns', icon: Database },
     { id: 'mappings', label: 'Mappings', icon: GitBranch, disabled: true },
-    { id: 'relationships', label: 'Relationships', icon: LinkIcon, disabled: true },
+    { id: 'relationships', label: 'Relationships', icon: LinkIcon, disabled: !githubToken || !githubRepo },
     { id: 'ai_insights', label: 'AI Insights', icon: Bot, disabled: true },
     { id: 'history', label: 'History', icon: History, disabled: true },
   ] as const;
@@ -669,11 +676,16 @@ export function NodeEditorDialog({
               </div>
             )}
 
-            {activeTab === 'relationships' && (
-              <div className="text-center py-12">
-                <LinkIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Relationships management coming in Phase 2.6</p>
-              </div>
+            {activeTab === 'relationships' && node && githubToken && githubRepo && (
+              <NodeRelationshipsTab
+                node={node}
+                githubToken={githubToken}
+                githubRepo={githubRepo}
+                onAddRelationship={() => onAddRelationship?.(node.uuid)}
+                onRefresh={() => {
+                  // Refresh can be handled by reloading the node
+                }}
+              />
             )}
 
             {activeTab === 'ai_insights' && (
