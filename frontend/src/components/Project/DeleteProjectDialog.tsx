@@ -3,62 +3,36 @@
  * Shows cascade warning before deleting a project
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
-import type { Project, ProjectDeletionInfo } from '../../types/project';
-import { getProjectDeletionInfo, deleteProject } from '../../lib/project-service';
+import { useDeleteProject } from '../../hooks';
 
 interface DeleteProjectDialogProps {
-  project: Project;
+  projectId: string;
   onClose: () => void;
-  onDeleted: () => void;
+  onSuccess?: () => void;
 }
 
 export function DeleteProjectDialog({
-  project,
+  projectId,
   onClose,
-  onDeleted,
+  onSuccess,
 }: DeleteProjectDialogProps) {
-  const [loading, setLoading] = useState(true);
-  const [deletionInfo, setDeletionInfo] = useState<ProjectDeletionInfo | null>(
-    null
-  );
-  const [confirmText, setConfirmText] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
-  useEffect(() => {
-    loadDeletionInfo();
-  }, [project.id]);
-
-  const loadDeletionInfo = async () => {
-    setLoading(true);
-    try {
-      const info = await getProjectDeletionInfo(project.id);
-      setDeletionInfo(info);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load deletion info');
-    } finally {
-      setLoading(false);
+  // Delete project mutation
+  const deleteProjectMutation = useDeleteProject({
+    onSuccess: () => {
+      onSuccess?.();
+    },
+    onError: (error) => {
+      console.error('Failed to delete project:', error);
     }
-  };
+  });
 
-  const handleDelete = async () => {
-    if (confirmText !== project.name) {
-      setError('Project name does not match');
-      return;
-    }
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      await deleteProject(project.id);
-      onDeleted();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete project');
-      setDeleting(false);
-    }
+  const handleDelete = () => {
+    if (!confirmed) return;
+    deleteProjectMutation.mutate(projectId);
   };
 
   return (
@@ -75,7 +49,7 @@ export function DeleteProjectDialog({
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={deleting}
+            disabled={deleteProjectMutation.isPending}
           >
             <X className="w-6 h-6" />
           </button>
@@ -83,92 +57,47 @@ export function DeleteProjectDialog({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          {loading ? (
-            <div className="text-center py-8 text-gray-500">
-              Loading deletion info...
-            </div>
-          ) : error && !deletionInfo ? (
+          {/* Warning Message */}
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 font-medium mb-2">
+              This action cannot be undone!
+            </p>
+            <p className="text-sm text-red-700">
+              Deleting this project will permanently remove:
+            </p>
+            <ul className="mt-2 text-sm text-red-700 space-y-1 list-disc list-inside">
+              <li>The project and all its settings</li>
+              <li>All workspaces associated with this project</li>
+              <li>All datasets and configurations</li>
+              <li>All data models and metadata</li>
+              <li>Member associations and permissions</li>
+            </ul>
+          </div>
+
+          {/* Confirmation Checkbox */}
+          <div className="flex items-start gap-3">
+            <input
+              id="confirm"
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="mt-1 w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+              disabled={deleteProjectMutation.isPending}
+            />
+            <label htmlFor="confirm" className="text-sm text-gray-700 select-none">
+              I understand that this action is permanent and cannot be undone. All data associated
+              with this project will be permanently deleted.
+            </label>
+          </div>
+
+          {/* Error Message */}
+          {deleteProjectMutation.isError && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="text-sm text-red-600">
+                {deleteProjectMutation.error?.message || 'Failed to delete project'}
+              </p>
             </div>
-          ) : deletionInfo ? (
-            <>
-              {/* Warning Message */}
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800 font-medium mb-2">
-                  This action cannot be undone!
-                </p>
-                <p className="text-sm text-red-700">
-                  Deleting this project will permanently remove:
-                </p>
-              </div>
-
-              {/* Cascade Warning */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
-                  <span className="text-sm text-gray-700">Project</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {deletionInfo.project.name}
-                  </span>
-                </div>
-
-                {deletionInfo.data_models_count > 0 && (
-                  <div className="flex items-center justify-between py-2 px-3 bg-red-50 rounded">
-                    <span className="text-sm text-red-700">Data Models</span>
-                    <span className="text-sm font-semibold text-red-900">
-                      {deletionInfo.data_models_count}
-                    </span>
-                  </div>
-                )}
-
-                {deletionInfo.uuid_registry_count > 0 && (
-                  <div className="flex items-center justify-between py-2 px-3 bg-red-50 rounded">
-                    <span className="text-sm text-red-700">
-                      UUID Registry Entries
-                    </span>
-                    <span className="text-sm font-semibold text-red-900">
-                      {deletionInfo.uuid_registry_count}
-                    </span>
-                  </div>
-                )}
-
-                {!deletionInfo.has_dependencies && (
-                  <div className="py-2 px-3 bg-green-50 rounded">
-                    <p className="text-sm text-green-700">
-                      No dependencies found. This project can be safely deleted.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Confirmation Input */}
-              <div>
-                <label
-                  htmlFor="confirm"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Type <span className="font-bold">{project.name}</span> to
-                  confirm deletion:
-                </label>
-                <input
-                  id="confirm"
-                  type="text"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder={project.name}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  disabled={deleting}
-                />
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
-            </>
-          ) : null}
+          )}
         </div>
 
         {/* Actions */}
@@ -176,16 +105,16 @@ export function DeleteProjectDialog({
           <button
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-            disabled={deleting}
+            disabled={deleteProjectMutation.isPending}
           >
             Cancel
           </button>
           <button
             onClick={handleDelete}
             className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={deleting || confirmText !== project.name || loading}
+            disabled={deleteProjectMutation.isPending || !confirmed}
           >
-            {deleting ? 'Deleting...' : 'Delete Project'}
+            {deleteProjectMutation.isPending ? 'Deleting...' : 'Delete Project'}
           </button>
         </div>
       </div>

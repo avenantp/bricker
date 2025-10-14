@@ -1,66 +1,60 @@
 /**
  * Create Project Dialog
- * Modal dialog for creating a new project
+ * Modal dialog for creating a new project using React Query hooks
  */
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
-import type { ProjectType, CreateProjectPayload, Project } from '../../types/project';
-import { createProject } from '../../lib/project-service';
+import { X, AlertCircle } from 'lucide-react';
+import { useCreateProject } from '../../hooks';
+import type { ProjectType, ProjectVisibility, CreateProjectInput } from '@/types/project';
 
 interface CreateProjectDialogProps {
-  workspaceId: string;
+  accountId: string;
   onClose: () => void;
-  onProjectCreated: (project: Project) => void;
+  onSuccess?: () => void;
 }
 
 export function CreateProjectDialog({
-  workspaceId,
+  accountId,
   onClose,
-  onProjectCreated,
+  onSuccess,
 }: CreateProjectDialogProps) {
+  // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [projectType, setProjectType] = useState<ProjectType>('Standard');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<ProjectVisibility>('private');
 
-  // Configuration state
-  const [medallionEnabled, setMedallionEnabled] = useState(false);
-  const [defaultCatalog, setDefaultCatalog] = useState('');
-  const [defaultSchema, setDefaultSchema] = useState('');
+  // TODO: Get current user ID from auth context
+  const userId = '00000000-0000-0000-0000-000000000000'; // Placeholder
+
+  // Create project mutation
+  const createProjectMutation = useCreateProject({
+    onSuccess: () => {
+      onSuccess?.();
+    },
+    onError: (error) => {
+      console.error('Failed to create project:', error);
+    }
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
-      setError('Project name is required');
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    const input: CreateProjectInput = {
+      account_id: accountId,
+      name: name.trim(),
+      description: description.trim() || undefined,
+      project_type: projectType,
+      visibility,
+      owner_id: userId
+    };
 
-    try {
-      const payload: CreateProjectPayload = {
-        workspace_id: workspaceId,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        project_type: projectType,
-        configuration: {
-          medallion_layers_enabled: medallionEnabled,
-          default_catalog: defaultCatalog || undefined,
-          default_schema: defaultSchema || undefined,
-        },
-      };
-
-      const newProject = await createProject(payload);
-      onProjectCreated(newProject);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project');
-    } finally {
-      setLoading(false);
-    }
+    createProjectMutation.mutate({ input, userId });
   };
 
   return (
@@ -80,9 +74,15 @@ export function CreateProjectDialog({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error Message */}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
+          {createProjectMutation.isError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Failed to create project</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {createProjectMutation.error?.message || 'An unexpected error occurred'}
+                </p>
+              </div>
             </div>
           )}
 
@@ -145,55 +145,31 @@ export function CreateProjectDialog({
             </div>
           </div>
 
-          {/* Configuration */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">
-              Configuration (Optional)
-            </h3>
-
-            {/* Medallion Architecture */}
-            <div className="mb-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={medallionEnabled}
-                  onChange={(e) => setMedallionEnabled(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Enable Medallion Architecture (Bronze/Silver/Gold)
-                </span>
-              </label>
-            </div>
-
-            {/* Default Catalog */}
-            <div className="mb-4">
-              <label htmlFor="catalog" className="block text-sm font-medium text-gray-700 mb-2">
-                Default Catalog
-              </label>
-              <input
-                id="catalog"
-                type="text"
-                value={defaultCatalog}
-                onChange={(e) => setDefaultCatalog(e.target.value)}
-                placeholder="main"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Default Schema */}
-            <div>
-              <label htmlFor="schema" className="block text-sm font-medium text-gray-700 mb-2">
-                Default Schema
-              </label>
-              <input
-                id="schema"
-                type="text"
-                value={defaultSchema}
-                onChange={(e) => setDefaultSchema(e.target.value)}
-                placeholder="default"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {/* Visibility */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Visibility *
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              {(['private', 'team', 'organization'] as ProjectVisibility[]).map((vis) => (
+                <button
+                  key={vis}
+                  type="button"
+                  onClick={() => setVisibility(vis)}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    visibility === vis
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="font-semibold capitalize">{vis}</div>
+                  <div className="text-xs mt-1 opacity-75">
+                    {vis === 'private' && 'Only you'}
+                    {vis === 'team' && 'Your team'}
+                    {vis === 'organization' && 'Everyone'}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -203,16 +179,16 @@ export function CreateProjectDialog({
               type="button"
               onClick={onClose}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              disabled={loading}
+              disabled={createProjectMutation.isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
+              disabled={createProjectMutation.isPending || !name.trim()}
             >
-              {loading ? 'Creating...' : 'Create Project'}
+              {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
             </button>
           </div>
         </form>

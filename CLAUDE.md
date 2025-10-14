@@ -129,6 +129,92 @@ The project is structured in 6 phases:
 5. Testing & MCP - MCP servers, Databricks API integration (Weeks 13-14)
 6. Polish & Launch - Testing, optimization, documentation (Weeks 15-16)
 
+## UI Standards & Component Guidelines
+
+### Button Classes
+
+All buttons in the application MUST use standardized CSS classes defined in `frontend/src/index.css`. **Never use inline button styles.**
+
+**Available Button Classes:**
+
+1. **`.btn-primary`** - Primary action buttons
+   - Use for: Main actions like "Save", "Create", "Submit", "New Project"
+   - Styling: `bg-primary-500` (teal in light mode, orange in dark mode) with white text
+   - Example:
+   ```tsx
+   <button onClick={handleSave} className="btn-primary">
+     Save Changes
+   </button>
+
+   // With icon:
+   <button onClick={handleCreate} className="btn-primary inline-flex items-center gap-2">
+     <Plus className="w-5 h-5" />
+     New Project
+   </button>
+   ```
+
+2. **`.btn-secondary`** - Secondary action buttons
+   - Use for: Secondary actions like "Cancel", "Previous/Next" pagination, "Back"
+   - Styling: `bg-gray-200` (light mode) / `bg-gray-700` (dark mode) with appropriate text colors
+   - Example:
+   ```tsx
+   <button onClick={handleCancel} className="btn-secondary">
+     Cancel
+   </button>
+
+   // Pagination:
+   <button onClick={handleNext} className="btn-secondary text-sm px-3 py-1">
+     Next
+   </button>
+   ```
+
+3. **`.btn-icon`** - Icon-only buttons
+   - Use for: Settings icons, close buttons, menu toggles, expand/collapse buttons
+   - Styling: Minimal padding with hover state, no background color by default
+   - Example:
+   ```tsx
+   <button onClick={handleClose} className="btn-icon" title="Close">
+     <X className="w-5 h-5 text-gray-500" />
+   </button>
+
+   // With additional layout:
+   <button onClick={toggleMenu} className="btn-icon flex items-center gap-2">
+     <Menu className="w-5 h-5" />
+   </button>
+   ```
+
+**Important Notes:**
+- All button classes include built-in disabled states (`disabled:opacity-50 disabled:cursor-not-allowed`)
+- All button classes include smooth transitions (`transition-colors`)
+- Size modifiers (like `text-sm px-3 py-1`) can override default padding when needed
+- Layout classes (like `inline-flex items-center gap-2`) should be added for buttons with icons
+- Color overrides are allowed for special cases (e.g., red for delete: `btn-primary !bg-red-600 !hover:bg-red-700`)
+
+### Dark Mode Support
+
+All UI components must support dark mode using Tailwind's `dark:` modifier:
+- Background colors: `bg-white dark:bg-gray-800`
+- Text colors: `text-gray-900 dark:text-gray-100`
+- Border colors: `border-gray-200 dark:border-gray-700`
+- The dark mode toggle updates `document.documentElement.classList` with the `dark` class
+
+### Color Palette
+
+**Primary Colors (CSS variables):**
+- Light mode: Teal/Dark Green (`#1e413a`)
+- Dark mode: Orange (`#f46428`)
+
+**Secondary Colors:**
+- Vibrant Orange: `#FF3D12`
+
+**Accent Colors:**
+- Steel Blue: `#4682b4` (for secondary UI elements like view mode toggles)
+
+**Use Tailwind color utilities:**
+- Primary actions: `bg-primary-500`, `hover:bg-primary-600`
+- Accent elements: `bg-accent-300` (light mode) / `bg-accent-500` (dark mode)
+- Focus rings: `focus:ring-primary-500`
+
 ## Security Notes
 
 - Databricks tokens stored encrypted in Supabase

@@ -131,7 +131,7 @@ export function HomePage() {
                 console.log('[HomePage] Current isDarkMode:', isDarkMode);
                 toggleDarkMode();
               }}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="btn-icon"
               title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {isDarkMode ? (
@@ -141,14 +141,14 @@ export function HomePage() {
               )}
             </button>
 
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button className="btn-icon">
               <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="btn-icon flex items-center gap-2"
               >
                 <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
@@ -189,7 +189,7 @@ export function HomePage() {
                   </h3>
                   <button
                     onClick={() => currentWorkspace ? navigate(`/workspace/${currentWorkspace.id}/new`) : setShowCreateWorkspace(true)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                    className="btn-icon p-1"
                     title={currentWorkspace ? "Create Project" : "Create Workspace"}
                   >
                     <Plus className="w-4 h-4 text-gray-600 dark:text-gray-300" />
@@ -301,7 +301,7 @@ export function HomePage() {
                   </div>
                   <button
                     onClick={() => navigate(`/workspace/${currentWorkspace.id}/new`)}
-                    className="btn-primary flex items-center gap-2"
+                    className="btn-primary inline-flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     Create Project

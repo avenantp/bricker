@@ -150,7 +150,7 @@ export function ProjectSettingsPage() {
           <p className="text-sm text-gray-500">{error}</p>
           <button
             onClick={() => navigate('/projects')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="btn-primary mt-4"
           >
             Back to Projects
           </button>
@@ -180,7 +180,7 @@ export function ProjectSettingsPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/projects')}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              className="btn-icon text-gray-400 hover:text-gray-600"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -194,7 +194,7 @@ export function ProjectSettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="btn-primary flex items-center gap-2 px-6"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Changes'}

@@ -1,272 +1,433 @@
 /**
  * Projects Page
- * Displays list of projects in the current workspace
+ * Displays list of projects with filtering, search, and pagination
+ *
+ * Uses React Query hooks for data fetching and mutations.
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Grid, List, Settings, Moon, Sun, FlaskConical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useWorkspace } from '../hooks/useWorkspace';
-import { useProject } from '../hooks/useProject';
-import { getProjects, duplicateProject } from '../lib/project-service';
-import type { Project, ProjectType, ProjectFilters } from '../types/project';
+import { useProjects, useAccount } from '../hooks';
+import { useDevMode } from '../hooks/useDevMode';
+import { useStore } from '../store/useStore';
+import type { ProjectType, ProjectVisibility } from '@/types/project';
 import { ProjectCard } from '../components/Project/ProjectCard';
 import { CreateProjectDialog } from '../components/Project/CreateProjectDialog';
 import { DeleteProjectDialog } from '../components/Project/DeleteProjectDialog';
+import { ProjectSettingsDialog } from '../components/Project/ProjectSettingsDialog';
+import { SettingsModal } from '../components/Settings/SettingsModal';
+
+type ViewMode = 'grid' | 'list';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
-  const { currentWorkspace } = useWorkspace();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<ProjectType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'updated_at'>(
-    'updated_at'
-  );
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const { isDevMode } = useDevMode();
+  const { isDarkMode, toggleDarkMode } = useStore();
 
-  // Load projects when workspace changes
+  // Fetch user's account
+  const { data: account, isLoading: isLoadingAccount } = useAccount();
+
+  // Apply dark mode class to document element
   useEffect(() => {
-    if (!currentWorkspace?.id) {
-      setProjects([]);
-      setLoading(false);
-      return;
+    console.log('[ProjectsPage] isDarkMode changed:', isDarkMode);
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      console.log('[ProjectsPage] Added dark class');
+    } else {
+      document.documentElement.classList.remove('dark');
+      console.log('[ProjectsPage] Removed dark class');
     }
+  }, [isDarkMode]);
 
-    loadProjects();
-  }, [currentWorkspace?.id, searchQuery, filterType, sortBy]);
+  // View mode state (persisted in localStorage)
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('projectsViewMode');
+    return (saved === 'grid' || saved === 'list') ? saved : 'grid';
+  });
 
-  const loadProjects = async () => {
-    if (!currentWorkspace?.id) return;
+  // Filter and search state
+  const [search, setSearch] = useState('');
+  const [projectType, setProjectType] = useState<ProjectType | 'all'>('all');
+  const [visibility, setVisibility] = useState<ProjectVisibility | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'updated_at'>('updated_at');
+  const [page, setPage] = useState(1);
 
-    setLoading(true);
-    setError(null);
+  // Dialog state
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [projectToEdit, setProjectToEdit] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
-    try {
-      const filters: ProjectFilters = {
-        workspace_id: currentWorkspace.id,
-        sort_by: sortBy,
-        sort_order: 'desc',
-      };
+  // Fetch projects with React Query
+  const { data, isLoading, error, refetch } = useProjects({
+    account_id: account?.id,
+    project_type: projectType !== 'all' ? projectType : undefined,
+    visibility: visibility !== 'all' ? visibility : undefined,
+    search: search || undefined,
+    sort_by: sortBy,
+    sort_order: 'desc',
+    page,
+    limit: 20
+  });
 
-      if (searchQuery) {
-        filters.search = searchQuery;
-      }
-
-      if (filterType !== 'all') {
-        filters.project_type = filterType;
-      }
-
-      const data = await getProjects(currentWorkspace.id, filters);
-      setProjects(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
+  // Handlers
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('projectsViewMode', mode);
   };
 
-  const handleCreateProject = () => {
-    setShowCreateDialog(true);
+  const handleOpenProject = (projectId: string) => {
+    // Navigate to the workspaces page for this project
+    navigate(`/projects/${projectId}/workspaces`);
   };
 
-  const handleProjectCreated = (newProject: Project) => {
-    setProjects((prev) => [newProject, ...prev]);
-    setShowCreateDialog(false);
+  const handleDuplicateProject = (projectId: string, name: string) => {
+    // TODO: Implement duplicate project functionality
+    console.log('Duplicate project:', projectId, name);
   };
 
-  const handleOpenProject = (project: Project) => {
-    // Navigate to project canvas or details
-    navigate(`/projects/${project.id}`);
-  };
-
-  const handleEditProject = (project: Project) => {
-    navigate(`/projects/${project.id}/settings`);
-  };
-
-  const handleDeleteProject = (project: Project) => {
-    setProjectToDelete(project);
+  const handleDeleteProject = (projectId: string) => {
+    setProjectToDelete(projectId);
   };
 
   const handleProjectDeleted = () => {
-    if (projectToDelete) {
-      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
-      setProjectToDelete(null);
-    }
+    setProjectToDelete(null);
+    refetch();
   };
 
-  const handleDuplicateProject = async (project: Project) => {
-    try {
-      const newProject = await duplicateProject(
-        project.id,
-        `${project.name} (Copy)`,
-        false
-      );
-      setProjects((prev) => [newProject, ...prev]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to duplicate project');
-    }
+  const handleProjectSettings = (projectId: string) => {
+    setProjectToEdit(projectId);
   };
-
-  const handleProjectSettings = (project: Project) => {
-    navigate(`/projects/${project.id}/settings`);
-  };
-
-  if (!currentWorkspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">
-            No Workspace Selected
-          </h2>
-          <p className="text-gray-500">
-            Please select a workspace to view projects
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {currentWorkspace.name}
-            </p>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Manage your data modeling projects
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Dark Mode Toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className="btn-icon"
+                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDarkMode ? (
+                  <Sun className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                ) : (
+                  <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                )}
+              </button>
+
+              {/* Templates Button (Dev Mode Only) */}
+              {isDevMode && (
+                <button
+                  onClick={() => navigate('/templates')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                  title="Template Editor (Dev Mode)"
+                >
+                  <FlaskConical className="w-5 h-5" />
+                  <span className="font-medium">Templates</span>
+                </button>
+              )}
+
+              {/* Settings Button */}
+              <button
+                onClick={() => setShowSettings(true)}
+                className="btn-icon"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+
+              {/* New Project Button */}
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                New Project
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleCreateProject}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Project
-          </button>
         </div>
+      </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1); // Reset to first page on search
+                }}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-2">
+              {/* Project Type */}
+              <select
+                value={projectType}
+                onChange={(e) => {
+                  setProjectType(e.target.value as ProjectType | 'all');
+                  setPage(1);
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All Types</option>
+                <option value="Standard">Standard</option>
+                <option value="DataVault">Data Vault</option>
+                <option value="Dimensional">Dimensional</option>
+              </select>
+
+              {/* Visibility */}
+              <select
+                value={visibility}
+                onChange={(e) => {
+                  setVisibility(e.target.value as ProjectVisibility | 'all');
+                  setPage(1);
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All Visibility</option>
+                <option value="private">Private</option>
+                <option value="public">Public</option>
+                <option value="locked">Locked</option>
+              </select>
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'created_at' | 'updated_at')}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="updated_at">Last Updated</option>
+                <option value="created_at">Date Created</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+
+              {/* View Mode Toggle */}
+              <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => handleViewModeChange('grid')}
+                  className={`px-3 py-2 ${
+                    viewMode === 'grid'
+                      ? 'bg-accent-300 dark:bg-accent-500 text-gray-600 dark:text-gray-300'
+                      : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  } transition-colors`}
+                  title="Grid view"
+                >
+                  <Grid className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => handleViewModeChange('list')}
+                  className={`px-3 py-2 border-l border-gray-300 dark:border-gray-600 ${
+                    viewMode === 'list'
+                      ? 'bg-accent-300 dark:bg-accent-500 text-gray-600 dark:text-gray-300'
+                      : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  } transition-colors`}
+                  title="List view"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* Type Filter */}
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as ProjectType | 'all')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Types</option>
-            <option value="Standard">Standard</option>
-            <option value="DataVault">Data Vault</option>
-            <option value="Dimensional">Dimensional</option>
-          </select>
-
-          {/* Sort */}
-          <select
-            value={sortBy}
-            onChange={(e) =>
-              setSortBy(e.target.value as 'name' | 'created_at' | 'updated_at')
-            }
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="updated_at">Last Updated</option>
-            <option value="created_at">Date Created</option>
-            <option value="name">Name</option>
-          </select>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-gray-500">Loading projects...</div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isLoadingAccount ? (
+          // Loading account
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="text-center">
+              <p className="text-gray-500 dark:text-gray-400">Loading account information...</p>
+            </div>
+          </div>
+        ) : !account ? (
+          // No account found
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="text-center">
+              <p className="text-red-600 dark:text-red-400 font-medium mb-2">No account found</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Please contact support</p>
+            </div>
+          </div>
+        ) : isLoading ? (
+          // Loading skeleton
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            ))}
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-64">
+          // Error state
+          <div className="flex flex-col items-center justify-center py-12">
             <div className="text-center">
-              <p className="text-red-600 mb-2">Error loading projects</p>
-              <p className="text-sm text-gray-500">{error}</p>
+              <p className="text-red-600 font-medium mb-2">Error loading projects</p>
+              <p className="text-sm text-gray-500 mb-4">{error.message}</p>
               <button
-                onClick={loadProjects}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                onClick={() => refetch()}
+                className="btn-primary"
               >
-                Retry
+                Try Again
               </button>
             </div>
           </div>
-        ) : projects.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
+        ) : !data || data.data.length === 0 ? (
+          // Empty state
+          <div className="flex flex-col items-center justify-center py-12">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                {searchQuery || filterType !== 'all'
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {search || projectType !== 'all' || visibility !== 'all'
                   ? 'No projects found'
                   : 'No projects yet'}
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {searchQuery || filterType !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'Create your first project to get started'}
+              <p className="text-sm text-gray-500 mb-6">
+                {search || projectType !== 'all' || visibility !== 'all'
+                  ? 'Try adjusting your filters or search query'
+                  : 'Get started by creating your first project'}
               </p>
-              {!searchQuery && filterType === 'all' && (
+              {!search && projectType === 'all' && visibility === 'all' && (
                 <button
-                  onClick={handleCreateProject}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  onClick={() => setShowCreateDialog(true)}
+                  className="btn-primary inline-flex items-center gap-2"
                 >
-                  Create Project
+                  <Plus className="w-5 h-5" />
+                  Create Your First Project
                 </button>
               )}
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onOpen={handleOpenProject}
-                onEdit={handleEditProject}
-                onDelete={handleDeleteProject}
-                onDuplicate={handleDuplicateProject}
-                onSettings={handleProjectSettings}
-              />
-            ))}
-          </div>
+          <>
+            {/* Projects grid/list */}
+            <div className={viewMode === 'grid'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+              : 'space-y-4'
+            }>
+              {data.data.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  viewMode={viewMode}
+                  onOpen={() => handleOpenProject(project.id)}
+                  onDuplicate={() => handleDuplicateProject(project.id, project.name)}
+                  onDelete={() => handleDeleteProject(project.id)}
+                  onSettings={() => handleProjectSettings(project.id)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {data.pagination.total_pages > 1 && (
+              <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4">
+                <div className="text-sm text-gray-500">
+                  Showing {((page - 1) * data.pagination.limit) + 1} to{' '}
+                  {Math.min(page * data.pagination.limit, data.pagination.total)} of{' '}
+                  {data.pagination.total} projects
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="btn-secondary text-sm px-3 py-1"
+                  >
+                    Previous
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(5, data.pagination.total_pages) }, (_, i) => {
+                      let pageNum: number;
+                      if (data.pagination.total_pages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= data.pagination.total_pages - 2) {
+                        pageNum = data.pagination.total_pages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          className={page === pageNum ? 'btn-primary text-sm px-3 py-1' : 'btn-secondary text-sm px-3 py-1'}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setPage(p => Math.min(data.pagination.total_pages, p + 1))}
+                    disabled={page === data.pagination.total_pages}
+                    className="btn-secondary text-sm px-3 py-1"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Create Dialog */}
-      {showCreateDialog && currentWorkspace && (
+      {/* Dialogs */}
+      {showCreateDialog && account && (
         <CreateProjectDialog
-          workspaceId={currentWorkspace.id}
+          accountId={account.id}
           onClose={() => setShowCreateDialog(false)}
-          onProjectCreated={handleProjectCreated}
+          onSuccess={() => {
+            setShowCreateDialog(false);
+            refetch();
+          }}
         />
       )}
 
-      {/* Delete Dialog */}
       {projectToDelete && (
         <DeleteProjectDialog
-          project={projectToDelete}
+          projectId={projectToDelete}
           onClose={() => setProjectToDelete(null)}
-          onDeleted={handleProjectDeleted}
+          onSuccess={handleProjectDeleted}
         />
       )}
+
+      {projectToEdit && (
+        <ProjectSettingsDialog
+          projectId={projectToEdit}
+          onClose={() => setProjectToEdit(null)}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

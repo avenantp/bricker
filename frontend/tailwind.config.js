@@ -25,30 +25,30 @@ export default {
         },
         // Secondary - Vibrant Orange
         secondary: {
-          50: "#FFF0F0",
-          100: "#FFDEDC",
-          200: "#FFBFBC",
-          300: "#FF9B94",
-          400: "#FF7165",
-          500: "#FF3D12",
-          600: "#CC2B00",
-          700: "#9C1F00",
-          800: "#6E1300",
-          900: "#410700",
-          950: "#2E0400"
+          50: '#FFF0F0',
+          100: '#FFDEDC',
+          200: '#FFBFBC',
+          300: '#FF9B94',
+          400: '#FF7165',
+          500: '#FF3D12',
+          600: '#CC2B00',
+          700: '#9C1F00',
+          800: '#6E1300',
+          900: '#410700',
+          950: '#2E0400',
         },
-        // Accent - Warm Beige
+        // Accent - Steel blue
         accent: {
-          50: '#faf8f5',
-          100: '#f5f1eb',
-          200: '#ebe3d7',
-          300: '#e1d5c3',
-          400: '#d7c7af',
-          500: '#d4c4a8', // Main beige
-          600: '#c0ac8f',
-          700: '#a89476',
-          800: '#8f7c5d',
-          900: '#766444',
+          50: '#f2f8fc',
+          100: '#d9e9f5',
+          200: '#b7d3ea',
+          300: '#94bce0',
+          400: '#6fa4d6',
+          500: '#4682b4', // Main steel blue
+          600: '#3c719e',
+          700: '#325f85',
+          800: '#284d6b',
+          900: '#1e3b52',
         },
         // Neutral - Cream/Off-white
         neutral: {
@@ -87,13 +87,13 @@ export default {
       },
       textColor: {
         'brand-dark': '#0d4d4d',
-        'brand-orange': '#ff4420',
+        'brand-orange': '#f46428',
         'brand-beige': '#d4c4a8',
         'brand-cream': '#ede9e3',
       },
       borderColor: {
         'brand-dark': '#0d4d4d',
-        'brand-orange': '#ff4420',
+        'brand-orange': '#f46428',
         'brand-beige': '#d4c4a8',
         'brand-cream': '#ede9e3',
       },

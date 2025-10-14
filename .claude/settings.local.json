@@ -3,7 +3,17 @@
     "allow": [
       "Bash(npm test:*)",
       "Bash(npm run dev)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(npx supabase@latest db inspect:*)",
+      "Bash(env)",
+      "Bash(node check-schema.js)",
+      "Bash(node:*)",
+      "Bash(npx supabase db:*)",
+      "Bash(npx supabase link:*)",
+      "Bash(test -f \"frontend/src/types/workspace.ts\")",
+      "Bash(npm run build)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install pg)"
     ],
     "deny": [],
     "ask": []

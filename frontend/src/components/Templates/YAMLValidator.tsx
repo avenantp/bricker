@@ -134,7 +134,7 @@ export default function YAMLValidator({
             <button
               onClick={handleValidate}
               disabled={isValidating || !isDevMode}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="btn-primary flex items-center gap-2"
             >
               <Play className="w-4 h-4" />
               Validate
@@ -143,7 +143,7 @@ export default function YAMLValidator({
             {validationResult && !validationResult.isValid && isDevMode && (
               <button
                 onClick={handleAutoFix}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="btn-primary bg-green-600 hover:bg-green-700"
               >
                 Auto-Fix
               </button>
@@ -151,7 +151,7 @@ export default function YAMLValidator({
 
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="btn-icon"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -226,7 +226,7 @@ export default function YAMLValidator({
                 <div className="mb-4">
                   <button
                     onClick={() => setShowErrors(!showErrors)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors mb-2"
+                    className="btn-secondary w-full flex items-center justify-between bg-red-100 hover:bg-red-200 px-3 mb-2"
                   >
                     <span className="text-sm font-semibold text-red-900">
                       Errors ({validationResult.errors.length})
@@ -247,7 +247,7 @@ export default function YAMLValidator({
                 <div>
                   <button
                     onClick={() => setShowWarnings(!showWarnings)}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors mb-2"
+                    className="btn-secondary w-full flex items-center justify-between bg-yellow-100 hover:bg-yellow-200 px-3 mb-2"
                   >
                     <span className="text-sm font-semibold text-yellow-900">
                       Warnings ({validationResult.warnings.length})

@@ -140,7 +140,7 @@ export function GitHistoryPanel({
         <button
           onClick={loadHistory}
           disabled={loading}
-          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+          className="btn-icon text-gray-600 hover:text-gray-900"
           title="Refresh history"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -201,7 +201,7 @@ export function GitHistoryPanel({
                         {onViewCommitDiff && (
                           <button
                             onClick={() => onViewCommitDiff(commit.commit_sha)}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                            className="btn-icon p-1.5 text-gray-500 hover:text-gray-700"
                             title="View changes"
                           >
                             <FileText className="w-4 h-4" />
@@ -211,7 +211,7 @@ export function GitHistoryPanel({
                           <button
                             onClick={() => handleRevert(commit.commit_sha)}
                             disabled={loading}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
+                            className="btn-icon p-1.5 text-gray-500 hover:text-gray-700"
                             title="Revert to this commit"
                           >
                             <Download className="w-4 h-4" />
@@ -219,7 +219,7 @@ export function GitHistoryPanel({
                         )}
                         <button
                           onClick={() => toggleCommitExpansion(commit.commit_sha)}
-                          className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                          className="btn-icon p-1.5 text-gray-500 hover:text-gray-700"
                           title={isExpanded ? 'Collapse' : 'Expand'}
                         >
                           {isExpanded ? (

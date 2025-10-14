@@ -1,57 +1,63 @@
 /**
  * Project Card Component
- * Displays project information in a card format
+ * Displays project information in grid or list format
  */
 
 import { useState } from 'react';
 import {
   MoreVertical,
-  Edit,
   Trash2,
   Copy,
   Settings,
   FolderOpen,
+  Users,
+  Calendar,
 } from 'lucide-react';
-import type { Project } from '../../types/project';
+import type { ProjectWithDetails } from '@/types/project';
+
+type ViewMode = 'grid' | 'list';
 
 interface ProjectCardProps {
-  project: Project;
-  onEdit?: (project: Project) => void;
-  onDelete?: (project: Project) => void;
-  onDuplicate?: (project: Project) => void;
-  onSettings?: (project: Project) => void;
-  onOpen?: (project: Project) => void;
+  project: ProjectWithDetails;
+  viewMode?: ViewMode;
+  onOpen?: () => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
+  onSettings?: () => void;
 }
 
 export function ProjectCard({
   project,
-  onEdit,
+  viewMode = 'grid',
+  onOpen,
   onDelete,
   onDuplicate,
   onSettings,
-  onOpen,
 }: ProjectCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
   const getProjectTypeColor = (type: string) => {
     switch (type) {
       case 'DataVault':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'Dimensional':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'Standard':
       default:
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-100 text-blue-700 border-blue-200';
     }
   };
 
-  const getProjectTypeIcon = (type: string) => {
-    switch (type) {
-      case 'DataVault':
-        return '🏛️';
-      case 'Dimensional':
-        return '📊';
+  const getVisibilityColor = (visibility: string) => {
+    switch (visibility) {
+      case 'private':
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'team':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case 'organization':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       default:
-        return '📁';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -70,43 +76,180 @@ export function ProjectCard({
     return date.toLocaleDateString();
   };
 
+  if (viewMode === 'list') {
+    return (
+      <div
+        className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+        onClick={onOpen}
+      >
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                  {project.name}
+                </h3>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getProjectTypeColor(project.project_type)}`}>
+                  {project.project_type}
+                </span>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getVisibilityColor(project.visibility)}`}>
+                  {project.visibility}
+                </span>
+              </div>
+              {project.description && (
+                <p className="text-sm text-gray-600 line-clamp-1 mb-2">
+                  {project.description}
+                </p>
+              )}
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {project.member_count || 0} {project.member_count === 1 ? 'member' : 'members'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <FolderOpen className="w-3 h-3" />
+                  {project.workspace_count || 0} {project.workspace_count === 1 ? 'workspace' : 'workspaces'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Updated {formatDate(project.updated_at)}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions Menu */}
+            <div className="relative ml-4">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(!showMenu);
+                }}
+                className="btn-icon text-gray-400 hover:text-gray-600"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {showMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                    }}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                    {onOpen && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpen();
+                          setShowMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        Open
+                      </button>
+                    )}
+                    {onDuplicate && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicate();
+                          setShowMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Duplicate
+                      </button>
+                    )}
+                    {onSettings && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSettings();
+                          setShowMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                    )}
+                    {onDelete && (
+                      <>
+                        <div className="border-t border-gray-200 my-1" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                            setShowMenu(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Grid view
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all group">
-      {/* Card Header */}
+    <div
+      className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+      onClick={onOpen}
+    >
       <div className="p-6">
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{getProjectTypeIcon(project.project_type)}</span>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                {project.name}
-              </h3>
-            </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate mb-2">
+              {project.name}
+            </h3>
+            {project.description && (
+              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                {project.description}
+              </p>
+            )}
           </div>
 
           {/* Actions Menu */}
-          <div className="relative">
+          <div className="relative ml-2">
             <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="btn-icon p-1 text-gray-400 hover:text-gray-600"
             >
               <MoreVertical className="w-5 h-5" />
             </button>
 
             {showMenu && (
               <>
-                {/* Backdrop */}
                 <div
                   className="fixed inset-0 z-10"
-                  onClick={() => setShowMenu(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                  }}
                 />
-
-                {/* Menu */}
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                   {onOpen && (
                     <button
-                      onClick={() => {
-                        onOpen(project);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpen();
                         setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -115,22 +258,11 @@ export function ProjectCard({
                       Open
                     </button>
                   )}
-                  {onEdit && (
-                    <button
-                      onClick={() => {
-                        onEdit(project);
-                        setShowMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit
-                    </button>
-                  )}
                   {onDuplicate && (
                     <button
-                      onClick={() => {
-                        onDuplicate(project);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicate();
                         setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -141,8 +273,9 @@ export function ProjectCard({
                   )}
                   {onSettings && (
                     <button
-                      onClick={() => {
-                        onSettings(project);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSettings();
                         setShowMenu(false);
                       }}
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
@@ -155,8 +288,9 @@ export function ProjectCard({
                     <>
                       <div className="border-t border-gray-200 my-1" />
                       <button
-                        onClick={() => {
-                          onDelete(project);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete();
                           setShowMenu(false);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
@@ -172,54 +306,41 @@ export function ProjectCard({
           </div>
         </div>
 
-        {/* Description */}
-        {project.description && (
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-            {project.description}
-          </p>
-        )}
-
-        {/* Project Type Badge */}
-        <div className="flex items-center gap-2 mb-4">
-          <span
-            className={`px-2 py-1 text-xs font-medium rounded ${getProjectTypeColor(
-              project.project_type
-            )}`}
-          >
+        {/* Badges */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className={`px-2 py-1 text-xs font-medium rounded border ${getProjectTypeColor(project.project_type)}`}>
             {project.project_type}
           </span>
-          {project.configuration?.medallion_layers_enabled && (
-            <span className="px-2 py-1 text-xs font-medium rounded bg-amber-100 text-amber-700">
-              Medallion
-            </span>
-          )}
+          <span className={`px-2 py-1 text-xs font-medium rounded border ${getVisibilityColor(project.visibility)}`}>
+            {project.visibility}
+          </span>
         </div>
 
-        {/* Configuration Details */}
-        {(project.configuration?.default_catalog ||
-          project.configuration?.default_schema) && (
-          <div className="text-xs text-gray-500 mb-4 space-y-1">
-            {project.configuration.default_catalog && (
-              <div>
-                <span className="font-medium">Catalog:</span>{' '}
-                {project.configuration.default_catalog}
-              </div>
-            )}
-            {project.configuration.default_schema && (
-              <div>
-                <span className="font-medium">Schema:</span>{' '}
-                {project.configuration.default_schema}
-              </div>
-            )}
+        {/* Stats */}
+        <div className="space-y-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-gray-400" />
+            <span>{project.member_count || 0} {project.member_count === 1 ? 'member' : 'members'}</span>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-gray-400" />
+            <span>{project.workspace_count || 0} {project.workspace_count === 1 ? 'workspace' : 'workspaces'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Card Footer */}
+      {/* Footer */}
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Updated {formatDate(project.updated_at)}</span>
-          <span>Created {formatDate(project.created_at)}</span>
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            Updated {formatDate(project.updated_at)}
+          </span>
+          {project.owner && (
+            <span className="truncate" title={project.owner.email}>
+              {project.owner.full_name}
+            </span>
+          )}
         </div>
       </div>
     </div>

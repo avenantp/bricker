@@ -62,7 +62,7 @@ export function Header() {
         {/* AI Assistant Toggle */}
         <button
           onClick={toggleChat}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="btn-icon"
           title="Toggle AI Assistant"
         >
           <Sparkles className="w-5 h-5 text-secondary-600" />
@@ -71,7 +71,7 @@ export function Header() {
         {/* Settings */}
         <button
           onClick={() => setShowSettings(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="btn-icon"
           title="Settings"
         >
           <Settings className="w-5 h-5 text-gray-600" />
@@ -81,7 +81,7 @@ export function Header() {
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="btn-icon flex items-center gap-2"
           >
             <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
               {user?.email?.charAt(0).toUpperCase() || 'U'}

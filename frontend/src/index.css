@@ -4,35 +4,40 @@
 
 @layer base {
   :root {
-    /* Light mode primary colors */
-    --color-primary-50: #7BFEE5;
-    --color-primary-100: #32EACE;
-    --color-primary-200: #25BAA3;
-    --color-primary-300: #198B7A;
-    --color-primary-400: #0E6053;
-    --color-primary-500: #053830;
-    --color-primary-600: #02251F;
-    --color-primary-700: #082e2e;
-    --color-primary-800: #011C17;
-    --color-primary-900: #01110E;
+    /* Light mode primary colors (based on #1e413a) */
+    --color-primary-50: #e6f1ef;
+    --color-primary-100: #c1d5d1;
+    --color-primary-200: #9bbab4;
+    --color-primary-300: #759f97;
+    --color-primary-400: #4f847a;
+    --color-primary-500: #1e413a;
+    --color-primary-600: #18342f;
+    --color-primary-700: #122823;
+    --color-primary-800: #0c1c18;
+    --color-primary-900: #06100d;
   }
 
   .dark {
-    /* Dark mode primary colors */
-    --color-primary-50: #FFF0F0;
-    --color-primary-100: #FFDEDC;
-    --color-primary-200: #FFBFBC;
-    --color-primary-300: #FF9B94;
-    --color-primary-400: #FF7165;
-    --color-primary-500: #FF3D12;
-    --color-primary-600: #CC2B00;
-    --color-primary-700: #9C1F00;
-    --color-primary-800: #6E1300;
-    --color-primary-900: #410700;
+    /* Dark mode primary colors (based on #f46428) */
+    --color-primary-50: #fff1eb;
+    --color-primary-100: #ffd6c2;
+    --color-primary-200: #ffb899;
+    --color-primary-300: #ff986f;
+    --color-primary-400: #f97a47;
+    --color-primary-500: #f46428;
+    --color-primary-600: #d9541e;
+    --color-primary-700: #b64316;
+    --color-primary-800: #93320e;
+    --color-primary-900: #702207;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+
+  /* Dark mode for common elements */
+  .dark {
+    color-scheme: dark;
   }
 }
 
@@ -48,6 +53,10 @@
   .btn-secondary {
     @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
     @apply dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
+  }
+
+  .btn-icon {
+    @apply p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors;
   }
 
   .input-field {

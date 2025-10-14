@@ -174,7 +174,7 @@ export function CanvasPage() {
           <p className="text-sm text-gray-500">{error}</p>
           <button
             onClick={() => navigate('/projects')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="btn-primary mt-4"
           >
             Back to Projects
           </button>
@@ -191,7 +191,7 @@ export function CanvasPage() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/projects')}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              className="btn-icon text-gray-400 hover:text-gray-600"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -214,7 +214,7 @@ export function CanvasPage() {
             )}
             <button
               onClick={() => navigate(`/projects/${projectId}/settings`)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="btn-secondary flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
               Settings

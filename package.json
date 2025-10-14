@@ -23,5 +23,8 @@
     "concurrently": "^8.2.2",
     "cross-env": "^10.1.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
   }
 }

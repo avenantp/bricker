@@ -1,0 +1,20 @@
+I have run the migration and now want to create a new technical specifications document or multiple documents based on functionality. Please note that i have updated company to now be account. 
+I would like to break the technical specification into individual specification files and tasklists.
+1. user,  subscription and license management similar to how cursor.ai manage their usage and subscriptions
+2. core functionality managing, projects and workspaces with optional source control synching and version control. we will support multiple source control vendors.
+3. create and manage connections. For source systems like and Microsoft SQL Server, Salesforce, Workday, ServiceNow and File Systems and for the target Databricks platform. add import metadata capability for all listed source types and connection editor dialogs for the various connection types.
+4. dataset and column metadata entry and management with ai assitance to recommend context aware business names and descriptions. 
+5. dataset diagram view with ability to manage diagram state including edge alginment to facilitate reloading. on node click to show details of dataset and ability to drag and add relationships. individual dataset can expand to show columns. diagram will have view staets to show relationships between datasets or lineage. must have ability to add a relationship between datasets
+6. data vault modeling and acceleration. for a selected dataset in the dataset diagram on right click we should switch to a new accelerator diagram that will show the data vault acceleration for the selected dataset. the backend service will run the data vault accelerator code that will be defined in a seperates specification. for now we will just mock up a hub and sattelite based on the name of the select dataset
+7. data lineage displaying lineage in graph format at a column level. in any diagram view when we right click we can view the lineage of the dataset in diagram view. we will analyse the lineage table and show all downstream and upstream lineage for the dataset. this diagram can be toggled to column view and we will show the lineage at a column level. when a dataset or column is selected the lineage will highlighted for all the downstream and upstream nodes
+8. business modeling diagram allow users to create datasets and columns for conceptual models. these models will not be connected to any connections and can be can be linked to datasets. the business models should be connected to ai allowing users the ability to create a physical dataset from this conceptual dataset. as an example if the user has a business dataset called customer of type dimension the user can ask the ai to create and map a dimension using physical dataset by using natural language. the ai will analyse the dataset diagram and based on the context list the top datasets that can be used to create this dimension the user will interact with tha ai and it will use relationships, business names and description to answer the user and recommending the target dataset with relevant lineage and source to target mappings.
+9. data mart or dimensional modeling that can create source queries or views based on natural language ai assitance. 
+10 Jinja template creation and workflow using diagrams to visualise and define control flow logic. 
+11 Template rendering creating ELT sql code for Databricks. 
+12 Template rendering for Databricks jods and workflows. 
+13.Template rendering for databricks autoloader and lakeflow pipelines. 
+Analyse the provided 000-task-list.md, 001-technical-specifications-refactored.md and 003-ai-assistant.md files to prvious specifications and create the new specifications documents for each feature. 
+Analyse the master task list master_task_list.txt and expand on it creating a detailed task list for each feature. 
+Analyse the current implemented database schema for reference.
+
+Create only the detailed technical specification and tasklist for `5. dataset diagram view`

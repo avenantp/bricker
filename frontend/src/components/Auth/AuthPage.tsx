@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Github, AlertCircle, Loader2 } from 'lucide-react';
 import { UroqLogo } from '../Logo/UroqLogo';
 import { useAuth } from '@/hooks/useAuth';
 
 export function AuthPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,22 +18,38 @@ export function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[AuthPage] Form submitted, mode:', mode);
     setError(null);
     setSuccess(null);
     setLoading(true);
 
     try {
       if (mode === 'signin') {
+        console.log('[AuthPage] Signing in...');
         await signIn(email, password);
       } else if (mode === 'signup') {
-        await signUp(email, password, fullName);
-        setSuccess('Account created! Please check your email to verify your account.');
+        console.log('[AuthPage] Signing up...', { email, fullName });
+        const result = await signUp(email, password, fullName);
+        console.log('[AuthPage] Signup result:', result);
+
+        // Check if email confirmation is required
+        if (result.user && !result.session) {
+          // Email confirmation required
+          setSuccess('Account created! Please check your email to verify your account before signing in.');
+          setMode('signin');
+        } else if (result.session) {
+          // No email confirmation required, user is logged in
+          console.log('[AuthPage] Signup successful, navigating to subscription page');
+          navigate('/select-subscription');
+        }
       } else if (mode === 'reset') {
+        console.log('[AuthPage] Resetting password...');
         await resetPassword(email);
         setSuccess('Password reset email sent! Please check your inbox.');
         setMode('signin');
       }
     } catch (err: any) {
+      console.error('[AuthPage] Error:', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
@@ -65,7 +83,7 @@ export function AuthPage() {
           <div className="text-center mb-8 flex flex-col items-center">
             <UroqLogo size="lg" showText={false} />
             <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">Welcome to Uroq</h1>
-            <p className="text-gray-600">Automation Builder</p>
+            <p className="text-gray-600">Lakehouse Automation Builder</p>
           </div>
 
           {/* Auth Card */}

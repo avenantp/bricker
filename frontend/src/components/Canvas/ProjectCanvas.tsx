@@ -292,7 +292,7 @@ function ProjectCanvasInner({
             {!readOnly && (
               <button
                 onClick={handleSave}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                className="btn-primary w-full flex items-center gap-2 text-sm px-3"
                 title="Save (Cmd/Ctrl + S)"
               >
                 <Save className="w-4 h-4" />
