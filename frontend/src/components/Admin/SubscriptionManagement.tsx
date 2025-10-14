@@ -17,7 +17,7 @@ interface SubscriptionPlan {
 }
 
 export function SubscriptionManagement() {
-  const { currentCompany } = useStore();
+  const { currentAccount } = useStore();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -44,16 +44,16 @@ export function SubscriptionManagement() {
   };
 
   const getTrialDaysRemaining = () => {
-    if (!currentCompany?.trial_ends_at) return 0;
-    const trialEnd = new Date(currentCompany.trial_ends_at);
+    if (!currentAccount?.trial_ends_at) return 0;
+    const trialEnd = new Date(currentAccount.trial_ends_at);
     const now = new Date();
     const diff = trialEnd.getTime() - now.getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
-  const currentPlan = plans.find((p) => p.id === currentCompany?.subscription_plan_id);
+  const currentPlan = plans.find((p) => p.id === currentAccount?.subscription_plan_id);
   const trialDaysRemaining = getTrialDaysRemaining();
-  const isTrial = currentCompany?.subscription_status === 'trial';
+  const isTrial = currentAccount?.subscription_status === 'trial';
 
   return (
     <div>

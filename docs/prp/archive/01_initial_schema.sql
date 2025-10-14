@@ -18,23 +18,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- CORE TABLES
 -- =====================================================
 
--- Subscription Plans
-CREATE TABLE IF NOT EXISTS subscription_plans (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR NOT NULL UNIQUE,
-  tier VARCHAR NOT NULL CHECK (tier IN ('free', 'pro', 'enterprise', 'custom')),
-  price_monthly NUMERIC,
-  price_yearly NUMERIC,
-  max_users INTEGER,
-  max_projects INTEGER,
-  max_datasets INTEGER,
-  features JSONB,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
-
 -- Accounts (multi-tenant root)
 CREATE TABLE IF NOT EXISTS accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -59,6 +42,22 @@ CREATE TABLE IF NOT EXISTS accounts (
   max_datasets INTEGER DEFAULT 100,
 
   -- Metadata
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Subscription Plans
+CREATE TABLE IF NOT EXISTS subscription_plans (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR NOT NULL UNIQUE,
+  tier VARCHAR NOT NULL CHECK (tier IN ('free', 'pro', 'enterprise', 'custom')),
+  price_monthly NUMERIC,
+  price_yearly NUMERIC,
+  max_users INTEGER,
+  max_projects INTEGER,
+  max_datasets INTEGER,
+  features JSONB,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -127,7 +126,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- MEMBERSHIP/ACCESS TABLES
 -- =====================================================
 
--- Company Users (account membership)
+-- Account Users (account membership)
 CREATE TABLE IF NOT EXISTS account_users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, -- Renamed from company_id
@@ -544,6 +543,7 @@ CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(account_type);
 CREATE INDEX IF NOT EXISTS idx_accounts_subscription ON accounts(subscription_status);
 
 -- Users
+CREATE INDEX IF NOT EXISTS idx_users_account ON users(account_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Account Users

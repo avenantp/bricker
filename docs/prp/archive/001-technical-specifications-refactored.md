@@ -3,21 +3,21 @@
 ## 1. Project Overview
 
 ### 1.1 Purpose
-A React web application for managing metadata used to generate automation scripts for Databricks, featuring visual workflow design, schema modeling, AI-assisted data modeling, and Git-based version control.
+A React web application for managing metadata used to generate automation scripts for Databricks, featuring visual workflow design, schema modeling, AI-assisted data modeling, and Source-control-based version control.
 
 ### 1.2 Technology Stack
 - **Frontend**: React with React Flow for diagram visualization
 - **Database**: Supabase (PostgreSQL) - Primary source of truth
-- **Version Control**: GitHub for YAML artifacts and versioning
+- **Source Control**: Integrations with GitHub, GitLab, Bitbucket, and Azure DevOps for YAML artifacts and versioning
 - **AI Integration**: For metadata discovery, description generation, and modeling assistance
 
 ### 1.3 Architecture Pattern
-**Database-First with Git Sync**:
+**Database-First with Source Control Sync**:
 - Supabase stores all metadata (primary source of truth)
 - Users edit metadata in real-time collaborative UI
 - Changes tracked in database with audit trail
-- GitHub stores YAML representations for version control
-- Bidirectional sync: Commit to Git, Pull from Git
+- Configured source control repositories store YAML representations for version control
+- Bidirectional sync: Commit to source control, Pull from source control
 - Conflict detection and resolution for concurrent edits
 
 ## 2. Data Architecture
@@ -31,11 +31,11 @@ A React web application for managing metadata used to generate automation script
 - Lineage tracking
 - Change history and audit logs
 - Uncommitted changes tracking
-- Git sync status
+- Source control sync status
 
-**Secondary Storage (GitHub)**:
+**Secondary Storage (Source Control Repositories)**:
 - YAML representations of datasets (generated from database)
-- Version history through Git commits
+- Version history through Source control commits
 - Code review workflow through Pull Requests
 - Backup and disaster recovery
 - External editing capability for power users
@@ -44,15 +44,15 @@ A React web application for managing metadata used to generate automation script
 1. User creates/edits metadata in UI → Saves to Supabase
 2. Changes marked as "uncommitted" in database
 3. User reviews uncommitted changes
-4. User commits → Generate YAML from database → Push to GitHub
-5. Git maintains version history
-6. Other users can sync from Git to update their database view
+4. User commits → Generate YAML from database → Push to source control
+5. Source control maintains version history
+6. Other users can sync from source control to update their database view
 
 ### 2.2 Identifier System
 - **Fully Qualified Names (FQN)**: Human-readable hierarchical names
 - **UUIDs**: Immutable identifiers for lineage tracking
 - **Purpose**: Enable renaming while maintaining referential integrity and lineage
-- **Scope**: Both Supabase and GitHub YAML use same UUIDs
+- **Scope**: Both Supabase and source control YAML use same UUIDs
 
 ## 3. Core Domain Model
 
@@ -624,7 +624,7 @@ CREATE TABLE audit_logs (
   changed_by UUID REFERENCES users(user_id),
   changed_at TIMESTAMP DEFAULT NOW(),
 
-  -- Git correlation
+  -- Source control correlation
   committed_in_sha VARCHAR,
 
   CREATE INDEX idx_audit_logs_dataset ON audit_logs(dataset_id);
@@ -769,26 +769,26 @@ CREATE TABLE template_fragments (
 );
 ```
 
-## 4. Git Sync Architecture
+## 4. Source Control Sync Architecture
 
 ### 4.1 Workflow Overview
 
 **Database-First Pattern**:
 ```
-User Action → Supabase (immediate) → Mark Uncommitted → User Commits → Generate YAML → Push to GitHub
+User Action → Supabase (immediate) → Mark Uncommitted → User Commits → Generate YAML → Push to source control
      ↑                                                                                        ↓
-     └────────────────────────── Sync from GitHub ←──────────────────────────────────────────┘
+     └────────────────────────── Sync from the source control provider ←──────────────────────────────────────────┘
 ```
 
 **Key Principles**:
 1. **Supabase is Source of Truth**: All metadata lives in database
 2. **Real-time Collaboration**: Multiple users can edit simultaneously
-3. **Explicit Commits**: Users choose when to version in Git
+3. **Explicit Commits**: Users choose when to version in source control
 4. **Bidirectional Sync**: Changes flow both ways
 5. **Conflict Detection**: Smart detection of concurrent edits
 6. **Change Tracking**: Complete audit trail of all changes
 
-### 4.2 Commit to Git Workflow
+### 4.2 Commit to source control Workflow
 
 **Step-by-Step Process**:
 
@@ -806,7 +806,7 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
    - Review change summary
 
 3. **User Commits**:
-   - Click "Commit to Git" button
+   - Click "Commit to source control" button
    - Enter commit message
    - Select datasets to commit (or commit all)
 
@@ -859,9 +859,9 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
    }
    ```
 
-5. **System Writes to GitHub**:
+5. **System Writes to Source Control**:
    ```typescript
-   async function commitToGit(workspaceId: string, commitMessage: string) {
+   async function commitToSourceControl(workspaceId: string, commitMessage: string) {
      const workspace = await getWorkspace(workspaceId);
      const uncommittedDatasets = await getUncommittedDatasets(workspaceId);
      
@@ -874,20 +874,20 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
        
        // Update dataset with file path
        await updateDataset(dataset.dataset_id, {
-         github_file_path: filePath
+         source_control_file_path: filePath
        });
      }
      
-     // Write files to GitHub
-     const commitSha = await githubService.commitFiles({
-       branch: workspace.git_branch_name,
+     // Write files to the configured source control provider
+     const commitSha = await sourceControlService.commitFiles({
+       branch: workspace.source_control_branch_name,
        files: files,
        message: commitMessage
      });
      
      // Update workspace and datasets
      await updateWorkspace(workspaceId, {
-       git_commit_sha: commitSha,
+       source_control_commit_sha: commitSha,
        last_synced_at: new Date(),
        is_synced: true
      });
@@ -895,7 +895,7 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
      for (const dataset of uncommittedDatasets) {
        await updateDataset(dataset.dataset_id, {
          has_uncommitted_changes: false,
-         github_commit_sha: commitSha,
+         source_control_commit_sha: commitSha,
          last_synced_at: new Date(),
          sync_status: 'synced'
        });
@@ -905,13 +905,13 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
      }
      
      // Log commit
-     await createGitCommit({
+     await createSourceControlCommit({
        project_id: workspace.project_id,
        workspace_id: workspaceId,
        commit_sha: commitSha,
        commit_message: commitMessage,
        files_changed: uncommittedDatasets.map(d => ({
-         path: d.github_file_path,
+         path: d.source_control_file_path,
          action: 'modified',
          dataset_id: d.dataset_id
        }))
@@ -919,30 +919,30 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
    }
    ```
 
-### 4.3 Sync from Git Workflow
+### 4.3 Sync from Source Control Workflow
 
 **Step-by-Step Process**:
 
-1. **User Clicks "Sync from Git"**:
+1. **User Clicks "Sync from Source Control"**:
    - Or triggered automatically on workspace load
-   - Or triggered by GitHub webhook
+   - Or triggered by source control webhook
 
-2. **System Fetches Latest from GitHub**:
+2. **System Fetches Latest from the source control provider**:
    ```typescript
-   async function syncFromGit(workspaceId: string) {
+   async function syncFromSourceControl(workspaceId: string) {
      const workspace = await getWorkspace(workspaceId);
-     const currentSha = workspace.git_commit_sha;
+     const currentSha = workspace.source_control_commit_sha;
      
-     // Fetch latest commit from GitHub
-     const latestSha = await githubService.getLatestCommit(workspace.git_branch_name);
+     // Fetch latest commit from the source control provider
+     const latestSha = await sourceControlService.getLatestCommit(workspace.source_control_branch_name);
      
      if (currentSha === latestSha) {
        return { status: 'up-to-date' };
      }
      
      // Get diff between current and latest
-     const changedFiles = await githubService.getChangedFiles(
-       workspace.git_branch_name,
+     const changedFiles = await sourceControlService.getChangedFiles(
+       workspace.source_control_branch_name,
        currentSha,
        latestSha
      );
@@ -955,8 +955,8 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
        if (file.status === 'removed') {
          await deleteDatasetByPath(workspaceId, file.path);
        } else {
-         const yamlContent = await githubService.getFileContent(
-           workspace.git_branch_name,
+         const yamlContent = await sourceControlService.getFileContent(
+           workspace.source_control_branch_name,
            file.path
          );
          
@@ -978,7 +978,7 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
      // Update workspace
      if (conflicts.length === 0) {
        await updateWorkspace(workspaceId, {
-         git_commit_sha: latestSha,
+         source_control_commit_sha: latestSha,
          last_synced_at: new Date(),
          is_synced: true
        });
@@ -998,7 +998,7 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
      workspaceId: string,
      filePath: string,
      yamlContent: string,
-     gitSha: string
+     sourceControlSha: string
    ): Promise<{ dataset?: Dataset; conflict?: Conflict }> {
      
      const parsed = yaml.load(yamlContent);
@@ -1008,8 +1008,8 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
      const existingDataset = await getDatasetByUuid(datasetUuid);
      
      if (!existingDataset) {
-       // New dataset from Git - create it
-       const dataset = await createDatasetFromYAML(workspaceId, parsed, filePath, gitSha);
+       // New dataset from source control - create it
+       const dataset = await createDatasetFromYAML(workspaceId, parsed, filePath, sourceControlSha);
        return { dataset };
      }
      
@@ -1020,8 +1020,8 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
        return { conflict };
      }
      
-     // No conflict - update from Git
-     const dataset = await updateDatasetFromYAML(existingDataset.dataset_id, parsed, gitSha);
+     // No conflict - update from source control
+     const dataset = await updateDatasetFromYAML(existingDataset.dataset_id, parsed, sourceControlSha);
      return { dataset };
    }
    ```
@@ -1030,48 +1030,48 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
    ```typescript
    async function detectConflict(
      dbDataset: Dataset,
-     gitDataset: any
+     sourceControlDataset: any
    ): Promise<Conflict> {
      
      const dbColumns = await getColumns(dbDataset.dataset_id);
-     const gitColumns = gitDataset.dataset.columns;
+     const sourceControlColumns = sourceControlDataset.dataset.columns;
      
      const conflicts: FieldConflict[] = [];
      
      // Compare dataset fields
-     if (dbDataset.name !== gitDataset.dataset.name) {
+     if (dbDataset.name !== sourceControlDataset.dataset.name) {
        conflicts.push({
          field: 'name',
          database_value: dbDataset.name,
-         git_value: gitDataset.dataset.name
+         source_control_value: sourceControlDataset.dataset.name
        });
      }
      
-     if (dbDataset.description !== gitDataset.dataset.description) {
+     if (dbDataset.description !== sourceControlDataset.dataset.description) {
        conflicts.push({
          field: 'description',
          database_value: dbDataset.description,
-         git_value: gitDataset.dataset.description
+         source_control_value: sourceControlDataset.dataset.description
        });
      }
      
      // Compare columns
      const dbColMap = new Map(dbColumns.map(c => [c.name, c]));
-     const gitColMap = new Map(gitColumns.map((c: any) => [c.name, c]));
+     const sourceControlColMap = new Map(sourceControlColumns.map((c: any) => [c.name, c]));
      
      for (const [colName, dbCol] of dbColMap) {
-       const gitCol = gitColMap.get(colName);
-       if (!gitCol) {
+       const sourceControlCol = sourceControlColMap.get(colName);
+       if (!sourceControlCol) {
          conflicts.push({
            field: `column.${colName}`,
            database_value: 'exists',
-           git_value: 'deleted'
+           source_control_value: 'deleted'
          });
-       } else if (dbCol.data_type !== gitCol.data_type) {
+       } else if (dbCol.data_type !== sourceControlCol.data_type) {
          conflicts.push({
            field: `column.${colName}.data_type`,
            database_value: dbCol.data_type,
-           git_value: gitCol.data_type
+           source_control_value: sourceControlCol.data_type
          });
        }
      }
@@ -1080,7 +1080,7 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
        dataset_id: dbDataset.dataset_id,
        dataset_name: dbDataset.name,
        conflicts,
-       git_sha: gitDataset.git_sha
+       source_control_sha: sourceControlDataset.source_control_sha
      };
    }
    ```
@@ -1091,13 +1091,13 @@ User Action → Supabase (immediate) → Mark Uncommitted → User Commits → G
 
 1. **Take Ours (Database Version)**:
    - Keep all database changes
-   - Discard Git changes
+   - Discard source control changes
    - Generate new YAML from database
-   - Force push to Git (with warning)
+   - Force push to source control (with warning)
 
-2. **Take Theirs (Git Version)**:
+2. **Take Theirs (Source Control Version)**:
    - Discard all database changes
-   - Apply Git version to database
+   - Apply Source control version to database
    - Mark uncommitted changes as resolved
    - Update sync status
 
@@ -1113,7 +1113,7 @@ interface ConflictResolutionDialog {
   conflict: Conflict;
   strategy: 'ours' | 'theirs' | 'manual';
   
-  manualSelections?: Record<string, 'database' | 'git'>;
+  manualSelections?: Record<string, 'database' | 'sourceControl'>;
   
   onResolve: (resolution: Resolution) => Promise<void>;
 }
@@ -1121,15 +1121,15 @@ interface ConflictResolutionDialog {
 async function resolveConflict(
   datasetId: string,
   strategy: 'ours' | 'theirs' | 'manual',
-  manualSelections?: Record<string, 'database' | 'git'>
+  manualSelections?: Record<string, 'database' | 'sourceControl'>
 ) {
   
   if (strategy === 'ours') {
-    // Keep database version, commit to Git
+    // Keep database version, commit to source control
     const dataset = await getDataset(datasetId);
     const yaml = await generateYAMLFromDataset(dataset);
-    await githubService.commitFile({
-      path: dataset.github_file_path,
+    await sourceControlService.commitFile({
+      path: dataset.source_control_file_path,
       content: yaml,
       message: `Resolve conflict: keep database version for ${dataset.name}`
     });
@@ -1140,13 +1140,13 @@ async function resolveConflict(
     });
     
   } else if (strategy === 'theirs') {
-    // Discard database changes, apply Git version
-    const gitContent = await githubService.getFileContent(
-      workspace.git_branch_name,
-      dataset.github_file_path
+    // Discard database changes, apply Source control version
+    const sourceControlContent = await sourceControlService.getFileContent(
+      workspace.source_control_branch_name,
+      dataset.source_control_file_path
     );
     
-    await updateDatasetFromYAML(datasetId, yaml.load(gitContent), gitSha);
+    await updateDatasetFromYAML(datasetId, yaml.load(sourceControlContent), sourceControlSha);
     
     await updateDataset(datasetId, {
       has_uncommitted_changes: false,
@@ -1156,19 +1156,19 @@ async function resolveConflict(
   } else if (strategy === 'manual') {
     // Apply manual selections
     const dbDataset = await getDataset(datasetId);
-    const gitContent = await githubService.getFileContent(
-      workspace.git_branch_name,
-      dataset.github_file_path
+    const sourceControlContent = await sourceControlService.getFileContent(
+      workspace.source_control_branch_name,
+      dataset.source_control_file_path
     );
-    const gitDataset = yaml.load(gitContent);
+    const sourceControlDataset = yaml.load(sourceControlContent);
     
-    const merged = mergeDatasets(dbDataset, gitDataset, manualSelections);
+    const merged = mergeDatasets(dbDataset, sourceControlDataset, manualSelections);
     
     await updateDataset(datasetId, merged);
     
     const mergedYaml = await generateYAMLFromDataset(merged);
-    await githubService.commitFile({
-      path: dataset.github_file_path,
+    await sourceControlService.commitFile({
+      path: dataset.source_control_file_path,
       content: mergedYaml,
       message: `Resolve conflict: manual merge for ${dataset.name}`
     });
@@ -1238,16 +1238,16 @@ async function getUncommittedChanges(workspaceId: string) {
 }
 ```
 
-### 4.6 GitHub Webhook Integration
+### 4.6 Source Control Webhook Integration (e.g., GitHub, GitLab)
 
 **Webhook Handler**:
 ```typescript
-app.post('/webhooks/github/push', async (req, res) => {
+app.post('/webhooks/source-control/push', async (req, res) => {
   const payload = req.body;
   
   // Verify webhook signature
   const signature = req.headers['x-hub-signature-256'];
-  if (!verifyGithubSignature(signature, req.body)) {
+  if (!verifySourceControlSignature(signature, req.body)) {
     return res.status(401).send('Invalid signature');
   }
   
@@ -1259,21 +1259,21 @@ app.post('/webhooks/github/push', async (req, res) => {
   const workspace = await supabase
     .from('workspaces')
     .select('*')
-    .eq('git_branch_name', branchName)
+    .eq('source_control_branch_name', branchName)
     .single();
   
   if (!workspace.data) {
     return res.status(404).send('Workspace not found');
   }
   
-  // Trigger sync from Git
+  // Trigger sync from source control
   try {
-    await syncFromGit(workspace.data.workspace_id);
+    await syncFromSourceControl(workspace.data.workspace_id);
     
     // Notify users via websocket
     await notifyWorkspaceUsers(workspace.data.workspace_id, {
-      type: 'git_sync',
-      message: `${commits.length} new commit(s) synced from Git`,
+      type: 'source_control_sync',
+      message: `${commits.length} new commit(s) synced from source control`,
       commits: commits.map((c: any) => ({
         sha: c.id,
         message: c.message,
@@ -1421,7 +1421,7 @@ dataset:
 created_at: 2025-01-15T10:30:00Z
 updated_at: 2025-01-20T14:45:00Z
 last_synced_at: 2025-01-20T14:45:00Z
-github_commit_sha: abc123def456
+source_control_commit_sha: abc123def456
 ```
 
 ## 5. Feature Requirements
@@ -1433,7 +1433,7 @@ github_commit_sha: abc123def456
 2. System checks for existing workspace
 3. If no workspace exists:
    - Create default workspace (maps to "main" branch)
-   - Prompt for GitHub repo connection
+   - Prompt for source control repository connection
    - Block access until repo connected
 4. Load workspace dashboard with sync status
 
@@ -1441,7 +1441,7 @@ github_commit_sha: abc123def456
 - View all workspaces in system
 - Access any project across workspaces
 - Manage system templates and configurations
-- View system-wide Git sync metrics
+- View system-wide Source control sync metrics
 
 ### 5.2 Project Canvas (React Flow)
 
@@ -1453,7 +1453,7 @@ github_commit_sha: abc123def456
 - Mini-map for navigation
 - Dataset search with filters
 - Toggle between diagram view and grid view
-- **Git sync status overlay** (new)
+- **Source control sync status overlay** (new)
 
 **Dataset Representation**:
 - Visual indicators for medallion layer (color coding)
@@ -1513,7 +1513,7 @@ Search Features:
    - Materialization Type (dropdown)
    - Description (textarea)
    - Custom metadata (key-value pairs)
-   - **Git Sync Status Section** (new):
+   - **Source Control Sync Status Section** (new):
      - Last committed SHA
      - Uncommitted changes indicator
      - Last synced timestamp
@@ -1551,17 +1551,17 @@ Search Features:
 
 6. **History** (new/enhanced)
    - **Uncommitted changes** (grouped by field)
-   - **Git commit history**
+   - **Source control commit history**
    - **Change log** (all historical changes)
    - Version comparison (side-by-side diff)
    - Restore to previous version
 
-### 5.4 Git Sync UI Components (NEW)
+### 5.4 Source Control Sync UI Components (NEW)
 
-#### 5.4.1 Git Sync Panel
+#### 5.4.1 Source Control Sync Panel
 ```
 ┌─────────────────────────────────────┐
-│ Git Sync Status                     │
+│ Source Control Sync Status                     │
 ├─────────────────────────────────────┤
 │ Branch: main                        │
 │ Last Synced: 2 minutes ago          │
@@ -1569,14 +1569,14 @@ Search Features:
 │                                     │
 │ Uncommitted Changes: 5 datasets     │
 │                                     │
-│ [Commit to Git]  [Pull from Git]   │
+│ [Commit to source control]  [Pull from source control]   │
 └─────────────────────────────────────┘
 ```
 
 #### 5.4.2 Uncommitted Changes Dialog
 ```
 ┌──────────────────────────────────────────────────┐
-│ Commit Changes to Git                            │
+│ Commit Changes to Source Control                            │
 ├──────────────────────────────────────────────────┤
 │                                                  │
 │ Commit Message:                                  │
@@ -1609,11 +1609,11 @@ Search Features:
 ├──────────────────────────────────────────────────┤
 │                                                  │
 │ Conflicting changes detected between your        │
-│ database and Git. Choose how to resolve:         │
+│ database and source control. Choose how to resolve:         │
 │                                                  │
 │ Resolution Strategy:                             │
 │ ○ Take Ours (Keep database version)             │
-│ ○ Take Theirs (Use Git version)                 │
+│ ○ Take Theirs (Use Source control version)                 │
 │ ● Manual Merge (Select field-by-field)          │
 │                                                  │
 │ ┌──────────────────────────────────────────────┐ │
@@ -1622,7 +1622,7 @@ Search Features:
 │ │ Database Version:                            │ │
 │ │ ○ "Customer dimension with SCD Type 2"      │ │
 │ │                                              │ │
-│ │ Git Version:                                 │ │
+│ │ Source Control Version:                                 │ │
 │ │ ● "Customer dimension table"                 │ │
 │ └──────────────────────────────────────────────┘ │
 │                                                  │
@@ -1632,7 +1632,7 @@ Search Features:
 │ │ Database Version:                            │ │
 │ │ ● data_type: STRING (exists)                 │ │
 │ │                                              │ │
-│ │ Git Version:                                 │ │
+│ │ Source Control Version:                                 │ │
 │ │ ○ (not present)                              │ │
 │ └──────────────────────────────────────────────┘ │
 │                                                  │
@@ -1640,10 +1640,10 @@ Search Features:
 └──────────────────────────────────────────────────┘
 ```
 
-#### 5.4.4 Git History Panel
+#### 5.4.4 Source Control History Panel
 ```
 ┌─────────────────────────────────────┐
-│ Git History                         │
+│ Source Control History                         │
 ├─────────────────────────────────────┤
 │                                     │
 │ ● abc123 (2 hours ago)              │
@@ -1676,41 +1676,41 @@ Search Features:
 3. Datasets marked as `has_uncommitted_changes = true`
 4. User reviews imported datasets
 5. Optional: AI enhancement
-6. User commits imported datasets to Git
-7. YAML generated and pushed to GitHub
+6. User commits imported datasets to source control
+7. YAML generated and pushed to source control
 
 **All import types** (CSV, JSON, Parquet, MSSQL, Databricks, Snowflake, REST APIs) now:
 - Save directly to database
 - Mark as uncommitted
-- Allow review before Git commit
+- Allow review before Source control commit
 - Support batch commit
 
 ### 5.6 Data Vault Accelerator (Updated)
 
 **Apply Step Changes**:
-- Create all generated datasets in **Supabase** (not GitHub)
+- Create all generated datasets in **Supabase** (not directly in the source control repository)
 - Mark all as uncommitted changes
 - Show "Generated model has X uncommitted datasets"
 - Provide "Review Changes" button
-- Provide "Commit All to Git" button
+- Provide "Commit All to source control" button
 - Allow user to edit generated datasets before committing
 
 ### 5.7 Dimensional Modeling (Updated)
 
 **Apply Step Changes**:
-- Create dimension/fact in **Supabase** (not GitHub)
+- Create dimension/fact in **Supabase** (not directly in the source control repository)
 - Mark as uncommitted
 - Show "Generated dataset has uncommitted changes"
 - Allow user to review and edit
-- Commit to Git when ready
+- Commit to source control when ready
 
 ### 5.8 Template Rendering (Updated)
 
 **Data Context Preparation**:
-- Read datasets from **Supabase** (not GitHub)
+- Read datasets from **Supabase** (not directly from the source control repository)
 - Include uncommitted changes in rendering
 - Generate code from current database state
-- Optionally commit generated code to Git
+- Optionally commit generated code to source control
 
 ## 6. Technical Implementation Details
 
@@ -1724,7 +1724,7 @@ Service Layer
     ├── column-service.ts (CRUD + change tracking)
     ├── reference-service.ts (CRUD + change tracking)
     ├── lineage-service.ts (CRUD + change tracking)
-    ├── git-sync-service.ts (commit, sync, conflicts)
+    ├── source-control-sync-service.ts (commit, sync, conflicts)
     ├── yaml-generator.ts (database → YAML)
     ├── yaml-parser.ts (YAML → database)
     ├── conflict-resolver.ts (conflict detection & resolution)
@@ -1732,7 +1732,7 @@ Service Layer
     ↓
 Supabase (PostgreSQL)
     ↓
-GitHub (via git-sync-service)
+Source control provider (via source-control-sync-service)
 ```
 
 ### 6.2 State Management Strategy
@@ -1742,7 +1742,7 @@ GitHub (via git-sync-service)
 - Columns
 - References
 - Lineage
-- Git commits
+- Source control commits
 - Uncommitted changes
 - Conflicts
 
@@ -1757,7 +1757,7 @@ GitHub (via git-sync-service)
 - Current workspace
 - Current project
 - User info
-- Git sync status
+- Source control sync status
 
 ### 6.3 Real-time Collaboration (Future Enhancement)
 
@@ -1783,7 +1783,7 @@ GitHub (via git-sync-service)
 - Debounced search
 - Optimistic UI updates
 
-**Git Operations**:
+**Source Control Operations**:
 - Batch YAML generation
 - Parallel file writes
 - Incremental commits (only changed files)
@@ -1797,11 +1797,11 @@ GitHub (via git-sync-service)
 - Role-based access control
 - Audit logging for all changes
 
-**Git Security**:
-- Encrypted GitHub tokens
+**Source Control Security**:
+- Encrypted source control access tokens
 - User-scoped tokens (not shared)
 - Webhook signature verification
-- Rate limiting on Git operations
+- Rate limiting on Source control operations
 
 **API Security**:
 - JWT authentication
@@ -1820,16 +1820,16 @@ GitHub (via git-sync-service)
 - Change tracking
 
 ### 7.2 Integration Tests
-- Commit to Git workflow (end-to-end)
-- Sync from Git workflow (end-to-end)
+- Commit to Source control workflow (end-to-end)
+- Sync from Source control workflow (end-to-end)
 - Conflict detection and resolution (full cycle)
 - Import and commit workflow
 - Data Vault accelerator and commit
 - Dimensional modeling and commit
 
 ### 7.3 E2E Tests
-- User creates dataset, edits, commits to Git
-- User edits in Git directly, syncs to database
+- User creates dataset, edits, commits to source control
+- User edits in source control directly, syncs to database
 - Two users edit same dataset → conflict → resolution
 - Import file → review → commit
 - Generate Data Vault model → review → commit
@@ -1850,10 +1850,10 @@ SUPABASE_URL=
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_KEY=
 
-# GitHub
-GITHUB_APP_ID=
-GITHUB_APP_PRIVATE_KEY=
-GITHUB_WEBHOOK_SECRET=
+# Source Control Integration
+SOURCE_CONTROL_APP_ID=
+SOURCE_CONTROL_APP_PRIVATE_KEY=
+SOURCE_CONTROL_WEBHOOK_SECRET=
 
 # AI
 OPENAI_API_KEY=
@@ -1866,19 +1866,19 @@ ENVIRONMENT=production
 ### 8.2 Monitoring
 
 **Metrics to Track**:
-- Git sync success rate
+- Source control sync success rate
 - Conflict resolution rate
 - Average time to commit
 - Database query performance
-- GitHub API rate limit usage
+- Source control API rate limit usage
 - Uncommitted changes per workspace
 - Dataset count per project
 
 **Alerts**:
-- Git sync failures
+- Source control sync failures
 - High conflict rate
 - Slow query performance
-- GitHub API rate limit approaching
+- Source control API rate limit approaching
 - Database storage nearing capacity
 
 ## 9. Migration from Current Implementation
@@ -1902,10 +1902,10 @@ ENVIRONMENT=production
    CREATE INDEX idx_columns_reference ON columns(reference_column_id);
    ```
 
-3. **Add Git Sync Columns to datasets table**:
+3. **Add Source Control Sync Columns to datasets table**:
    ```sql
-   ALTER TABLE datasets ADD COLUMN github_file_path VARCHAR;
-   ALTER TABLE datasets ADD COLUMN github_commit_sha VARCHAR;
+   ALTER TABLE datasets ADD COLUMN source_control_file_path VARCHAR;
+   ALTER TABLE datasets ADD COLUMN source_control_commit_sha VARCHAR;
    ALTER TABLE datasets ADD COLUMN has_uncommitted_changes BOOLEAN DEFAULT false;
    ALTER TABLE datasets ADD COLUMN last_synced_at TIMESTAMP;
    ALTER TABLE datasets ADD COLUMN sync_status VARCHAR DEFAULT 'synced';
@@ -1923,7 +1923,7 @@ ENVIRONMENT=production
 6. **Migrate Existing Data**:
    - Mark all existing datasets as `has_uncommitted_changes = true`
    - Generate initial YAML for all datasets
-   - Commit to Git as "Initial migration"
+   - Commit to source control as "Initial migration"
    - Update sync status
 
 ### 9.2 Code Migration Steps
@@ -1931,7 +1931,7 @@ ENVIRONMENT=production
 1. Update all TypeScript interfaces
 2. Rename all service files
 3. Update all component imports
-4. Add Git sync UI components
+4. Add Source control sync UI components
 5. Update all API calls
 6. Add change tracking to all mutations
 7. Test thoroughly
@@ -1947,7 +1947,7 @@ ENVIRONMENT=production
 
 ## 10. Future Enhancements
 
-### 10.1 Advanced Git Features
+### 10.1 Advanced Source Control Features
 - Branch creation from UI
 - Pull Request creation from UI
 - Code review workflow in UI
@@ -1985,13 +1985,14 @@ ENVIRONMENT=production
 - Sync operation time: < 10 seconds for 100 datasets
 
 **System Performance**:
-- Git commit success rate: > 99%
+- Source control commit success rate: > 99%
 - Conflict detection accuracy: > 95%
 - Database query response time: < 500ms (p95)
-- Sync from Git latency: < 5 seconds
+- Sync from source control latency: < 5 seconds
 
 **Adoption**:
 - Daily active users
 - Datasets committed per day
 - Conflicts resolved per day
-- Git sync operations per day
+- Source control sync operations per day
+

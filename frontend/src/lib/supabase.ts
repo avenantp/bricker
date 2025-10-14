@@ -66,7 +66,7 @@ export interface Database {
           updated_at: string;
         };
       };
-      companies: {
+      accounts: {
         Row: {
           id: string;
           name: string;
@@ -75,7 +75,7 @@ export interface Database {
           logo_url: string | null;
           website: string | null;
           industry: string | null;
-          company_size: string | null;
+          account_size: string | null;
           subscription_plan_id: string | null;
           subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
           trial_ends_at: string | null;
@@ -101,9 +101,9 @@ export interface Database {
           subscription_status?: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
         };
       };
-      company_members: {
+      account_users: {
         Row: {
-          company_id: string;
+          account_id: string;
           user_id: string;
           role: 'owner' | 'admin' | 'contributor' | 'viewer';
           permissions: Record<string, any>;
@@ -111,7 +111,7 @@ export interface Database {
           joined_at: string;
         };
         Insert: {
-          company_id: string;
+          account_id: string;
           user_id: string;
           role: 'owner' | 'admin' | 'contributor' | 'viewer';
           invited_by?: string | null;
@@ -124,7 +124,7 @@ export interface Database {
       workspaces: {
         Row: {
           id: string;
-          company_id: string;
+          account_id: string;
           name: string;
           description: string | null;
           github_repo: string | null;
@@ -135,7 +135,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
-          company_id: string;
+          account_id: string;
           name: string;
           description?: string | null;
           github_repo?: string | null;
@@ -154,7 +154,7 @@ export interface Database {
       projects: {
         Row: {
           id: string;
-          company_id: string;
+          account_id: string;
           workspace_id: string;
           name: string;
           description: string | null;
@@ -163,7 +163,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
-          company_id: string;
+          account_id: string;
           workspace_id: string;
           name: string;
           description?: string | null;
@@ -178,7 +178,7 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
-          company_id: string;
+          account_id: string;
           workspace_id: string;
           name: string;
           description: string | null;
@@ -193,7 +193,7 @@ export interface Database {
         };
         Insert: {
           project_id: string;
-          company_id: string;
+          account_id: string;
           workspace_id: string;
           name: string;
           description?: string | null;
@@ -216,7 +216,7 @@ export interface Database {
       invitations: {
         Row: {
           id: string;
-          company_id: string;
+          account_id: string;
           email: string;
           role: 'admin' | 'contributor' | 'viewer';
           invited_by: string;
@@ -230,7 +230,7 @@ export interface Database {
       audit_logs: {
         Row: {
           id: string;
-          company_id: string | null;
+          account_id: string | null;
           user_id: string | null;
           action: string;
           resource_type: string | null;

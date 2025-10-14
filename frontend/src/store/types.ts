@@ -33,7 +33,7 @@ export interface DataModel {
   workspace_id: string;
 }
 
-export interface Company {
+export interface Account {
   id: string;
   name: string;
   subscription_status: 'trial' | 'active' | 'past_due' | 'canceled' | 'paused';
@@ -85,10 +85,10 @@ export interface SyncStatus {
 }
 
 export interface AppState {
-  // Company
-  currentCompany: Company | null;
+  // Account
+  currentAccount: Account | null;
   userRole: UserRole | null;
-  setCurrentCompany: (company: Company | null, role: UserRole | null) => void;
+  setCurrentAccount: (account: Account | null, role: UserRole | null) => void;
 
   // Workspace
   currentWorkspace: Workspace | null;

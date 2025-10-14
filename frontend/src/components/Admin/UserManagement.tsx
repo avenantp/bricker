@@ -3,7 +3,7 @@ import { UserPlus, Mail, MoreVertical, Shield, Trash2, Edit } from 'lucide-react
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 
-interface CompanyMember {
+interface AccountMember {
   user_id: string;
   role: 'owner' | 'admin' | 'contributor' | 'viewer';
   joined_at: string;
@@ -15,26 +15,26 @@ interface CompanyMember {
 }
 
 export function UserManagement() {
-  const { currentCompany } = useStore();
-  const [members, setMembers] = useState<CompanyMember[]>([]);
+  const { currentAccount } = useStore();
+  const [members, setMembers] = useState<AccountMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'contributor' | 'viewer'>('contributor');
 
   useEffect(() => {
-    if (currentCompany) {
+    if (currentAccount) {
       loadMembers();
     }
-  }, [currentCompany]);
+  }, [currentAccount]);
 
   const loadMembers = async () => {
-    if (!currentCompany) return;
+    if (!currentAccount) return;
 
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('company_members')
+        .from('account_users')
         .select(`
           user_id,
           role,
@@ -45,7 +45,7 @@ export function UserManagement() {
             avatar_url
           )
         `)
-        .eq('company_id', currentCompany.id)
+        .eq('account_id', currentAccount.id)
         .order('joined_at', { ascending: true });
 
       if (error) throw error;
@@ -59,7 +59,7 @@ export function UserManagement() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCompany) return;
+    if (!currentAccount) return;
 
     try {
       // Create invitation
@@ -67,7 +67,7 @@ export function UserManagement() {
       const { error } = await supabase
         .from('invitations')
         .insert({
-          company_id: currentCompany.id,
+          account_id: currentAccount.id,
           email: inviteEmail,
           role: inviteRole,
           invited_by: (await supabase.auth.getUser()).data.user?.id,
@@ -105,7 +105,7 @@ export function UserManagement() {
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Team Members</h2>
           <p className="text-sm text-gray-600 mt-1">
-            Manage who has access to your company
+            Manage who has access to your account
           </p>
         </div>
         <button
@@ -179,7 +179,7 @@ export function UserManagement() {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="colleague@company.com"
+                    placeholder="colleague@example.com"
                     required
                   />
                 </div>

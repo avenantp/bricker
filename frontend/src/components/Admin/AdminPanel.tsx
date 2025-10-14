@@ -13,7 +13,7 @@ export function AdminPanel() {
     { id: 'workspaces' as const, label: 'Workspaces', icon: FolderOpen },
     { id: 'users' as const, label: 'User Management', icon: Users },
     { id: 'subscription' as const, label: 'Subscription', icon: CreditCard },
-    { id: 'settings' as const, label: 'Company Settings', icon: Settings },
+    { id: 'settings' as const, label: 'Account Settings', icon: Settings },
     { id: 'analytics' as const, label: 'Analytics', icon: BarChart },
     { id: 'audit' as const, label: 'Audit Logs', icon: Shield },
   ];
@@ -23,7 +23,7 @@ export function AdminPanel() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Panel</h1>
-          <p className="text-gray-600">Manage your company settings and users</p>
+          <p className="text-gray-600">Manage your account settings and users</p>
         </div>
 
         {/* Tabs */}
@@ -57,7 +57,7 @@ export function AdminPanel() {
             {activeTab === 'workspaces' && <WorkspaceManagement />}
             {activeTab === 'users' && <UserManagement />}
             {activeTab === 'subscription' && <SubscriptionManagement />}
-            {activeTab === 'settings' && <CompanySettings />}
+            {activeTab === 'settings' && <AccountSettings />}
             {activeTab === 'analytics' && <Analytics />}
             {activeTab === 'audit' && <AuditLogs />}
           </div>
@@ -67,11 +67,11 @@ export function AdminPanel() {
   );
 }
 
-function CompanySettings() {
+function AccountSettings() {
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Company Settings</h2>
-      <p className="text-gray-600">Company settings coming soon...</p>
+      <h2 className="text-xl font-semibold mb-4">Account Settings</h2>
+      <p className="text-gray-600">Account settings coming soon...</p>
     </div>
   );
 }

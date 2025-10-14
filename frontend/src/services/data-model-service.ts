@@ -20,7 +20,7 @@ export class DataModelService {
   // Create new data model
   async createDataModel(
     projectId: string,
-    companyId: string,
+    accountId: string,
     workspaceId: string,
     userId: string,
     name: string,
@@ -52,7 +52,7 @@ export class DataModelService {
         visibility,
         is_locked: false,
         project_id: projectId,
-        company_id: companyId,
+        account_id: accountId,
         workspace_id: workspaceId,
         github_repo: githubRepo,
         github_branch: 'main',
@@ -83,7 +83,7 @@ export class DataModelService {
       .insert({
         id: modelYAML.metadata.id,
         project_id: projectId,
-        company_id: companyId,
+        account_id: accountId,
         workspace_id: workspaceId,
         github_repo: githubRepo,
         github_branch: 'main',
@@ -330,7 +330,7 @@ export class DataModelService {
     // Public models can be edited by contributors
     if (model.visibility === 'public') {
       const { data: member } = await supabase
-        .from('company_members')
+        .from('account_users')
         .select('role')
         .eq('user_id', userId)
         .single();

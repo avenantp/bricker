@@ -13,7 +13,7 @@ export interface ProjectYAML {
     is_locked: boolean;
     locked_by?: string;
     locked_at?: string;
-    company_id: string;
+    account_id: string;
     workspace_id: string;
     github_repo: string;
     github_branch: string;
@@ -54,7 +54,7 @@ export interface DataModelYAML {
     locked_by?: string;
     locked_at?: string;
     project_id: string;
-    company_id: string;
+    account_id: string;
     workspace_id: string;
     github_repo: string;
     github_branch: string;

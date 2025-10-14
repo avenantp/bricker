@@ -20,8 +20,8 @@ export interface SubscriptionPlan {
   updated_at: string;
 }
 
-// Companies
-export interface Company {
+// Accounts
+export interface Account {
   id: string;
   name: string;
   slug: string;
@@ -38,10 +38,10 @@ export interface Company {
   updated_at: string;
 }
 
-// Company Members
-export interface CompanyMember {
+// Account Members
+export interface AccountMember {
   id: string;
-  company_id: string;
+  account_id: string;
   user_id: string;
   role: UserRole;
   invited_by: string | null;
@@ -67,7 +67,7 @@ export interface User {
 // Workspaces
 export interface Workspace {
   id: string;
-  company_id: string;
+  account_id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -91,7 +91,7 @@ export interface WorkspaceMember {
 // Projects (GitHub YAML storage - only metadata in DB)
 export interface Project {
   id: string;
-  company_id: string;
+  account_id: string;
   workspace_id: string;
 
   // GitHub reference
@@ -137,7 +137,7 @@ export interface ProjectMember {
 export interface DataModel {
   id: string;
   project_id: string;
-  company_id: string;
+  account_id: string;
   workspace_id: string;
 
   // GitHub reference
@@ -198,7 +198,7 @@ export interface Configuration {
 // Invitations
 export interface Invitation {
   id: string;
-  company_id: string;
+  account_id: string;
   workspace_id: string | null;
   email: string;
   role: UserRole;
@@ -211,7 +211,7 @@ export interface Invitation {
 // Audit Logs
 export interface AuditLog {
   id: string;
-  company_id: string;
+  account_id: string;
   user_id: string | null;
   action: string;
   resource_type: string | null;

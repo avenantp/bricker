@@ -20,7 +20,7 @@ export class ProjectService {
   // Create new project
   async createProject(
     workspaceId: string,
-    companyId: string,
+    accountId: string,
     userId: string,
     name: string,
     description: string | null,
@@ -51,7 +51,7 @@ export class ProjectService {
         created_by: userId,
         visibility,
         is_locked: false,
-        company_id: companyId,
+        account_id: accountId,
         workspace_id: workspaceId,
         github_repo: githubRepo,
         github_branch: 'main',
@@ -80,7 +80,7 @@ export class ProjectService {
       .from('projects')
       .insert({
         id: projectYAML.metadata.id,
-        company_id: companyId,
+        account_id: accountId,
         workspace_id: workspaceId,
         github_repo: githubRepo,
         github_branch: 'main',
@@ -302,7 +302,7 @@ export class ProjectService {
     // Public projects can be edited by contributors
     if (project.visibility === 'public') {
       const { data: member } = await supabase
-        .from('company_members')
+        .from('account_users')
         .select('role')
         .eq('user_id', userId)
         .single();
