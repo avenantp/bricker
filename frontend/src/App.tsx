@@ -14,6 +14,7 @@ import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
 import { SubscriptionSelectionPage } from './pages/SubscriptionSelectionPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { WorkspacesPage } from './pages/WorkspacesPage';
+import { ConnectionsPage } from './pages/ConnectionsPage';
 import { useAuth } from './hooks/useAuth';
 import { useDevMode } from './hooks/useDevMode';
 import { useStore } from './store/useStore';
@@ -174,6 +175,9 @@ function AppRoutes({ devModeReady, hasAdminAccess, isDevMode }: { devModeReady: 
 
       {/* Workspaces Management for a specific project */}
       <Route path="/projects/:projectId/workspaces" element={<WorkspacesPage />} />
+
+      {/* Connections Management for a specific workspace */}
+      <Route path="/workspaces/:workspaceId/connections" element={<ConnectionsPage />} />
 
       {/* Legacy home page (for backward compatibility during migration) */}
       <Route path="/home" element={<HomePage />} />

@@ -4,7 +4,8 @@
  */
 
 import { useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { BaseDialog, DialogField, DialogInput, DialogTextarea } from '@/components/Common/BaseDialog';
 import { useCreateWorkspace } from '../../hooks';
 import type { CreateWorkspaceInput } from '@/types/workspace';
 
@@ -53,103 +54,66 @@ export function CreateWorkspaceDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Create New Workspace</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
+    <BaseDialog
+      title="Create New Workspace"
+      isOpen={true}
+      onClose={onClose}
+      primaryButtonLabel={createWorkspaceMutation.isPending ? 'Creating...' : 'Create Workspace'}
+      onPrimaryAction={() => handleSubmit({} as React.FormEvent)}
+      primaryButtonDisabled={createWorkspaceMutation.isPending || !name.trim()}
+      secondaryButtonLabel="Cancel"
+      onSecondaryAction={onClose}
+      width="700px"
+      height="auto"
+    >
+      {/* Error Message */}
+      {createWorkspaceMutation.isError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-800">Failed to create workspace</p>
+            <p className="text-sm text-red-600 mt-1">
+              {createWorkspaceMutation.error?.message || 'An unexpected error occurred'}
+            </p>
+          </div>
         </div>
+      )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Error Message */}
-          {createWorkspaceMutation.isError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-red-800">Failed to create workspace</p>
-                <p className="text-sm text-red-600 mt-1">
-                  {createWorkspaceMutation.error?.message || 'An unexpected error occurred'}
-                </p>
-              </div>
-            </div>
-          )}
+      {/* Workspace Name */}
+      <DialogField label="Workspace Name" required>
+        <DialogInput
+          value={name}
+          onChange={setName}
+          placeholder="Development Environment"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Choose a descriptive name for this workspace
+        </p>
+      </DialogField>
 
-          {/* Workspace Name */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Workspace Name *
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Development Environment"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              autoFocus
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Choose a descriptive name for this workspace
-            </p>
-          </div>
+      {/* Description */}
+      <DialogField label="Description">
+        <DialogTextarea
+          value={description}
+          onChange={setDescription}
+          placeholder="Describe the purpose of this workspace..."
+          rows={4}
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Optional description to help team members understand the workspace's purpose
+        </p>
+      </DialogField>
 
-          {/* Description */}
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the purpose of this workspace..."
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Optional description to help team members understand the workspace's purpose
-            </p>
-          </div>
-
-          {/* Info Box */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">What is a Workspace?</h4>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li>Isolated environment for developing data models</li>
-              <li>Can be connected to source control (GitHub, GitLab, etc.)</li>
-              <li>Contains datasets, configurations, and metadata</li>
-              <li>Team members can collaborate within the workspace</li>
-            </ul>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              disabled={createWorkspaceMutation.isPending}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={createWorkspaceMutation.isPending || !name.trim()}
-            >
-              {createWorkspaceMutation.isPending ? 'Creating...' : 'Create Workspace'}
-            </button>
-          </div>
-        </form>
+      {/* Info Box */}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h4 className="text-sm font-medium text-blue-900 mb-2">What is a Workspace?</h4>
+        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+          <li>Isolated environment for developing data models</li>
+          <li>Can be connected to source control (GitHub, GitLab, etc.)</li>
+          <li>Contains datasets, configurations, and metadata</li>
+          <li>Team members can collaborate within the workspace</li>
+        </ul>
       </div>
-    </div>
+    </BaseDialog>
   );
 }

@@ -4,9 +4,20 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, Settings, Users, Sliders, AlertCircle } from 'lucide-react';
-import { useProject, useUpdateProject, useProjectUsers } from '../../hooks';
+import { X, Settings, Users, Sliders, AlertCircle, GitBranch, CheckCircle, XCircle, RefreshCw, Trash2, Eye, EyeOff } from 'lucide-react';
+import {
+  useProject,
+  useUpdateProject,
+  useProjectUsers,
+  useProjectSourceControlStatus,
+  useConnectProjectSourceControl,
+  useDisconnectProjectSourceControl,
+  useTestProjectSourceControl,
+  useProjectBranches
+} from '../../hooks';
 import { ProjectType, ProjectVisibility, UpdateProjectInput } from '@/types/project';
+import { SourceControlProvider } from '@/types/source-control';
+import { getProviderDisplayName, getConnectionStatusColor } from '@/types/workspace';
 
 interface ProjectSettingsDialogProps {
   projectId: string;
@@ -14,7 +25,7 @@ interface ProjectSettingsDialogProps {
   onSuccess?: () => void;
 }
 
-type TabId = 'general' | 'configuration' | 'users';
+type TabId = 'general' | 'source-control' | 'configuration' | 'users';
 
 interface Tab {
   id: TabId;
@@ -24,6 +35,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { id: 'general', label: 'General', icon: Settings },
+  { id: 'source-control', label: 'Source Control', icon: GitBranch },
   { id: 'configuration', label: 'Configuration', icon: Sliders },
   { id: 'users', label: 'Users', icon: Users },
 ];
@@ -154,7 +166,6 @@ export function ProjectSettingsDialog({
               description={description}
               visibility={visibility}
               isLocked={isLocked}
-              projectType={project.project_type}
               onNameChange={(value) => {
                 setName(value);
                 setHasUnsavedChanges(true);
@@ -174,9 +185,12 @@ export function ProjectSettingsDialog({
             />
           )}
 
+          {activeTab === 'source-control' && (
+            <SourceControlTab projectId={projectId} />
+          )}
+
           {activeTab === 'configuration' && (
             <ConfigurationTab
-              projectType={project.project_type}
               configuration={project.configuration}
             />
           )}
@@ -237,7 +251,6 @@ interface GeneralTabProps {
   description: string;
   visibility: ProjectVisibility;
   isLocked: boolean;
-  projectType: ProjectType;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onVisibilityChange: (value: ProjectVisibility) => void;
@@ -249,7 +262,6 @@ function GeneralTab({
   description,
   visibility,
   isLocked,
-  projectType,
   onNameChange,
   onDescriptionChange,
   onVisibilityChange,
@@ -286,19 +298,6 @@ function GeneralTab({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             placeholder="Enter project description"
           />
-        </div>
-
-        {/* Project Type (Read-only) */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Project Type
-          </label>
-          <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
-            {projectType}
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Project type cannot be changed after creation
-          </p>
         </div>
 
         {/* Visibility */}
@@ -345,16 +344,15 @@ function GeneralTab({
 
 // Configuration Tab Component
 interface ConfigurationTabProps {
-  projectType: ProjectType;
   configuration: any;
 }
 
-function ConfigurationTab({ projectType, configuration }: ConfigurationTabProps) {
+function ConfigurationTab({ configuration }: ConfigurationTabProps) {
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {projectType} Configuration
+          Project Configuration
         </h3>
 
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -370,6 +368,302 @@ function ConfigurationTab({ projectType, configuration }: ConfigurationTabProps)
             <pre className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs overflow-auto max-h-96">
               {JSON.stringify(configuration, null, 2)}
             </pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Source Control Tab Component
+interface SourceControlTabProps {
+  projectId: string;
+}
+
+function SourceControlTab({ projectId }: SourceControlTabProps) {
+  const { data: project } = useProject(projectId);
+  const { data: status, refetch: refetchStatus } = useProjectSourceControlStatus(projectId);
+  const { data: branches } = useProjectBranches(projectId, { enabled: !!project?.source_control_provider });
+  const { refetch: testConnection } = useTestProjectSourceControl(projectId);
+
+  const connectMutation = useConnectProjectSourceControl();
+  const disconnectMutation = useDisconnectProjectSourceControl();
+
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [provider, setProvider] = useState<SourceControlProvider>(SourceControlProvider.GitHub);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [defaultBranch, setDefaultBranch] = useState('main');
+  const [username, setUsername] = useState('');
+  const [testResult, setTestResult] = useState<{ connected: boolean; message: string } | null>(null);
+
+  const handleConnect = async () => {
+    if (!repoUrl.trim() || !accessToken.trim()) {
+      alert('Repository URL and Access Token are required');
+      return;
+    }
+
+    connectMutation.mutate(
+      {
+        projectId,
+        provider,
+        repoUrl: repoUrl.trim(),
+        accessToken: accessToken.trim(),
+        defaultBranch: defaultBranch.trim() || 'main',
+        username: username.trim() || undefined
+      },
+      {
+        onSuccess: () => {
+          setIsConnecting(false);
+          setAccessToken('');
+          refetchStatus();
+        }
+      }
+    );
+  };
+
+  const handleDisconnect = async () => {
+    if (!window.confirm('Are you sure you want to disconnect source control? This will not affect existing workspaces but they will no longer sync.')) {
+      return;
+    }
+
+    disconnectMutation.mutate(projectId, {
+      onSuccess: () => {
+        setRepoUrl('');
+        setAccessToken('');
+        setDefaultBranch('main');
+        setUsername('');
+        refetchStatus();
+      }
+    });
+  };
+
+  const handleTest = async () => {
+    const result = await testConnection();
+    setTestResult(result.data || null);
+  };
+
+  const isConnected = project?.source_control_provider !== null;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Source Control</h3>
+
+        {!isConnected && !isConnecting && (
+          <>
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                Connect this project to a source control repository. Workspaces within this project can then connect to specific branches.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsConnecting(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <GitBranch className="w-4 h-4" />
+              Connect Source Control
+            </button>
+          </>
+        )}
+
+        {isConnecting && !isConnected && (
+          <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value as SourceControlProvider)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={SourceControlProvider.GitHub}>GitHub</option>
+                <option value={SourceControlProvider.GitLab}>GitLab</option>
+                <option value={SourceControlProvider.Bitbucket}>Bitbucket</option>
+                <option value={SourceControlProvider.Azure}>Azure DevOps</option>
+                <option value={SourceControlProvider.Other}>Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Repository URL *</label>
+              <input
+                type="url"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/username/repository"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Access Token *</label>
+              <div className="relative">
+                <input
+                  type={showToken ? 'text' : 'password'}
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxx or pat_xxxxxxxxxxxx"
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken(!showToken)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showToken ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Default Branch</label>
+                <input
+                  type="text"
+                  value={defaultBranch}
+                  onChange={(e) => setDefaultBranch(e.target.value)}
+                  placeholder="main"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Username (Optional)</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your-username"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleConnect}
+                disabled={connectMutation.isPending}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {connectMutation.isPending ? 'Connecting...' : 'Connect'}
+              </button>
+              <button
+                onClick={() => setIsConnecting(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {connectMutation.isError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{connectMutation.error?.message}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isConnected && status && (
+          <div className="space-y-4">
+            <div className="p-4 border border-gray-200 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    getConnectionStatusColor(project.source_control_connection_status) === 'green' ? 'bg-green-500' :
+                    getConnectionStatusColor(project.source_control_connection_status) === 'red' ? 'bg-red-500' :
+                    'bg-gray-400'
+                  }`} />
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {getProviderDisplayName(project.source_control_provider)}
+                    </p>
+                    <p className="text-sm text-gray-600">{project.source_control_repo_url}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleTest}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Test
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    disabled={disconnectMutation.isPending}
+                    className="px-3 py-1 text-sm border border-red-300 rounded-lg text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-200">
+                <div>
+                  <p className="text-xs text-gray-500">Default Branch</p>
+                  <p className="text-sm font-medium text-gray-900">{status.default_branch || 'main'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Workspaces</p>
+                  <p className="text-sm font-medium text-gray-900">{status.workspace_count}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Last Synced</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {status.last_synced_at ? new Date(status.last_synced_at).toLocaleString() : 'Never'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Credentials</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {status.has_credentials ? (
+                      <span className="flex items-center gap-1 text-green-600">
+                        <CheckCircle className="w-4 h-4" />
+                        Stored
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-red-600">
+                        <XCircle className="w-4 h-4" />
+                        Missing
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {testResult && (
+              <div className={`p-3 border rounded-lg ${
+                testResult.connected
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <p className={`text-sm ${testResult.connected ? 'text-green-800' : 'text-red-800'}`}>
+                  {testResult.message}
+                </p>
+              </div>
+            )}
+
+            {branches && branches.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Available Branches ({branches.length})</h4>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                  <div className="space-y-1">
+                    {branches.map((branch) => (
+                      <div
+                        key={branch}
+                        className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-50 rounded"
+                      >
+                        {branch}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -7,7 +7,9 @@
 import { supabase } from './supabase';
 import type {
   Column,
+  CreateColumnInput,
   CreateColumnPayload,
+  UpdateColumnInput,
   UpdateColumnPayload,
   ColumnWithReference,
   ColumnReference,
@@ -30,7 +32,7 @@ export async function createColumn(
     const { data: dataset } = await supabase
       .from('datasets')
       .select('fqn')
-      .eq('dataset_id', payload.dataset_id)
+      .eq('id', payload.dataset_id)
       .single();
 
     if (dataset) {
@@ -57,6 +59,9 @@ export async function createColumn(
     reference_description: payload.reference_description || null,
     transformation_logic: payload.transformation_logic || null,
     ai_confidence_score: null,
+    ai_suggestions: null,
+    last_ai_enhancement: null,
+    custom_metadata: null,
     position: payload.position || null,
     created_at: now,
     updated_at: now,
@@ -76,7 +81,7 @@ export async function createColumn(
   await markDatasetAsUncommitted(payload.dataset_id);
 
   // Log creation in audit_logs
-  await logAuditChange('column', data.column_id, 'create', userId, {
+  await logAuditChange('column', data.id, 'create', userId, {
     column_name: data.name,
     dataset_id: payload.dataset_id,
   });
@@ -91,7 +96,7 @@ export async function getColumn(columnId: string): Promise<Column | null> {
   const { data, error } = await supabase
     .from('columns')
     .select('*')
-    .eq('column_id', columnId)
+    .eq('id', columnId)
     .single();
 
   if (error) {
@@ -116,7 +121,7 @@ export async function getColumnWithReference(
     .select(`
       *,
       referenced_column:columns!reference_column_id(
-        column_id,
+        id,
         name,
         dataset_id,
         datasets!inner(
@@ -125,7 +130,7 @@ export async function getColumnWithReference(
         )
       )
     `)
-    .eq('column_id', columnId)
+    .eq('id', columnId)
     .single();
 
   if (error) {
@@ -141,7 +146,7 @@ export async function getColumnWithReference(
     return {
       ...column,
       referenced_column: {
-        column_id: column.referenced_column.column_id,
+        column_id: column.referenced_column.id,
         column_name: column.referenced_column.name,
         dataset_id: column.referenced_column.dataset_id,
         dataset_name: column.referenced_column.datasets.name,
@@ -179,7 +184,7 @@ export async function updateColumn(
     const { data: dataset } = await supabase
       .from('datasets')
       .select('fqn')
-      .eq('dataset_id', existingColumn.dataset_id)
+      .eq('id', existingColumn.dataset_id)
       .single();
 
     if (dataset) {
@@ -190,7 +195,7 @@ export async function updateColumn(
   const { data, error } = await supabase
     .from('columns')
     .update(updates)
-    .eq('column_id', columnId)
+    .eq('id', columnId)
     .select()
     .single();
 
@@ -225,7 +230,7 @@ export async function deleteColumn(
   const { error } = await supabase
     .from('columns')
     .delete()
-    .eq('column_id', columnId);
+    .eq('id', columnId);
 
   if (error) {
     throw new Error(`Failed to delete column: ${error.message}`);
@@ -272,7 +277,7 @@ export async function getDatasetColumnsWithReferences(
     .select(`
       *,
       referenced_column:columns!reference_column_id(
-        column_id,
+        id,
         name,
         dataset_id,
         datasets!inner(
@@ -299,7 +304,7 @@ export async function getDatasetColumnsWithReferences(
       return {
         ...col,
         referenced_column: {
-          column_id: col.referenced_column.column_id,
+          column_id: col.referenced_column.id,
           column_name: col.referenced_column.name,
           dataset_id: col.referenced_column.dataset_id,
           dataset_name: col.referenced_column.datasets.name,
@@ -324,7 +329,7 @@ export async function reorderColumns(
     supabase
       .from('columns')
       .update({ position: index })
-      .eq('column_id', columnId)
+      .eq('id', columnId)
   );
 
   await Promise.all(updates);
@@ -419,20 +424,20 @@ export async function getWorkspaceColumnReferences(
   // Get all datasets in workspace
   const { data: datasets } = await supabase
     .from('datasets')
-    .select('dataset_id')
+    .select('id')
     .eq('workspace_id', workspaceId);
 
   if (!datasets || datasets.length === 0) {
     return [];
   }
 
-  const datasetIds = datasets.map((d) => d.dataset_id);
+  const datasetIds = datasets.map((d) => d.id);
 
   // Get all columns with references in these datasets
   const { data, error } = await supabase
     .from('columns')
     .select(`
-      column_id,
+      id,
       name,
       dataset_id,
       reference_column_id,
@@ -440,10 +445,10 @@ export async function getWorkspaceColumnReferences(
       reference_description,
       source_dataset:datasets!dataset_id(
         name,
-        dataset_id
+        id
       ),
       target_column:columns!reference_column_id(
-        column_id,
+        id,
         name,
         dataset_id,
         target_dataset:datasets!dataset_id(
@@ -466,11 +471,11 @@ export async function getWorkspaceColumnReferences(
   return data
     .filter((col: any) => col.target_column)
     .map((col: any) => ({
-      source_column_id: col.column_id,
+      source_column_id: col.id,
       source_column_name: col.name,
       source_dataset_id: col.dataset_id,
       source_dataset_name: col.source_dataset.name,
-      target_column_id: col.target_column.column_id,
+      target_column_id: col.target_column.id,
       target_column_name: col.target_column.name,
       target_dataset_id: col.target_column.dataset_id,
       target_dataset_name: col.target_column.target_dataset.name,
@@ -522,7 +527,7 @@ async function markDatasetAsUncommitted(datasetId: string): Promise<void> {
   await supabase
     .from('datasets')
     .update({ has_uncommitted_changes: true })
-    .eq('dataset_id', datasetId);
+    .eq('id', datasetId);
 }
 
 /**

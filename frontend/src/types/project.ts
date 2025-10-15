@@ -3,12 +3,16 @@
  * Based on specification: docs/prp/021-project-workspaces-specification.md
  */
 
+import type { SourceControlProvider, SourceControlConnectionStatus } from './source-control';
+
 // =====================================================
 // Enums
 // =====================================================
 
 /**
  * Type of project structure
+ * @deprecated Projects now support multiple types based on mappings and lineage.
+ * This enum is kept for backward compatibility only.
  */
 export enum ProjectType {
   Standard = 'Standard',
@@ -108,11 +112,17 @@ export interface Project {
   account_id: string;
   name: string;
   description: string | null;
-  project_type: ProjectType;
+  project_type: ProjectType | null; // Made nullable - deprecated field
   configuration: ProjectConfiguration;
   owner_id: string;
   visibility: ProjectVisibility;
   is_locked: boolean;
+  // Source control fields (project-level)
+  source_control_provider: SourceControlProvider | null;
+  source_control_repo_url: string | null;
+  source_control_connection_status: SourceControlConnectionStatus | null;
+  source_control_last_synced_at: string | null;
+  source_control_default_branch: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -166,14 +176,27 @@ export interface ProjectStats {
 // =====================================================
 
 /**
+ * Source control configuration for project creation
+ */
+export interface ProjectSourceControlConfig {
+  provider: SourceControlProvider;
+  repo_url: string;
+  access_token: string;
+  refresh_token?: string;
+  default_branch?: string;
+  username?: string;
+}
+
+/**
  * Input for creating a new project
  */
 export interface CreateProjectInput {
   name: string;
   description?: string;
-  project_type: ProjectType;
+  project_type?: ProjectType; // Made optional - deprecated field
   visibility?: ProjectVisibility;
   configuration?: ProjectConfiguration;
+  source_control?: ProjectSourceControlConfig; // Optional source control setup
 }
 
 /**
@@ -194,8 +217,10 @@ export interface GetProjectsParams {
   page?: number;
   limit?: number;
   search?: string;
-  type?: ProjectType;
+  type?: ProjectType; // Deprecated - kept for backward compatibility
   visibility?: ProjectVisibility;
+  source_control_status?: SourceControlConnectionStatus; // New filter
+  source_control_provider?: SourceControlProvider; // New filter
   sort?: 'name' | 'created_at' | 'updated_at';
   order?: 'asc' | 'desc';
 }
@@ -213,6 +238,33 @@ export interface AddProjectUserInput {
  */
 export interface UpdateProjectUserRoleInput {
   role: ProjectRole;
+}
+
+/**
+ * Project source control credentials (from project_source_control_credentials table)
+ */
+export interface ProjectSourceControlCredentials {
+  id: string;
+  project_id: string;
+  provider: SourceControlProvider;
+  access_token_encrypted: string;
+  refresh_token_encrypted: string | null;
+  token_expires_at: string | null;
+  username: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Input for storing/updating project source control credentials
+ */
+export interface StoreProjectCredentialsInput {
+  project_id: string;
+  provider: SourceControlProvider;
+  access_token: string;
+  refresh_token?: string;
+  token_expires_at?: string;
+  username?: string;
 }
 
 // =====================================================

@@ -6,37 +6,32 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Grid, List, Settings, Moon, Sun, FlaskConical } from 'lucide-react';
+import { Plus, Search, Grid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProjects, useAccount } from '../hooks';
-import { useDevMode } from '../hooks/useDevMode';
 import { useStore } from '../store/useStore';
 import type { ProjectType, ProjectVisibility } from '@/types/project';
 import { ProjectCard } from '../components/Project/ProjectCard';
 import { CreateProjectDialog } from '../components/Project/CreateProjectDialog';
 import { DeleteProjectDialog } from '../components/Project/DeleteProjectDialog';
 import { ProjectSettingsDialog } from '../components/Project/ProjectSettingsDialog';
-import { SettingsModal } from '../components/Settings/SettingsModal';
+import { AppLayout } from '../components/Layout';
 
 type ViewMode = 'grid' | 'list';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
-  const { isDevMode } = useDevMode();
-  const { isDarkMode, toggleDarkMode } = useStore();
+  const { isDarkMode } = useStore();
 
   // Fetch user's account
   const { data: account, isLoading: isLoadingAccount } = useAccount();
 
   // Apply dark mode class to document element
   useEffect(() => {
-    console.log('[ProjectsPage] isDarkMode changed:', isDarkMode);
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      console.log('[ProjectsPage] Added dark class');
     } else {
       document.documentElement.classList.remove('dark');
-      console.log('[ProjectsPage] Removed dark class');
     }
   }, [isDarkMode]);
 
@@ -57,7 +52,6 @@ export function ProjectsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
   const [projectToEdit, setProjectToEdit] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
 
   // Fetch projects with React Query
   const { data, isLoading, error, refetch } = useProjects({
@@ -101,68 +95,31 @@ export function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
+    <AppLayout>
+      {/* Page Header with Actions */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Manage your data modeling projects
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={toggleDarkMode}
-                className="btn-icon"
-                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                ) : (
-                  <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                )}
-              </button>
-
-              {/* Templates Button (Dev Mode Only) */}
-              {isDevMode && (
-                <button
-                  onClick={() => navigate('/templates')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-                  title="Template Editor (Dev Mode)"
-                >
-                  <FlaskConical className="w-5 h-5" />
-                  <span className="font-medium">Templates</span>
-                </button>
-              )}
-
-              {/* Settings Button */}
-              <button
-                onClick={() => setShowSettings(true)}
-                className="btn-icon"
-                title="Settings"
-              >
-                <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </button>
-
-              {/* New Project Button */}
-              <button
-                onClick={() => setShowCreateDialog(true)}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                New Project
-              </button>
-            </div>
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              New Project
+            </button>
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
             <div className="flex-1 relative">
@@ -253,7 +210,7 @@ export function ProjectsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {isLoadingAccount ? (
           // Loading account
           <div className="flex flex-col items-center justify-center py-12">
@@ -425,9 +382,6 @@ export function ProjectsPage() {
           }}
         />
       )}
-
-      {/* Settings Modal */}
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
-    </div>
+    </AppLayout>
   );
 }

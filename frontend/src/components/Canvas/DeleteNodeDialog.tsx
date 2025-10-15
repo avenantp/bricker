@@ -4,7 +4,8 @@
  */
 
 import { useState } from 'react';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
+import { BaseDialog, DialogField, DialogInput } from '@/components/Common/BaseDialog';
 import type { Node } from '../../types/node';
 
 interface DeleteNodeDialogProps {
@@ -54,128 +55,89 @@ export function DeleteNodeDialog({
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">Delete Node</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={loading}
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <BaseDialog
+      title="Delete Node"
+      isOpen={true}
+      onClose={onClose}
+      primaryButtonLabel={loading ? 'Deleting...' : 'Delete Node'}
+      onPrimaryAction={handleDelete}
+      primaryButtonDisabled={loading || confirmText !== node.name}
+      secondaryButtonLabel="Cancel"
+      onSecondaryAction={onClose}
+      width="600px"
+      height="auto"
+      headerActions={
+        <AlertTriangle className="w-5 h-5 text-red-600" />
+      }
+    >
+      {/* Warning Message */}
+      <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-sm text-red-800 font-medium mb-2">
+          This action cannot be undone!
+        </p>
+        <p className="text-sm text-red-700">
+          Deleting this node will permanently remove it from GitHub and all
+          associated data.
+        </p>
+      </div>
+
+      {/* Node Details */}
+      <div className="mb-6 space-y-2">
+        <div className="flex items-start gap-2">
+          <span className="text-sm font-medium text-gray-700 w-24">Name:</span>
+          <span className="text-sm text-gray-900 font-semibold">{node.name}</span>
         </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Warning Message */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-800 font-medium mb-2">
-              This action cannot be undone!
-            </p>
-            <p className="text-sm text-red-700">
-              Deleting this node will permanently remove it from GitHub and all
-              associated data.
-            </p>
-          </div>
-
-          {/* Node Details */}
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-gray-700 w-24">Name:</span>
-              <span className="text-sm text-gray-900 font-semibold">{node.name}</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-gray-700 w-24">FQN:</span>
-              <span className="text-sm text-gray-600 font-mono">{node.fqn}</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-sm font-medium text-gray-700 w-24">Type:</span>
-              <span className="text-sm text-gray-600">
-                {node.entity_type}
-                {node.entity_subtype && ` / ${node.entity_subtype}`}
-              </span>
-            </div>
-          </div>
-
-          {/* Impact Assessment */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-2">
-            <p className="text-sm font-medium text-yellow-900">
-              This will also delete:
-            </p>
-            <ul className="text-sm text-yellow-800 list-disc list-inside space-y-1">
-              {hasNodeItems && (
-                <li>{node.node_items.length} column(s) / attribute(s)</li>
-              )}
-              {hasRelationships && <li>All relationships and mappings</li>}
-              <li>UUID registry entries</li>
-              <li>GitHub metadata file</li>
-            </ul>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Confirmation Input */}
-          <div>
-            <label
-              htmlFor="confirm-name"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Type <span className="font-semibold">{node.name}</span> to confirm
-            </label>
-            <input
-              id="confirm-name"
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={node.name}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              disabled={loading}
-              autoComplete="off"
-            />
-          </div>
+        <div className="flex items-start gap-2">
+          <span className="text-sm font-medium text-gray-700 w-24">FQN:</span>
+          <span className="text-sm text-gray-600 font-mono">{node.fqn}</span>
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={loading || confirmText !== node.name}
-            className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-300 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4" />
-                Delete Node
-              </>
-            )}
-          </button>
+        <div className="flex items-start gap-2">
+          <span className="text-sm font-medium text-gray-700 w-24">Type:</span>
+          <span className="text-sm text-gray-600">
+            {node.entity_type}
+            {node.entity_subtype && ` / ${node.entity_subtype}`}
+          </span>
         </div>
       </div>
-    </div>
+
+      {/* Impact Assessment */}
+      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-2">
+        <p className="text-sm font-medium text-yellow-900">
+          This will also delete:
+        </p>
+        <ul className="text-sm text-yellow-800 list-disc list-inside space-y-1">
+          {hasNodeItems && (
+            <li>{node.node_items.length} column(s) / attribute(s)</li>
+          )}
+          {hasRelationships && <li>All relationships and mappings</li>}
+          <li>UUID registry entries</li>
+          <li>GitHub metadata file</li>
+        </ul>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Confirmation Input */}
+      <DialogField
+        label={
+          <>
+            Type <span className="font-semibold">{node.name}</span> to confirm
+          </>
+        }
+        required
+      >
+        <DialogInput
+          value={confirmText}
+          onChange={setConfirmText}
+          placeholder={node.name}
+          disabled={loading}
+        />
+      </DialogField>
+    </BaseDialog>
   );
 }

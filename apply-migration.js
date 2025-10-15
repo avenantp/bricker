@@ -17,32 +17,31 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function applyMigration() {
   try {
-    const sql = readFileSync('./supabase/migrations/005_fix_workspace_members_rls.sql', 'utf8');
+    const sql = readFileSync('./supabase/migrations/007_add_deleted_at_columns.sql', 'utf8');
 
-    console.log('Applying migration: 005_fix_workspace_members_rls.sql');
+    console.log('Applying migration: 007_add_deleted_at_columns.sql');
+    console.log('Migration size:', sql.length, 'bytes');
 
-    const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql });
+    // Use pg client for DDL operations
+    const { Client } = await import('pg');
+    const client = new Client({
+      connectionString: process.env.DATABASE_URL
+    });
 
-    if (error) {
-      // Try direct query if rpc doesn't exist
-      const result = await supabase.from('_migrations').select('*').limit(1);
-      if (result.error) {
-        console.error('Error applying migration:', error);
-        process.exit(1);
-      }
+    await client.connect();
+    console.log('Connected to database');
 
-      // Apply via direct SQL
-      console.log('Attempting direct SQL execution...');
-      const { error: sqlError } = await supabase.rpc('exec', { query: sql });
-      if (sqlError) {
-        console.error('Error:', sqlError);
-        process.exit(1);
-      }
-    }
-
+    // Execute migration
+    await client.query(sql);
     console.log('✅ Migration applied successfully!');
+
+    await client.end();
+    console.log('Database connection closed');
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error:', err.message);
+    if (err.stack) {
+      console.error(err.stack);
+    }
     process.exit(1);
   }
 }

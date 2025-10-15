@@ -353,3 +353,123 @@ export function useCanManageProjectUsers(projectId: string, userId: string) {
     staleTime: 60000
   });
 }
+
+// =====================================================
+// Source Control Hooks
+// =====================================================
+
+/**
+ * Hook to connect project to source control
+ */
+export function useConnectProjectSourceControl(
+  options?: UseMutationOptions<
+    Project,
+    Error,
+    {
+      projectId: string;
+      provider: string;
+      repoUrl: string;
+      accessToken: string;
+      refreshToken?: string;
+      defaultBranch?: string;
+      username?: string;
+    }
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, provider, repoUrl, accessToken, refreshToken, defaultBranch, username }) =>
+      projectService.connectSourceControl(projectId, {
+        provider,
+        repo_url: repoUrl,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        default_branch: defaultBranch,
+        username
+      }),
+    onSuccess: (data, { projectId }) => {
+      // Update project in cache
+      queryClient.setQueryData(projectKeys.detail(projectId), data);
+
+      // Invalidate lists
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+
+      // Invalidate source control status
+      queryClient.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'sourceControl'] });
+    },
+    ...options
+  });
+}
+
+/**
+ * Hook to disconnect project from source control
+ */
+export function useDisconnectProjectSourceControl(
+  options?: UseMutationOptions<void, Error, string>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId) => projectService.disconnectSourceControl(projectId),
+    onSuccess: (_, projectId) => {
+      // Invalidate project detail
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+
+      // Invalidate lists
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+
+      // Invalidate source control status
+      queryClient.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'sourceControl'] });
+    },
+    ...options
+  });
+}
+
+/**
+ * Hook to test project source control connection
+ */
+export function useTestProjectSourceControl(
+  projectId: string,
+  options?: Omit<UseQueryOptions<{ connected: boolean; message: string }>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: [...projectKeys.detail(projectId), 'sourceControl', 'test'],
+    queryFn: () => projectService.testSourceControl(projectId),
+    enabled: false, // Manual trigger only
+    staleTime: 0, // Always fresh
+    ...options
+  });
+}
+
+/**
+ * Hook to get project source control status
+ */
+export function useProjectSourceControlStatus(
+  projectId: string,
+  options?: Omit<UseQueryOptions<any>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: [...projectKeys.detail(projectId), 'sourceControl', 'status'],
+    queryFn: () => projectService.getSourceControlStatus(projectId),
+    enabled: !!projectId,
+    staleTime: 30000,
+    ...options
+  });
+}
+
+/**
+ * Hook to get available branches from project repository
+ */
+export function useProjectBranches(
+  projectId: string,
+  options?: Omit<UseQueryOptions<string[]>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: [...projectKeys.detail(projectId), 'sourceControl', 'branches'],
+    queryFn: () => projectService.getProjectBranches(projectId),
+    enabled: !!projectId,
+    staleTime: 60000, // 1 minute
+    ...options
+  });
+}

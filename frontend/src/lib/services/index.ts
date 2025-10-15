@@ -25,3 +25,9 @@ export {
   type CommitParams,
   type SyncParams
 } from './source-control-service';
+
+// Connection Service
+export {
+  ConnectionService,
+  createConnectionService
+} from './connection-service';

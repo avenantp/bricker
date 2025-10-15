@@ -13,7 +13,8 @@ import {
   ProjectRole,
   CreateProjectInput,
   UpdateProjectInput,
-  ProjectStats
+  ProjectStats,
+  ProjectSourceControlConfig
 } from '@/types/project';
 import {
   PaginatedResponse,
@@ -22,6 +23,7 @@ import {
   validatePaginationParams,
   calculateOffset
 } from '@/types/api';
+import { SourceControlProvider } from '@/types/source-control';
 
 /**
  * Project search and filter parameters
@@ -151,13 +153,13 @@ export class ProjectService {
       account_id: input.account_id,
       name: input.name,
       description: input.description || null,
-      project_type: input.project_type,
+      project_type: input.project_type || null, // Now optional/nullable
       visibility: input.visibility || 'public',
       owner_id: userId,
       configuration: input.configuration || {}
     };
 
-    const { data, error } = await this.supabase
+    const { data: project, error } = await this.supabase
       .from('projects')
       .insert(projectData)
       .select()
@@ -167,7 +169,29 @@ export class ProjectService {
       throw new Error(`Failed to create project: ${error.message}`);
     }
 
-    return data;
+    // If source control configuration is provided, connect it
+    if (input.source_control) {
+      try {
+        await this.connectSourceControl(project.id, {
+          provider: input.source_control.provider,
+          repo_url: input.source_control.repo_url,
+          access_token: input.source_control.access_token,
+          refresh_token: input.source_control.refresh_token,
+          default_branch: input.source_control.default_branch,
+          username: input.source_control.username
+        });
+
+        // Re-fetch project to get updated source control fields
+        return await this.getProject(project.id);
+      } catch (scError) {
+        // If source control connection fails, we still return the project
+        // but log the error for debugging
+        console.error('Failed to connect source control during project creation:', scError);
+        return project;
+      }
+    }
+
+    return project;
   }
 
   /**
@@ -493,6 +517,398 @@ export class ProjectService {
   }
 
   // =====================================================
+  // Source Control Management
+  // =====================================================
+
+  /**
+   * Connect project to source control repository
+   */
+  async connectSourceControl(
+    projectId: string,
+    config: {
+      provider: string;
+      repo_url: string;
+      access_token: string;
+      refresh_token?: string;
+      default_branch?: string;
+      username?: string;
+    }
+  ): Promise<Project> {
+    // First, store encrypted credentials
+    await this.storeSourceControlCredentials(projectId, {
+      provider: config.provider as SourceControlProvider,
+      access_token: config.access_token,
+      refresh_token: config.refresh_token,
+      username: config.username
+    });
+
+    // Call database function to connect source control
+    const { data, error } = await this.supabase
+      .rpc('connect_project_source_control', {
+        p_project_id: projectId,
+        p_provider: config.provider,
+        p_repo_url: config.repo_url,
+        p_default_branch: config.default_branch || 'main'
+      });
+
+    if (error) {
+      throw new Error(`Failed to connect source control: ${error.message}`);
+    }
+
+    if (!data || data.length === 0 || !data[0].success) {
+      throw new Error(data?.[0]?.message || 'Failed to connect source control');
+    }
+
+    // Fetch and return updated project
+    return await this.getProject(projectId);
+  }
+
+  /**
+   * Disconnect project from source control
+   */
+  async disconnectSourceControl(projectId: string): Promise<void> {
+    const { data, error } = await this.supabase
+      .rpc('disconnect_project_source_control', {
+        p_project_id: projectId
+      });
+
+    if (error) {
+      throw new Error(`Failed to disconnect source control: ${error.message}`);
+    }
+
+    if (!data || data.length === 0 || !data[0].success) {
+      throw new Error(data?.[0]?.message || 'Failed to disconnect source control');
+    }
+  }
+
+  /**
+   * Test project source control connection
+   */
+  async testSourceControl(projectId: string): Promise<{ connected: boolean; message: string }> {
+    try {
+      // Get source control status
+      const status = await this.getSourceControlStatus(projectId);
+
+      if (!status.provider || !status.repo_url) {
+        return {
+          connected: false,
+          message: 'Source control not configured'
+        };
+      }
+
+      if (!status.has_credentials) {
+        return {
+          connected: false,
+          message: 'Source control credentials not found'
+        };
+      }
+
+      // Try to fetch branches to test the connection
+      // This will use the stored credentials and test the actual connection
+      try {
+        const branches = await this.getProjectBranches(projectId);
+
+        if (branches && branches.length > 0) {
+          return {
+            connected: true,
+            message: `Successfully connected to ${status.provider} repository`
+          };
+        } else {
+          return {
+            connected: false,
+            message: 'Could not fetch branches from repository'
+          };
+        }
+      } catch (branchError) {
+        return {
+          connected: false,
+          message: `Connection test failed: ${branchError instanceof Error ? branchError.message : 'Unknown error'}`
+        };
+      }
+    } catch (error) {
+      return {
+        connected: false,
+        message: `Failed to test connection: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Get project source control status
+   */
+  async getSourceControlStatus(projectId: string): Promise<{
+    provider: string | null;
+    repo_url: string | null;
+    connection_status: string | null;
+    default_branch: string | null;
+    last_synced_at: string | null;
+    has_credentials: boolean;
+    workspace_count: number;
+  }> {
+    const { data, error } = await this.supabase
+      .rpc('get_project_source_control_status', {
+        p_project_id: projectId
+      });
+
+    if (error) {
+      throw new Error(`Failed to get source control status: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('Project not found');
+    }
+
+    return data[0];
+  }
+
+  /**
+   * Get available branches from project repository
+   */
+  async getProjectBranches(projectId: string): Promise<string[]> {
+    // Get project details including source control info
+    const project = await this.getProject(projectId);
+
+    if (!project.source_control_provider || !project.source_control_repo_url) {
+      throw new Error('Project source control not configured');
+    }
+
+    // Get credentials
+    const credentials = await this.getSourceControlCredentials(projectId);
+
+    if (!credentials) {
+      throw new Error('Source control credentials not found');
+    }
+
+    // Fetch branches from provider API
+    return await this.fetchBranchesFromProvider(
+      project.source_control_provider,
+      project.source_control_repo_url,
+      credentials.access_token_encrypted // Note: In production, this should be decrypted
+    );
+  }
+
+  /**
+   * Fetch branches from source control provider API
+   *
+   * Note: This is a simplified implementation. In production:
+   * - Tokens should be properly decrypted before use
+   * - Should use provider-specific SDKs/APIs
+   * - Should handle pagination for repositories with many branches
+   * - Should implement proper error handling and retry logic
+   */
+  private async fetchBranchesFromProvider(
+    provider: string,
+    repoUrl: string,
+    accessToken: string
+  ): Promise<string[]> {
+    try {
+      switch (provider) {
+        case 'github':
+          return await this.fetchGitHubBranches(repoUrl, accessToken);
+        case 'gitlab':
+          return await this.fetchGitLabBranches(repoUrl, accessToken);
+        case 'bitbucket':
+          return await this.fetchBitbucketBranches(repoUrl, accessToken);
+        case 'azure':
+          return await this.fetchAzureBranches(repoUrl, accessToken);
+        default:
+          throw new Error(`Unsupported source control provider: ${provider}`);
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to fetch branches from ${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Fetch branches from GitHub
+   */
+  private async fetchGitHubBranches(repoUrl: string, accessToken: string): Promise<string[]> {
+    // Extract owner and repo from URL
+    // Example: https://github.com/owner/repo -> owner/repo
+    const match = repoUrl.match(/github\.com[/:]([\w-]+)\/([\w-]+)/);
+    if (!match) {
+      throw new Error('Invalid GitHub repository URL');
+    }
+
+    const [, owner, repo] = match;
+    const cleanRepo = repo.replace(/\.git$/, '');
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${cleanRepo}/branches`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.statusText}`);
+    }
+
+    const branches = await response.json();
+    return branches.map((branch: any) => branch.name);
+  }
+
+  /**
+   * Fetch branches from GitLab
+   */
+  private async fetchGitLabBranches(repoUrl: string, accessToken: string): Promise<string[]> {
+    // Extract project path from URL
+    // Example: https://gitlab.com/group/project -> group/project
+    const match = repoUrl.match(/gitlab\.com[/:]([\w-]+\/[\w-]+)/);
+    if (!match) {
+      throw new Error('Invalid GitLab repository URL');
+    }
+
+    const projectPath = encodeURIComponent(match[1].replace(/\.git$/, ''));
+
+    const response = await fetch(
+      `https://gitlab.com/api/v4/projects/${projectPath}/repository/branches`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`GitLab API error: ${response.statusText}`);
+    }
+
+    const branches = await response.json();
+    return branches.map((branch: any) => branch.name);
+  }
+
+  /**
+   * Fetch branches from Bitbucket
+   */
+  private async fetchBitbucketBranches(repoUrl: string, accessToken: string): Promise<string[]> {
+    // Extract workspace and repo from URL
+    // Example: https://bitbucket.org/workspace/repo -> workspace/repo
+    const match = repoUrl.match(/bitbucket\.org[/:]([\w-]+)\/([\w-]+)/);
+    if (!match) {
+      throw new Error('Invalid Bitbucket repository URL');
+    }
+
+    const [, workspace, repoSlug] = match;
+
+    const response = await fetch(
+      `https://api.bitbucket.org/2.0/repositories/${workspace}/${repoSlug}/refs/branches`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Bitbucket API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.values.map((branch: any) => branch.name);
+  }
+
+  /**
+   * Fetch branches from Azure DevOps
+   */
+  private async fetchAzureBranches(repoUrl: string, accessToken: string): Promise<string[]> {
+    // Azure DevOps URL parsing is more complex
+    // Example: https://dev.azure.com/organization/project/_git/repo
+    const match = repoUrl.match(/dev\.azure\.com\/([\w-]+)\/([\w-]+)\/_git\/([\w-]+)/);
+    if (!match) {
+      throw new Error('Invalid Azure DevOps repository URL');
+    }
+
+    const [, organization, project, repo] = match;
+
+    const response = await fetch(
+      `https://dev.azure.com/${organization}/${project}/_apis/git/repositories/${repo}/refs?filter=heads/&api-version=6.0`,
+      {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`:${accessToken}`).toString('base64')}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Azure DevOps API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.value.map((ref: any) => ref.name.replace('refs/heads/', ''));
+  }
+
+  /**
+   * Store source control credentials (encrypted)
+   *
+   * Note: In production, implement proper encryption using a KMS or vault service
+   */
+  private async storeSourceControlCredentials(
+    projectId: string,
+    credentials: {
+      provider: SourceControlProvider;
+      access_token: string;
+      refresh_token?: string;
+      username?: string;
+    }
+  ): Promise<void> {
+    // TODO: Implement proper encryption
+    // For now, storing as-is (THIS IS NOT SECURE - implement encryption in production)
+    const credentialData = {
+      project_id: projectId,
+      provider: credentials.provider,
+      access_token_encrypted: credentials.access_token, // Should be encrypted
+      refresh_token_encrypted: credentials.refresh_token || null, // Should be encrypted
+      username: credentials.username || null
+    };
+
+    // Use upsert to handle both insert and update
+    const { error } = await this.supabase
+      .from('project_source_control_credentials')
+      .upsert(credentialData, {
+        onConflict: 'project_id'
+      });
+
+    if (error) {
+      throw new Error(`Failed to store credentials: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get source control credentials for a project
+   *
+   * Note: In production, decrypt credentials before returning
+   */
+  private async getSourceControlCredentials(
+    projectId: string
+  ): Promise<{
+    provider: string;
+    access_token_encrypted: string;
+    refresh_token_encrypted: string | null;
+    username: string | null;
+  } | null> {
+    const { data, error } = await this.supabase
+      .from('project_source_control_credentials')
+      .select('provider, access_token_encrypted, refresh_token_encrypted, username')
+      .eq('project_id', projectId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // Not found
+        return null;
+      }
+      throw new Error(`Failed to get credentials: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  // =====================================================
   // Validation Helpers
   // =====================================================
 
@@ -504,11 +920,38 @@ export class ProjectService {
       throw new Error('Account ID is required');
     }
 
-    if (!input.project_type) {
-      throw new Error('Project type is required');
-    }
+    // project_type is now optional/deprecated
 
     this.validateProjectName(input.name);
+
+    // Validate source control config if provided
+    if (input.source_control) {
+      this.validateSourceControlConfig(input.source_control);
+    }
+  }
+
+  /**
+   * Validate source control configuration
+   */
+  private validateSourceControlConfig(config: ProjectSourceControlConfig): void {
+    if (!config.provider) {
+      throw new Error('Source control provider is required');
+    }
+
+    if (!config.repo_url || config.repo_url.trim().length === 0) {
+      throw new Error('Repository URL is required');
+    }
+
+    if (!config.access_token || config.access_token.trim().length === 0) {
+      throw new Error('Access token is required');
+    }
+
+    // Validate repo URL format
+    try {
+      new URL(config.repo_url);
+    } catch {
+      throw new Error('Invalid repository URL format');
+    }
   }
 
   /**

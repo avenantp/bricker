@@ -12,8 +12,16 @@ import {
   FolderOpen,
   Users,
   Calendar,
+  GitBranch,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import type { ProjectWithDetails } from '@/types/project';
+import { getProviderDisplayName, getConnectionStatusColor } from '@/types/workspace';
+import { Card } from '@/components/ui/Card';
 
 type ViewMode = 'grid' | 'list';
 
@@ -36,28 +44,17 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
-  const getProjectTypeColor = (type: string) => {
-    switch (type) {
-      case 'DataVault':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Dimensional':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'Standard':
-      default:
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-    }
-  };
 
   const getVisibilityColor = (visibility: string) => {
     switch (visibility) {
       case 'private':
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
       case 'team':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700';
       case 'organization':
-        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+        return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
 
@@ -76,39 +73,68 @@ export function ProjectCard({
     return date.toLocaleDateString();
   };
 
+  const getSourceControlStatusIcon = () => {
+    if (!project.source_control_provider) {
+      return <XCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />;
+    }
+
+    const statusColor = getConnectionStatusColor(project.source_control_connection_status);
+
+    switch (statusColor) {
+      case 'green':
+        return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-500" />;
+      case 'red':
+        return <XCircle className="w-4 h-4 text-red-600 dark:text-red-500" />;
+      case 'yellow':
+      case 'orange':
+        return <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />;
+      default:
+        return <XCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />;
+    }
+  };
+
   if (viewMode === 'list') {
     return (
-      <div
-        className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+      <Card
+        variant="bordered"
+        padding="none"
+        interactive
+        viewMode="list"
         onClick={onOpen}
       >
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
                   {project.name}
                 </h3>
-                <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getProjectTypeColor(project.project_type)}`}>
-                  {project.project_type}
-                </span>
+                {project.is_locked ? (
+                  <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                ) : (
+                  <Unlock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                )}
                 <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getVisibilityColor(project.visibility)}`}>
                   {project.visibility}
                 </span>
               </div>
               {project.description && (
-                <p className="text-sm text-gray-600 line-clamp-1 mb-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1 mb-2">
                   {project.description}
                 </p>
               )}
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
-                  {project.member_count || 0} {project.member_count === 1 ? 'member' : 'members'}
+                  {project.user_count || 1} {project.user_count === 1 ? 'user' : 'users'}
                 </span>
                 <span className="flex items-center gap-1">
                   <FolderOpen className="w-3 h-3" />
                   {project.workspace_count || 0} {project.workspace_count === 1 ? 'workspace' : 'workspaces'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <GitBranch className="w-3 h-3" />
+                  {getProviderDisplayName(project.source_control_provider)}
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
@@ -124,7 +150,7 @@ export function ProjectCard({
                   e.stopPropagation();
                   setShowMenu(!showMenu);
                 }}
-                className="btn-icon text-gray-400 hover:text-gray-600"
+                className="btn-icon text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <MoreVertical className="w-5 h-5" />
               </button>
@@ -138,7 +164,7 @@ export function ProjectCard({
                       setShowMenu(false);
                     }}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
                     {onOpen && (
                       <button
                         onClick={(e) => {
@@ -146,7 +172,7 @@ export function ProjectCard({
                           onOpen();
                           setShowMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <FolderOpen className="w-4 h-4" />
                         Open
@@ -159,7 +185,7 @@ export function ProjectCard({
                           onDuplicate();
                           setShowMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <Copy className="w-4 h-4" />
                         Duplicate
@@ -172,7 +198,7 @@ export function ProjectCard({
                           onSettings();
                           setShowMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <Settings className="w-4 h-4" />
                         Settings
@@ -180,14 +206,14 @@ export function ProjectCard({
                     )}
                     {onDelete && (
                       <>
-                        <div className="border-t border-gray-200 my-1" />
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onDelete();
                             setShowMenu(false);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -200,24 +226,27 @@ export function ProjectCard({
             </div>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Grid view
   return (
-    <div
-      className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+    <Card
+      variant="bordered"
+      padding="none"
+      interactive
+      viewMode="grid"
       onClick={onOpen}
     >
       <div className="p-6">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate mb-2">
               {project.name}
             </h3>
             {project.description && (
-              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
                 {project.description}
               </p>
             )}
@@ -230,7 +259,7 @@ export function ProjectCard({
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
-              className="btn-icon p-1 text-gray-400 hover:text-gray-600"
+              className="btn-icon p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <MoreVertical className="w-5 h-5" />
             </button>
@@ -244,7 +273,7 @@ export function ProjectCard({
                     setShowMenu(false);
                   }}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
                   {onOpen && (
                     <button
                       onClick={(e) => {
@@ -252,7 +281,7 @@ export function ProjectCard({
                         onOpen();
                         setShowMenu(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <FolderOpen className="w-4 h-4" />
                       Open
@@ -265,7 +294,7 @@ export function ProjectCard({
                         onDuplicate();
                         setShowMenu(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Copy className="w-4 h-4" />
                       Duplicate
@@ -278,7 +307,7 @@ export function ProjectCard({
                         onSettings();
                         setShowMenu(false);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Settings className="w-4 h-4" />
                       Settings
@@ -286,14 +315,14 @@ export function ProjectCard({
                   )}
                   {onDelete && (
                     <>
-                      <div className="border-t border-gray-200 my-1" />
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onDelete();
                           setShowMenu(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete
@@ -308,30 +337,40 @@ export function ProjectCard({
 
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className={`px-2 py-1 text-xs font-medium rounded border ${getProjectTypeColor(project.project_type)}`}>
-            {project.project_type}
-          </span>
+          {project.is_locked ? (
+            <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          ) : (
+            <Unlock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          )}
           <span className={`px-2 py-1 text-xs font-medium rounded border ${getVisibilityColor(project.visibility)}`}>
             {project.visibility}
           </span>
         </div>
 
         {/* Stats */}
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-400" />
-            <span>{project.member_count || 0} {project.member_count === 1 ? 'member' : 'members'}</span>
+            <Users className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            <span>{project.user_count || 1} {project.user_count === 1 ? 'user' : 'users'}</span>
           </div>
           <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-gray-400" />
+            <FolderOpen className="w-4 h-4 text-gray-400 dark:text-gray-500" />
             <span>{project.workspace_count || 0} {project.workspace_count === 1 ? 'workspace' : 'workspaces'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {getSourceControlStatusIcon()}
+            <span className="text-xs">
+              {project.source_control_provider
+                ? getProviderDisplayName(project.source_control_provider)
+                : 'No source control'}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
-        <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 rounded-b-lg">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             Updated {formatDate(project.updated_at)}
@@ -343,6 +382,6 @@ export function ProjectCard({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

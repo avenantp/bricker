@@ -15,3 +15,6 @@ export * from './useWorkspaces';
 
 // Source Control Hooks
 export * from './useSourceControl';
+
+// Connection Hooks
+export * from './useConnections';

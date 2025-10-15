@@ -1,0 +1,78 @@
+# Tasks to mark as complete in 040-dataset-column-tasklist.md
+
+## Task 4.2.4 - Inline Editing ✅
+Replace lines 182-197 with:
+### 4.2.4 Columns Tab - Inline Editing ✅
+- [x] **4.2.4.1** Create `frontend/src/components/Canvas/EditableCell.tsx`
+- [x] **4.2.4.2** Implement click-to-edit behavior with hover indicators
+- [x] **4.2.4.3** Add input types for different field types (text, textarea, data_type)
+- [x] **4.2.4.4** Implement keyboard navigation (Tab, Enter, Escape)
+- [x] **4.2.4.5** Add validation on blur
+- [x] **4.2.4.6** Show validation errors inline
+- [x] **4.2.4.7** Implement auto-save on valid input
+- [x] **4.2.4.8** Add optimistic UI updates with loading states
+- [x] **4.2.4.9** Integration with DataTypeSelector and validation utilities
+- [x] **4.2.4.10** Specialized cells (name, data_type, business_name, description)
+
+**Files**: `frontend/src/components/Canvas/EditableCell.tsx` ✅
+
+**Status**: ✅ Complete (integrated toolbar & actions from 4.2.5, indicators from 4.2.6, badges from 4.2.7 already in ColumnsTab)
+
+## Task 4.2.5 - Toolbar & Actions ✅ (Integrated in ColumnsTab)
+## Task 4.2.6 - PK/FK/Nullable Indicators ✅ (Integrated in ColumnsTab)
+## Task 4.2.7 - AI Confidence Badges ✅ (Integrated in ColumnsTab)
+
+## Task 4.3.2 - Delete Column Confirmation ✅
+Replace lines 276-289 with:
+### 4.3.2 Delete Column Confirmation ✅
+- [x] **4.3.2.1** Create `frontend/src/components/Canvas/DeleteColumnDialog.tsx`
+- [x] **4.3.2.2** Show column name being deleted with full details
+- [x] **4.3.2.3** Display PK/FK/NN indicators
+- [x] **4.3.2.4** Display warning if column has constraints
+- [x] **4.3.2.5** Show impact assessment for constrained columns
+- [x] **4.3.2.6** Implement "Delete" and "Cancel" buttons
+- [x] **4.3.2.7** Call column service on confirm
+- [x] **4.3.2.8** Keyboard shortcuts (Enter to confirm, Escape to cancel)
+- [x] **4.3.2.9** Loading states and error handling
+- [x] **4.3.2.10** Accessibility features
+
+**Files**: `frontend/src/components/Canvas/DeleteColumnDialog.tsx` ✅
+
+**Status**: ✅ Complete
+
+## Task 4.3.3 - Bulk Delete Columns ✅
+Replace lines 291-305 with:
+### 4.3.3 Bulk Delete Columns ✅
+- [x] **4.3.3.1** Create `frontend/src/components/Canvas/BulkDeleteColumnsDialog.tsx`
+- [x] **4.3.3.2** Show list of columns to be deleted
+- [x] **4.3.3.3** Display count with dynamic messaging
+- [x] **4.3.3.4** Check constraints for all selected columns
+- [x] **4.3.3.5** Show combined impact assessment with metrics dashboard
+- [x] **4.3.3.6** Expandable column details list (Press D to toggle)
+- [x] **4.3.3.7** Implement "Delete All" and "Cancel" buttons
+- [x] **4.3.3.8** Call column service for bulk delete
+- [x] **4.3.3.9** Loading states during deletion
+- [x] **4.3.3.10** Keyboard shortcuts (Enter, Escape, D)
+- [x] **4.3.3.11** Comprehensive impact warnings
+
+**Files**: `frontend/src/components/Canvas/BulkDeleteColumnsDialog.tsx` ✅
+
+**Status**: ✅ Complete
+
+## Task 4.3.4 - Data Type Selector ✅
+Replace lines 307-325 with:
+### 4.3.4 Column Data Type Selector ✅
+- [x] **4.3.4.1** Create `frontend/src/components/Canvas/DataTypeSelector.tsx`
+- [x] **4.3.4.2** Build dropdown with 25+ common data types across 6 categories
+- [x] **4.3.4.3** Add search/filter functionality
+- [x] **4.3.4.4** Group types by category with headers
+- [x] **4.3.4.5** Add "Custom" option for user-defined types
+- [x] **4.3.4.6** Custom input mode with validation
+- [x] **4.3.4.7** Validate custom input format
+- [x] **4.3.4.8** Style with Tailwind CSS
+- [x] **4.3.4.9** Reusable component with two variants
+- [x] **4.3.4.10** Keyboard navigation (Enter, Escape)
+
+**Files**: `frontend/src/components/Canvas/DataTypeSelector.tsx` ✅
+
+**Status**: ✅ Complete

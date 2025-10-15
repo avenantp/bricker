@@ -62,7 +62,15 @@ export class WorkspaceService {
       .select(`
         *,
         owner:users!owner_id(id, full_name, email),
-        project:projects!project_id(id, name, project_type),
+        project:projects!project_id(
+          id,
+          name,
+          project_type,
+          source_control_provider,
+          source_control_repo_url,
+          source_control_default_branch,
+          source_control_connection_status
+        ),
         dataset_count:datasets(count),
         user_count:workspace_users(count)
       `, { count: 'exact' });
@@ -101,7 +109,11 @@ export class WorkspaceService {
       ...workspace,
       dataset_count: workspace.dataset_count?.[0]?.count || 0,
       user_count: workspace.user_count?.[0]?.count || 0,
-      user_role: undefined // Will be populated by getUserRole if needed
+      user_role: undefined, // Will be populated by getUserRole if needed
+      // Map project source control fields to top-level prefixed fields
+      project_source_control_provider: workspace.project?.source_control_provider || null,
+      project_source_control_repo_url: workspace.project?.source_control_repo_url || null,
+      project_source_control_default_branch: workspace.project?.source_control_default_branch || null
     }));
 
     return createPaginatedResponse(workspaces, page, limit, count || 0);
@@ -116,7 +128,15 @@ export class WorkspaceService {
       .select(`
         *,
         owner:users!owner_id(id, full_name, email),
-        project:projects!project_id(id, name, project_type),
+        project:projects!project_id(
+          id,
+          name,
+          project_type,
+          source_control_provider,
+          source_control_repo_url,
+          source_control_default_branch,
+          source_control_connection_status
+        ),
         dataset_count:datasets(count),
         user_count:workspace_users(count)
       `)
@@ -131,10 +151,14 @@ export class WorkspaceService {
       throw new Error('Workspace not found');
     }
 
+    // Map project source control fields to top-level prefixed fields
     return {
       ...data,
       dataset_count: data.dataset_count?.[0]?.count || 0,
-      user_count: data.user_count?.[0]?.count || 0
+      user_count: data.user_count?.[0]?.count || 0,
+      project_source_control_provider: data.project?.source_control_provider || null,
+      project_source_control_repo_url: data.project?.source_control_repo_url || null,
+      project_source_control_default_branch: data.project?.source_control_default_branch || null
     };
   }
 

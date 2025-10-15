@@ -37,9 +37,10 @@ export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error' | 'not_sync
  */
 export interface Dataset {
   // Core identifiers
-  dataset_id: string; // UUID
-  workspace_id: string; // UUID reference to workspaces
-  project_id: string; // UUID reference to projects
+  id: string; // UUID (primary key in database, aliased as dataset_id in queries)
+  account_id: string; // UUID reference to accounts (multi-tenancy)
+  workspace_id?: string; // UUID reference to workspaces
+  project_id?: string; // UUID reference to projects
 
   // Identity
   fqn: string; // Fully Qualified Name
@@ -53,10 +54,15 @@ export interface Dataset {
 
   // Documentation
   description?: string;
-  metadata: DatasetMetadata;
+  metadata?: DatasetMetadata;
 
   // AI metadata
   ai_confidence_score?: number; // 0-100
+
+  // Ownership and Security
+  owner_id?: string; // UUID reference to users
+  visibility: 'public' | 'private' | 'locked';
+  is_locked: boolean;
 
   // Source control sync tracking
   source_control_file_path?: string;
@@ -73,11 +79,12 @@ export interface Dataset {
 }
 
 /**
- * Dataset creation payload
+ * Dataset creation input (used by service layer)
  */
-export interface CreateDatasetPayload {
-  workspace_id: string;
-  project_id: string;
+export interface CreateDatasetInput {
+  account_id: string;
+  workspace_id?: string;
+  project_id?: string;
   name: string;
   fqn: string;
   medallion_layer?: MedallionLayer;
@@ -86,13 +93,21 @@ export interface CreateDatasetPayload {
   materialization_type?: MaterializationType;
   description?: string;
   metadata?: DatasetMetadata;
+  owner_id?: string;
+  visibility?: 'public' | 'private' | 'locked';
+}
+
+/**
+ * Dataset creation payload (for API calls, includes UI-specific fields)
+ */
+export interface CreateDatasetPayload extends CreateDatasetInput {
   position?: { x: number; y: number }; // Canvas position (UI only)
 }
 
 /**
- * Dataset update payload (partial updates)
+ * Dataset update input (used by service layer)
  */
-export interface UpdateDatasetPayload {
+export interface UpdateDatasetInput {
   name?: string;
   fqn?: string;
   medallion_layer?: MedallionLayer;
@@ -102,7 +117,15 @@ export interface UpdateDatasetPayload {
   description?: string;
   metadata?: DatasetMetadata;
   ai_confidence_score?: number;
+  owner_id?: string;
+  visibility?: 'public' | 'private' | 'locked';
+  is_locked?: boolean;
 }
+
+/**
+ * Dataset update payload (alias for compatibility)
+ */
+export type UpdateDatasetPayload = UpdateDatasetInput;
 
 /**
  * Dataset with canvas position for UI

@@ -102,6 +102,7 @@ export interface WorkspaceSettings {
 
 /**
  * Workspace entity (matches database table)
+ * Note: repo_url and provider are now inherited from the parent project
  */
 export interface Workspace {
   id: string;
@@ -109,11 +110,10 @@ export interface Workspace {
   project_id: string;
   name: string;
   description: string | null;
-  source_control_repo_url: string | null;
-  source_control_branch: string | null;
-  source_control_commit_sha: string | null;
-  source_control_provider: SourceControlProvider | null;
-  source_control_connection_status: SourceControlConnectionStatus | null;
+  // Source control fields (workspace-specific - branch level)
+  source_control_branch: string | null; // Branch this workspace connects to
+  source_control_commit_sha: string | null; // Current commit SHA for this branch
+  source_control_connection_status: SourceControlConnectionStatus | null; // Workspace-specific status
   last_synced_at: string | null;
   is_synced: boolean;
   owner_id: string;
@@ -126,6 +126,7 @@ export interface Workspace {
 
 /**
  * Workspace with additional computed fields
+ * Includes source control information inherited from project
  */
 export interface WorkspaceWithDetails extends Workspace {
   owner?: {
@@ -136,8 +137,12 @@ export interface WorkspaceWithDetails extends Workspace {
   project?: {
     id: string;
     name: string;
-    project_type: string;
+    project_type: string | null; // Deprecated
   };
+  // Project-level source control (inherited for display)
+  project_source_control_provider?: SourceControlProvider | null;
+  project_source_control_repo_url?: string | null;
+  project_source_control_default_branch?: string | null;
   dataset_count?: number;
   uncommitted_changes_count?: number;
   unpulled_commits_count?: number;
@@ -198,6 +203,7 @@ export interface UpdateWorkspaceInput {
   visibility?: WorkspaceVisibility;
   settings?: WorkspaceSettings;
   is_locked?: boolean;
+  source_control_branch?: string | null;
 }
 
 /**

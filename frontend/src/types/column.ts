@@ -9,11 +9,27 @@
 export type ReferenceType = 'FK' | 'BusinessKey' | 'NaturalKey';
 
 /**
+ * AI suggestions stored in JSONB
+ */
+export interface AISuggestions {
+  business_name?: {
+    suggested: string;
+    confidence: number;
+    reasoning: string;
+  };
+  description?: {
+    suggested: string;
+    confidence: number;
+    reasoning: string;
+  };
+}
+
+/**
  * Column entity (stored in Supabase)
  */
 export interface Column {
   // Core identifiers
-  column_id: string; // UUID
+  id: string; // UUID (primary key in database, aliased as column_id in queries)
   dataset_id: string; // UUID reference to datasets
 
   // Identity
@@ -43,6 +59,9 @@ export interface Column {
 
   // AI metadata
   ai_confidence_score?: number; // 0-100
+  ai_suggestions?: AISuggestions; // JSONB - AI-generated suggestions
+  last_ai_enhancement?: string; // ISO timestamp - when AI last enhanced this column
+  custom_metadata?: Record<string, unknown>; // JSONB - custom user-defined metadata
 
   // Position in table
   position?: number;
@@ -53,9 +72,9 @@ export interface Column {
 }
 
 /**
- * Column creation payload
+ * Column creation input (used by service layer)
  */
-export interface CreateColumnPayload {
+export interface CreateColumnInput {
   dataset_id: string;
   name: string;
   data_type: string;
@@ -74,9 +93,14 @@ export interface CreateColumnPayload {
 }
 
 /**
- * Column update payload (partial updates)
+ * Column creation payload (alias for compatibility)
  */
-export interface UpdateColumnPayload {
+export type CreateColumnPayload = CreateColumnInput;
+
+/**
+ * Column update input (used by service layer)
+ */
+export interface UpdateColumnInput {
   name?: string;
   data_type?: string;
   fqn?: string;
@@ -91,8 +115,16 @@ export interface UpdateColumnPayload {
   reference_description?: string;
   transformation_logic?: string;
   ai_confidence_score?: number;
+  ai_suggestions?: AISuggestions;
+  last_ai_enhancement?: string;
+  custom_metadata?: Record<string, unknown>;
   position?: number;
 }
+
+/**
+ * Column update payload (alias for compatibility)
+ */
+export type UpdateColumnPayload = UpdateColumnInput;
 
 /**
  * Column with reference details (joined data)

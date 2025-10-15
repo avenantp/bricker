@@ -7,7 +7,9 @@
 import { supabase } from './supabase';
 import type {
   Dataset,
+  CreateDatasetInput,
   CreateDatasetPayload,
+  UpdateDatasetInput,
   UpdateDatasetPayload,
   DatasetFilters,
   BatchDatasetOperationResult,
@@ -26,6 +28,7 @@ export async function createDataset(
 
   // Prepare dataset object
   const dataset = {
+    account_id: payload.account_id,
     workspace_id: payload.workspace_id,
     project_id: payload.project_id,
     name: payload.name,
@@ -35,12 +38,15 @@ export async function createDataset(
     entity_subtype: payload.entity_subtype || null,
     materialization_type: payload.materialization_type || null,
     description: payload.description || null,
-    metadata: payload.metadata || {},
+    metadata: payload.metadata || null,
     ai_confidence_score: null,
+    owner_id: payload.owner_id || userId,
+    visibility: payload.visibility || 'private',
+    is_locked: false,
     has_uncommitted_changes: true, // New dataset is uncommitted
     sync_status: 'not_synced' as const,
-    source_file_path: null,
-    source_commit_sha: null,
+    source_control_file_path: null,
+    source_control_commit_sha: null,
     last_synced_at: null,
     sync_error_message: null,
     created_by: userId,
@@ -59,7 +65,7 @@ export async function createDataset(
   }
 
   // Log creation in audit_logs
-  await logAuditChange('dataset', data.dataset_id, 'create', userId, {
+  await logAuditChange('dataset', data.id, 'create', userId, {
     dataset_name: data.name,
     fqn: data.fqn,
   });
@@ -74,7 +80,7 @@ export async function getDataset(datasetId: string): Promise<Dataset | null> {
   const { data, error } = await supabase
     .from('datasets')
     .select('*')
-    .eq('dataset_id', datasetId)
+    .eq('id', datasetId)
     .single();
 
   if (error) {
@@ -108,7 +114,7 @@ export async function updateDataset(
   const { data, error } = await supabase
     .from('datasets')
     .update(updates)
-    .eq('dataset_id', datasetId)
+    .eq('id', datasetId)
     .select()
     .single();
 
@@ -137,7 +143,7 @@ export async function deleteDataset(
   const { error } = await supabase
     .from('datasets')
     .delete()
-    .eq('dataset_id', datasetId);
+    .eq('id', datasetId);
 
   if (error) {
     throw new Error(`Failed to delete dataset: ${error.message}`);
@@ -246,7 +252,7 @@ export async function updateDatasetPosition(
     .from('workspace_datasets')
     .update({ canvas_position: position })
     .eq('workspace_id', workspaceId)
-    .eq('dataset_id', datasetId);
+    .eq('dataset_id', datasetId); // This references the join table, so dataset_id is correct here
 
   if (error) {
     throw new Error(`Failed to update dataset position: ${error.message}`);
@@ -271,6 +277,7 @@ export async function cloneDataset(
   const now = new Date().toISOString();
 
   const newDataset = {
+    account_id: sourceDataset.account_id,
     workspace_id: sourceDataset.workspace_id,
     project_id: sourceDataset.project_id,
     name: newName,
@@ -282,12 +289,15 @@ export async function cloneDataset(
     description: sourceDataset.description
       ? `Copy of ${sourceDataset.description}`
       : null,
-    metadata: { ...sourceDataset.metadata },
+    metadata: sourceDataset.metadata ? { ...sourceDataset.metadata } : null,
     ai_confidence_score: sourceDataset.ai_confidence_score,
+    owner_id: userId,
+    visibility: sourceDataset.visibility,
+    is_locked: false,
     has_uncommitted_changes: true,
     sync_status: 'not_synced' as const,
-    source_file_path: null,
-    source_commit_sha: null,
+    source_control_file_path: null,
+    source_control_commit_sha: null,
     last_synced_at: null,
     sync_error_message: null,
     created_by: userId,
@@ -306,7 +316,7 @@ export async function cloneDataset(
   }
 
   // Log clone in audit_logs
-  await logAuditChange('dataset', data.dataset_id, 'create', userId, {
+  await logAuditChange('dataset', data.id, 'create', userId, {
     cloned_from: sourceDatasetId,
     dataset_name: data.name,
   });
@@ -358,11 +368,11 @@ export function datasetToCanvasNode(
   dataset: DatasetWithPosition
 ): CanvasNode {
   return {
-    id: dataset.dataset_id,
+    id: dataset.id,
     type: 'dataNode',
     position: dataset.position,
     data: {
-      uuid: dataset.dataset_id,
+      uuid: dataset.id,
       fqn: dataset.fqn,
       project_id: dataset.project_id,
       name: dataset.name,
@@ -373,7 +383,7 @@ export function datasetToCanvasNode(
       description: dataset.description,
       metadata: dataset.metadata,
       ai_confidence_score: dataset.ai_confidence_score,
-      git_commit_hash: dataset.source_commit_sha,
+      git_commit_hash: dataset.source_control_commit_sha,
       created_at: dataset.created_at,
       updated_at: dataset.updated_at,
     },
@@ -414,12 +424,12 @@ export async function markDatasetAsSynced(
     .update({
       has_uncommitted_changes: false,
       sync_status: 'synced',
-      source_commit_sha: commitSha,
-      source_file_path: filePath,
+      source_control_commit_sha: commitSha,
+      source_control_file_path: filePath,
       last_synced_at: now,
       sync_error_message: null,
     })
-    .eq('dataset_id', datasetId);
+    .eq('id', datasetId);
 
   if (error) {
     throw new Error(`Failed to mark dataset as synced: ${error.message}`);
@@ -439,7 +449,7 @@ export async function markDatasetSyncError(
       sync_status: 'error',
       sync_error_message: errorMessage,
     })
-    .eq('dataset_id', datasetId);
+    .eq('id', datasetId);
 
   if (error) {
     throw new Error(`Failed to mark dataset sync error: ${error.message}`);
