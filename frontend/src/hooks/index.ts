@@ -18,3 +18,6 @@ export * from './useSourceControl';
 
 // Connection Hooks
 export * from './useConnections';
+
+// Workspace Diagram Hooks
+export * from './useWorkspaceDiagrams';

@@ -1,5 +1,5 @@
 {
-  "name": "@bricker/databricks-optimizer-mcp",
+  "name": "@uroq/databricks-optimizer-mcp",
   "version": "1.0.0",
   "description": "MCP server providing Databricks-specific optimization recommendations",
   "type": "module",

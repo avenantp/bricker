@@ -17,7 +17,7 @@ You need:
 ### Step 2: Add the MCP Server
 
 ```bash
-cd C:\Code\bricker
+cd C:\Code\uroq
 
 # Add the PostgreSQL MCP server for Supabase
 claude mcp add supabase npx -- -y @modelcontextprotocol/server-postgres "postgresql://postgres:YOUR_PASSWORD@db.dhclhobnxhdkkxrbtmkb.supabase.co:5432/postgres"
@@ -235,7 +235,7 @@ postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres
 ✅ **Supabase MCP Server Configured and Connected**
 
 Configuration location: `C:\Users\peter\.claude.json`
-Project: `C:\Code\bricker`
+Project: `C:\Code\uroq`
 Status: Connected ✓
 
 You can now ask Claude to query your database directly!

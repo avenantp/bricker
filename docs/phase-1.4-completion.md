@@ -21,7 +21,7 @@ Phase 1.4 has successfully implemented comprehensive workspace management functi
 ```typescript
 export interface Workspace {
   id: string;
-  company_id: string;
+  account_id: string;
   name: string;
   slug: string;
   description: string | null;

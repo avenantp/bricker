@@ -1,6 +1,6 @@
-# Bricker User Guide
+# Uroq User Guide
 
-Welcome to Bricker! This guide will help you get started with creating and managing data models, tracking lineage, and syncing with source control.
+Welcome to Uroq! This guide will help you get started with creating and managing data models, tracking lineage, and syncing with source control.
 
 ## 📚 Documentation Sections
 
@@ -14,7 +14,7 @@ Welcome to Bricker! This guide will help you get started with creating and manag
 - [Source Control Sync](./source-control-sync.md) - Syncing with GitHub/GitLab
 
 ### Multi-Tenant Features
-- [Companies and Subscriptions](./multi-tenancy.md) - Understanding multi-tenant architecture
+- [accounts and Subscriptions](./multi-tenancy.md) - Understanding multi-tenant architecture
 - [Access Control](./access-control.md) - Managing permissions and visibility
 
 ## 🎯 Quick Links
@@ -41,7 +41,7 @@ Welcome to Bricker! This guide will help you get started with creating and manag
 
 ## 🏗️ Architecture Overview
 
-Bricker uses a **database-first** architecture where:
+Uroq uses a **database-first** architecture where:
 
 1. **Supabase Database** is the primary source of truth
 2. **Real-time editing** happens in the database
@@ -94,7 +94,7 @@ Bricker uses a **database-first** architecture where:
 
 ### Support
 - Report issues on GitHub
-- Contact support at support@bricker.com
+- Contact support at support@uroq.com
 - Join our community forum
 
 ## 🔄 Migration from Version 1.x

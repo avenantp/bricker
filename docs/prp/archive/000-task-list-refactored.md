@@ -5,7 +5,7 @@ This document tracks the migration from the current node-based architecture to t
 
 **Key Architectural Changes**:
 1. **References/Relationships table ELIMINATED**: References are now stored directly on the `columns` table via a `reference_column_id` self-referencing foreign key.
-2. **Multi-Tenant Subscription System**: All metadata is isolated by `company_id` with subscription-based access control.
+2. **Multi-Tenant Subscription System**: All metadata is isolated by `account_id` with subscription-based access control.
 3. **Shared Resources**: Datasets can be shared across projects and workspaces via mapping tables.
 4. **Multi-Level Security**: Project, workspace, and dataset-level security with ownership and visibility controls.
 
@@ -13,29 +13,29 @@ This document tracks the migration from the current node-based architecture to t
 
 ## Phase M.0: Multi-Tenant Foundation (NEW)
 
-### M.0.1 Create Companies and Multi-Tenant Structure ⭐ NEW
-- [ ] Create `companies` table with subscription fields
-- [ ] Update `users` table to add `company_id` and `company_role`
+### M.0.1 Create accounts and Multi-Tenant Structure ⭐ NEW
+- [ ] Create `accounts` table with subscription fields
+- [ ] Update `users` table to add `account_id` and `account_role`
 - [ ] Add RLS policies for company isolation
 - [ ] Create indexes for multi-tenant queries
 - [ ] Test company isolation
 
-**Files**: `backend/migrations/M_0_1_create_companies_and_multi_tenancy.sql`
+**Files**: `backend/migrations/M_0_1_create_accounts_and_multi_tenancy.sql`
 
 
 **SQL Tasks**:
-- CREATE TABLE companies with subscription fields
-- ALTER TABLE users ADD COLUMN company_id
-- ALTER TABLE users ADD COLUMN company_role
+- CREATE TABLE accounts with subscription fields
+- ALTER TABLE users ADD COLUMN account_id
+- ALTER TABLE users ADD COLUMN account_role
 - CREATE RLS policies on users table
-- CREATE indexes on companies and users
+- CREATE indexes on accounts and users
 
 ### M.0.2 Add Multi-Tenancy to Core Tables ⭐ NEW
-- [ ] Add `company_id` to `projects` table
+- [ ] Add `account_id` to `projects` table
 - [ ] Add `owner_id` and `visibility` to `projects` table
-- [ ] Add `company_id` to `workspaces` table
+- [ ] Add `account_id` to `workspaces` table
 - [ ] Add `owner_id` and `visibility` to `workspaces` table
-- [ ] Add `company_id` to `datasets` table
+- [ ] Add `account_id` to `datasets` table
 - [ ] Add `owner_id` and `visibility` to `datasets` table
 - [ ] Create RLS policies for all tables
 - [ ] Test isolation and access control
@@ -43,11 +43,11 @@ This document tracks the migration from the current node-based architecture to t
 **Files**: `backend/migrations/M_0_2_add_multi_tenancy_to_core_tables.sql`
 
 **SQL Tasks**:
-- ALTER TABLE projects ADD COLUMN company_id, owner_id, visibility, is_locked
-- ALTER TABLE workspaces ADD COLUMN company_id, owner_id, visibility, is_locked
-- ALTER TABLE datasets ADD COLUMN company_id, owner_id, visibility, is_locked
+- ALTER TABLE projects ADD COLUMN account_id, owner_id, visibility, is_locked
+- ALTER TABLE workspaces ADD COLUMN account_id, owner_id, visibility, is_locked
+- ALTER TABLE datasets ADD COLUMN account_id, owner_id, visibility, is_locked
 - CREATE RLS policies on projects, workspaces, datasets
-- CREATE indexes on company_id, owner_id, visibility
+- CREATE indexes on account_id, owner_id, visibility
 
 ### M.0.3 Create Mapping Tables for Shared Resources ⭐ NEW
 - [ ] Create `project_datasets` mapping table
@@ -281,9 +281,9 @@ This document tracks the migration from the current node-based architecture to t
 ### Key Architectural Changes
 
 #### 1. Multi-Tenant Subscription System (NEW)
-- **Company Isolation**: All metadata isolated by `company_id`
-  - Individual users: `company_type = 'individual'`
-  - Organizations: `company_type = 'organization'`
+- **Company Isolation**: All metadata isolated by `account_id`
+  - Individual users: `account_type = 'individual'`
+  - Organizations: `account_type = 'organization'`
 - **Subscription Tiers**: free | pro | enterprise
 - **Access Control**:
   - Company admins: full access to all company resources
@@ -359,15 +359,15 @@ This document tracks the migration from the current node-based architecture to t
 - [ ] References converted correctly
 - [ ] Git sync works bidirectionally
 - [ ] Conflict resolution functional
-- [ ] Performance acceptable (with company_id indexes)
+- [ ] Performance acceptable (with account_id indexes)
 - [ ] Security validated (RLS policies tested)
 - [ ] **Subscription limits enforced**
-- [ ] **Individual vs organization companies working**
+- [ ] **Individual vs organization accounts working**
 
 ### Multi-Tenant Hierarchy
 ```
-Company (company_id)
-  ├── Users (with company_role: admin | member)
+Company (account_id)
+  ├── Users (with account_role: admin | member)
   ├── Projects (with owner_id, visibility)
   │   └── Project-Dataset Mappings
   ├── Workspaces (with owner_id, visibility)
@@ -406,11 +406,11 @@ Company (company_id)
 - Only User X and admins can edit the dataset (owner control)
 
 ### Security Best Practices
-1. **Always query with company_id filter** to ensure isolation
+1. **Always query with account_id filter** to ensure isolation
 2. **Use RLS policies** - never bypass them
 3. **Check ownership** before allowing edits
 4. **Respect visibility settings** - enforce in queries
 5. **Log all access attempts** for audit trail
 6. **Validate subscription limits** before allowing operations
 7. **Test cross-company isolation** thoroughly
-8. **Never expose company_id** to users in URLs (use slugs or opaque IDs)
+8. **Never expose account_id** to users in URLs (use slugs or opaque IDs)

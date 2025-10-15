@@ -1,13 +1,13 @@
 # Source Control Sync Guide
 
-Bricker uses a **database-first** approach to source control integration, where your Supabase database is the primary source of truth and you explicitly commit changes to Git.
+Uroq uses a **database-first** approach to source control integration, where your Supabase database is the primary source of truth and you explicitly commit changes to Git.
 
 ## Overview
 
 ### Database-First Workflow
 
 1. **Edit in Database**: Make changes to datasets, columns, lineage in real-time
-2. **Track Changes**: Bricker tracks uncommitted changes automatically
+2. **Track Changes**: Uroq tracks uncommitted changes automatically
 3. **Commit to Git**: Explicitly commit your changes with a message
 4. **Pull from Git**: Pull changes made by others or in other environments
 5. **Resolve Conflicts**: Handle conflicts when database and Git diverge
@@ -189,7 +189,7 @@ Pull changes when:
 ### Pull Process
 
 1. Click **"Source Control"** → **"Pull"**
-2. Bricker fetches latest changes from Git
+2. Uroq fetches latest changes from Git
 3. Review incoming changes:
    - Datasets added by others
    - Datasets modified by others
@@ -206,7 +206,7 @@ Pull changes when:
 
 **Merge** (Has conflicts):
 - Both database and Git have changes
-- Bricker attempts auto-merge
+- Uroq attempts auto-merge
 - Manual resolution needed if conflicts detected
 
 ## Conflict Resolution
@@ -242,7 +242,7 @@ Conflicts occur when:
 
 #### Automatic Resolution
 
-Bricker attempts to auto-resolve when possible:
+Uroq attempts to auto-resolve when possible:
 - Non-overlapping changes merged automatically
 - New columns from both sides kept
 - New lineage from both sides kept
@@ -267,7 +267,7 @@ When auto-resolution fails:
    - Click **"Resolve"**
 
 4. **Commit Resolution**:
-   - Bricker creates merge commit
+   - Uroq creates merge commit
    - Documents conflict resolution
    - Syncs with Git
 
@@ -484,7 +484,7 @@ jobs:
 
 - See [Workspaces and Projects](./workspaces-and-projects.md)
 - See [Datasets and Lineage](./datasets-and-lineage.md)
-- Contact support at support@bricker.com
+- Contact support at support@uroq.com
 
 ---
 

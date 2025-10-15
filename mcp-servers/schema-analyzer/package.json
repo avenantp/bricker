@@ -1,5 +1,5 @@
 {
-  "name": "@bricker/schema-analyzer-mcp",
+  "name": "@uroq/schema-analyzer-mcp",
   "version": "1.0.0",
   "description": "MCP server for analyzing database schemas and extracting metadata",
   "type": "module",

@@ -1,0 +1,69 @@
+Analyse the specification referenced in this file @docs\prp\051-dataset-diagram-view-specification.md.
+
+Review current codebase and implment the outstanding tasks in @docs\prp\050-dataset-diagram-view-tasklist.md
+
+For each task:
+1. State task number and what you're doing
+2. Show proposed changes
+3. Do not wait for "Approved" before implementing
+4. Confirm completion and ask to proceed to next task
+5. As you go please mark tasks as completed in @docs\prp\050-dataset-diagram-view-tasklist.md
+
+If there are any variations or changes required to the database let me know if I need to run SQL migration scripts on Supabase and wait
+for approval to proceed.
+
+
+Analyse the specification referenced in this file @docs\prp\041-dataset-column-specification.md.
+
+Review current codebase against the tasks in @docs\prp\040-dataset-column-tasklist.md
+
+For each task:
+1. State task number and what you're doing
+2. Show proposed changes
+3. Do not wait for "Approved" before implementing
+4. Confirm completion and ask to proceed to next task
+5. As you go please mark tasks as completed in @docs\prp\040-dataset-column-tasklist.md
+
+Please verify and complete the following task `4.1.2 TypeScript Type Definitions`
+
+If there are any variations or changes required to the database let me know if I need to run SQL migration scripts on Supabase and wait
+for approval to proceed.
+
+
+
+Please perform a thorough verification audit against our specification and tasklist documents.
+
+Reference documents:
+- @docs\prp\041-dataset-column-specification.md - contains all requirements and design specifications
+- @docs\prp\040-dataset-column-tasklist.md - contains the implementation checklist
+
+IMPORTANT ARCHITECTURE NOTE:
+All Row Level Security (RLS) and access control has been moved to the application layer. 
+Do NOT expect or look for database-level RLS policies. Access control is handled through:
+- Application-level permission checks
+- Middleware/route guards
+- Service layer authorization logic
+- API endpoint access controls
+
+When verifying security requirements, check the application code for proper authorization 
+checks rather than database policies.
+
+Verification process:
+1. Read both documents carefully to understand all requirements
+2. Go through the codebase and check each item systematically
+3. For each requirement/task, verify:
+   - Is it fully implemented?
+   - Does it work as specified?
+   - Are there any edge cases not handled?
+   - Does it match the design/behavior described?
+
+4. Test the implementation:
+   - Run the application and manually test key features
+   - Check for console errors or warnings
+   - Verify responsive behavior (if applicable)
+   - Test user interactions and flows
+
+5. If you find any issues, fix them and re-verify
+
+Be thorough and critical - don't just check if code exists, verify it actually works 
+correctly according to the specifications.

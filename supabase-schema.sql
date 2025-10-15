@@ -1,4 +1,4 @@
--- Bricker Database Schema
+-- Uroq Database Schema
 -- This file should be run in your Supabase SQL editor
 
 -- Enable UUID extension

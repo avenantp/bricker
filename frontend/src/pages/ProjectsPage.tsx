@@ -10,6 +10,7 @@ import { Plus, Search, Grid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProjects, useAccount } from '../hooks';
 import { useStore } from '../store/useStore';
+import { useSearch } from '../contexts/SearchContext';
 import type { ProjectType, ProjectVisibility } from '@/types/project';
 import { ProjectCard } from '../components/Project/ProjectCard';
 import { CreateProjectDialog } from '../components/Project/CreateProjectDialog';
@@ -22,6 +23,7 @@ type ViewMode = 'grid' | 'list';
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { isDarkMode } = useStore();
+  const { searchQuery: globalSearch, setSearchPlaceholder } = useSearch();
 
   // Fetch user's account
   const { data: account, isLoading: isLoadingAccount } = useAccount();
@@ -42,11 +44,15 @@ export function ProjectsPage() {
   });
 
   // Filter and search state
-  const [search, setSearch] = useState('');
   const [projectType, setProjectType] = useState<ProjectType | 'all'>('all');
   const [visibility, setVisibility] = useState<ProjectVisibility | 'all'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'updated_at'>('updated_at');
   const [page, setPage] = useState(1);
+
+  // Set search placeholder for this page
+  useEffect(() => {
+    setSearchPlaceholder('Search projects...');
+  }, [setSearchPlaceholder]);
 
   // Dialog state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -58,7 +64,7 @@ export function ProjectsPage() {
     account_id: account?.id,
     project_type: projectType !== 'all' ? projectType : undefined,
     visibility: visibility !== 'all' ? visibility : undefined,
-    search: search || undefined,
+    search: globalSearch || undefined,
     sort_by: sortBy,
     sort_order: 'desc',
     page,
@@ -96,63 +102,18 @@ export function ProjectsPage() {
 
   return (
     <AppLayout>
-      {/* Page Header with Actions */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Manage your data modeling projects
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              New Project
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
+      {/* Page Header with Actions and Filters */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1); // Reset to first page on search
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2">
-              {/* Project Type */}
-              <select
-                value={projectType}
-                onChange={(e) => {
-                  setProjectType(e.target.value as ProjectType | 'all');
-                  setPage(1);
-                }}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                <option value="all">All Types</option>
-                <option value="Standard">Standard</option>
-                <option value="DataVault">Data Vault</option>
-                <option value="Dimensional">Dimensional</option>
-              </select>
-
+            <div className="flex-1 flex items-center justify-end gap-3">
+            {/* Filter dropdowns */}
+            <div className="flex items-center gap-2">
               {/* Visibility */}
               <select
                 value={visibility}
@@ -205,6 +166,16 @@ export function ProjectsPage() {
                 </button>
               </div>
             </div>
+
+            {/* New Project Button */}
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="btn-primary inline-flex items-center gap-2 flex-shrink-0 !py-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -256,16 +227,16 @@ export function ProjectsPage() {
           <div className="flex flex-col items-center justify-center py-12">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {search || projectType !== 'all' || visibility !== 'all'
+                {globalSearch || projectType !== 'all' || visibility !== 'all'
                   ? 'No projects found'
                   : 'No projects yet'}
               </h3>
               <p className="text-sm text-gray-500 mb-6">
-                {search || projectType !== 'all' || visibility !== 'all'
+                {globalSearch || projectType !== 'all' || visibility !== 'all'
                   ? 'Try adjusting your filters or search query'
                   : 'Get started by creating your first project'}
               </p>
-              {!search && projectType === 'all' && visibility === 'all' && (
+              {!globalSearch && projectType === 'all' && visibility === 'all' && (
                 <button
                   onClick={() => setShowCreateDialog(true)}
                   className="btn-primary inline-flex items-center gap-2"

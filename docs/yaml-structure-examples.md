@@ -26,7 +26,7 @@ metadata:
   locked_at: null
 
   # References
-  company_id: 789e4567-e89b-12d3-a456-426614174000
+  account_id: 789e4567-e89b-12d3-a456-426614174000
   workspace_id: 456e4567-e89b-12d3-a456-426614174000
 
   # GitHub tracking
@@ -101,7 +101,7 @@ metadata:
 
   # References
   project_id: 550e8400-e29b-41d4-a716-446655440000
-  company_id: 789e4567-e89b-12d3-a456-426614174000
+  account_id: 789e4567-e89b-12d3-a456-426614174000
   workspace_id: 456e4567-e89b-12d3-a456-426614174000
 
   # GitHub tracking

@@ -2,7 +2,7 @@
 
 ## Current State
 
-This directory contains the consolidated schema for the Bricker application.
+This directory contains the consolidated schema for the Uroq application.
 
 ### Schema File
 
@@ -15,7 +15,7 @@ All previous migration files have been consolidated into `initial_schema.sql`. T
 ### What Migrations Were Applied
 
 1. **Table Renames**:
-   - `company_members` → `company_users`
+   - `account_members` → `account_users`
    - `project_members` → `project_users`
    - `workspace_members` → `workspace_users`
    - `git_commits` → `source_code_commits`
@@ -29,7 +29,7 @@ All previous migration files have been consolidated into `initial_schema.sql`. T
    - `environments.databricks_workspace_url` → `platform_url`
 
 3. **New Columns Added**:
-   - Multi-tenancy: `company_id`, `owner_id`, `visibility` to core tables
+   - Multi-tenancy: `account_id`, `owner_id`, `visibility` to core tables
    - Source control: `source_provider`, `source_commit_sha`
    - Platform agnostic: `target_platform`, `platform_config`
 
@@ -41,10 +41,10 @@ All previous migration files have been consolidated into `initial_schema.sql`. T
 ## Database Schema Structure
 
 ### Core Tables
-- `companies` - Multi-tenant root
+- `accounts` - Multi-tenant root
 - `subscription_plans` - Subscription tiers
 - `users` - User profiles
-- `company_users` - Company membership
+- `account_users` - Company membership
 
 ### Projects & Workspaces
 - `projects` - Project management
@@ -77,7 +77,7 @@ All previous migration files have been consolidated into `initial_schema.sql`. T
 ## Key Features
 
 ### Multi-Tenancy
-All core entities include \`company_id\` for company-level isolation using Row Level Security (RLS).
+All core entities include \`account_id\` for company-level isolation using Row Level Security (RLS).
 
 ### Resource Ownership
 Tables include \`owner_id\` and \`visibility\` (public/private/locked) for fine-grained access control.

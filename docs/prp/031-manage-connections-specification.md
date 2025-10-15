@@ -155,7 +155,7 @@ CREATE INDEX idx_connection_metadata_stale ON connection_metadata_cache(is_stale
   "advanced": {
     "connection_timeout": 30,
     "command_timeout": 300,
-    "application_name": "Bricker_MetadataManager"
+    "application_name": "Uroq_MetadataManager"
   },
   "cdc": {
     "enabled": false,
@@ -187,7 +187,7 @@ CREATE INDEX idx_connection_metadata_stale ON connection_metadata_cache(is_stale
 #### 2.3.3 Workday
 ```json
 {
-  "tenant_name": "company_impl",
+  "tenant_name": "account_impl",
   "base_url": "https://wd2-impl.workday.com",
   "authentication": {
     "type": "integration_system_user",

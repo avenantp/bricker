@@ -2,7 +2,7 @@
 
 ## Overview
 
-GitHub integration has been successfully added to Bricker, enabling version-controlled storage of data models and templates as YAML files in GitHub repositories.
+GitHub integration has been successfully added to Uroq, enabling version-controlled storage of data models and templates as YAML files in GitHub repositories.
 
 ## What Was Implemented
 
@@ -88,7 +88,7 @@ The database schema already included GitHub integration fields in the `workspace
 
 ## Repository Structure
 
-When connected, Bricker creates this structure in your GitHub repository:
+When connected, Uroq creates this structure in your GitHub repository:
 
 ```
 your-repository/
@@ -112,7 +112,7 @@ your-repository/
 
 1. Create a GitHub repository (private recommended)
 2. Create a GitHub Personal Access Token with `repo` scope
-3. In Bricker, go to Settings > GitHub Integration
+3. In Uroq, go to Settings > GitHub Integration
 4. Enter repository (`owner/repo`), token, and branch
 5. Click "Connect to GitHub"
 
@@ -226,7 +226,7 @@ curl -X POST http://localhost:3001/api/github/models/export \
 3. **Diff Viewer**: Show visual diffs between model versions
 4. **Branch Switcher**: UI to switch between branches without disconnecting
 5. **Automated Sync**: Periodic background sync of models from GitHub
-6. **Pull Request Integration**: Create PRs directly from Bricker
+6. **Pull Request Integration**: Create PRs directly from Uroq
 7. **Webhook Support**: Listen for GitHub webhooks to sync changes
 8. **Template Marketplace**: Public templates repository
 9. **Model Validation**: Pre-commit hooks to validate YAML structure

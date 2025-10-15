@@ -4,7 +4,7 @@
 
 Your Supabase database currently has **53 tables**, but according to the refactored technical specification, only **18 tables** are required (after renaming membership tables for consistency). This cleanup will remove **31 deprecated/unused tables** and rename **3 membership tables**.
 
-**Important**: The membership tables (`company_members`, `project_members`, `workspace_members`) will be **renamed** (not removed) to follow the `*_users` naming convention for consistency with the `users` table.
+**Important**: The membership tables (`account_members`, `project_members`, `workspace_members`) will be **renamed** (not removed) to follow the `*_users` naming convention for consistency with the `users` table.
 
 ## Current State
 
@@ -64,9 +64,9 @@ These are not part of the current refactored spec:
 ## Tables That Will Remain (18 tables)
 
 ### Multi-Tenant Foundation (3 tables)
-- `companies` - Root tenant entity with subscription management
+- `accounts` - Root tenant entity with subscription management
 - `users` - User accounts with company association
-- `company_users` - Company membership (renamed from company_members for consistency)
+- `account_users` - Company membership (renamed from account_members for consistency)
 
 ### Projects (3 tables)
 - `projects` - Project definitions with multi-tenancy
@@ -157,9 +157,9 @@ Total tables removed: 31
 
 Remaining tables (18 core tables):
   Multi-tenant:
-    • companies
+    • accounts
     • users
-    • company_users (renamed from company_members)
+    • account_users (renamed from account_members)
 
   Projects:
     • projects
@@ -248,7 +248,7 @@ After the cleanup, you should rename the membership tables to follow the `*_user
    - Execute to rename all three tables
 
 2. **Tables that will be renamed**:
-   - `company_members` → `company_users`
+   - `account_members` → `account_users`
    - `project_members` → `project_users`
    - `workspace_members` → `workspace_users`
 

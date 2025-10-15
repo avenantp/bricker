@@ -87,7 +87,7 @@ export function FlowCanvas() {
       exported_at: new Date().toISOString(),
     };
 
-    const yamlContent = `# Bricker Data Model Export
+    const yamlContent = `# Uroq Data Model Export
 # Generated: ${new Date().toISOString()}
 
 nodes:

@@ -1555,7 +1555,7 @@ interface EmailTemplate {
 
 const emailTemplates: Record<string, EmailTemplate> = {
   welcome: {
-    subject: 'Welcome to Bricker!',
+    subject: 'Welcome to Uroq!',
     html: welcomeTemplate,
     text: welcomeTextTemplate,
     variables: { user_name, account_name }

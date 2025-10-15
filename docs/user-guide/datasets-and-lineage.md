@@ -1,6 +1,6 @@
 # Datasets and Lineage Guide
 
-This comprehensive guide covers creating and managing datasets, columns, and data lineage in Bricker.
+This comprehensive guide covers creating and managing datasets, columns, and data lineage in Uroq.
 
 ## Datasets
 
@@ -738,7 +738,7 @@ Note: Leading zeros are lost in conversion
 - See [Getting Started](./getting-started.md)
 - See [Workspaces and Projects](./workspaces-and-projects.md)
 - See [Source Control Sync](./source-control-sync.md)
-- Contact support at support@bricker.com
+- Contact support at support@uroq.com
 
 ---
 

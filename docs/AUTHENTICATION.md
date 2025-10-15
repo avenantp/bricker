@@ -1,10 +1,10 @@
 # Authentication & Authorization Guide
 
-Complete guide to authentication and authorization in Bricker.
+Complete guide to authentication and authorization in Uroq.
 
 ## Overview
 
-Bricker uses **Supabase Auth** for authentication and **Row Level Security (RLS)** for authorization.
+Uroq uses **Supabase Auth** for authentication and **Row Level Security (RLS)** for authorization.
 
 ### Authentication Flow
 
@@ -78,7 +78,7 @@ await updatePassword('newPassword123');
 
 ### Roles
 
-Bricker uses workspace-level roles:
+Uroq uses workspace-level roles:
 
 | Role | Permissions |
 |------|-------------|
@@ -425,7 +425,7 @@ test('user can sign up and sign in', async () => {
 
 ### Multi-Tenancy
 
-Bricker uses **workspace-based multi-tenancy**:
+Uroq uses **workspace-based multi-tenancy**:
 - Each workspace is isolated
 - Users can belong to multiple workspaces
 - Data is filtered by workspace_id

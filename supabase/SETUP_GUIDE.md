@@ -1,6 +1,6 @@
-# Supabase Setup Guide for Bricker
+# Supabase Setup Guide for Uroq
 
-This guide walks you through setting up Supabase for the Bricker application.
+This guide walks you through setting up Supabase for the Uroq application.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide walks you through setting up Supabase for the Bricker application.
 1. Go to [https://supabase.com](https://supabase.com)
 2. Click "New Project"
 3. Fill in project details:
-   - **Name**: `bricker` (or your preferred name)
+   - **Name**: `uroq` (or your preferred name)
    - **Database Password**: Choose a strong password (save this!)
    - **Region**: Select closest to your users
 4. Click "Create new project"
@@ -54,7 +54,7 @@ This guide walks you through setting up Supabase for the Bricker application.
 1. Create GitHub OAuth App:
    - Go to GitHub Settings > Developer settings > OAuth Apps
    - Click "New OAuth App"
-   - **Application name**: `Bricker`
+   - **Application name**: `Uroq`
    - **Homepage URL**: `http://localhost:5173` (dev) or your domain
    - **Authorization callback URL**: `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
    - Click "Register application"
@@ -303,5 +303,5 @@ WHERE wm.role = 'admin';
 
 - **Supabase Docs**: https://supabase.com/docs
 - **Supabase Discord**: https://discord.supabase.com
-- **Bricker Issues**: https://github.com/your-org/bricker/issues
+- **Uroq Issues**: https://github.com/your-org/uroq/issues
 

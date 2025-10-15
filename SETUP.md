@@ -1,6 +1,6 @@
-# Bricker Setup Guide
+# Uroq Setup Guide
 
-Complete setup instructions for running the Bricker Databricks Automation Builder.
+Complete setup instructions for running the Uroq Databricks Automation Builder.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key-here
 
 # Optional
-DATABASE_URL=postgresql://user:password@localhost:5432/bricker
+DATABASE_URL=postgresql://user:password@localhost:5432/uroq
 GITHUB_TOKEN=ghp_your-token
 VITE_API_URL=http://localhost:3001
 ```
@@ -101,7 +101,7 @@ You should see:
 - **Authentication page** (if Supabase is set up)
 - Sign up with email/password or GitHub
 - After login:
-  - Header with Bricker logo and workspace selector
+  - Header with Uroq logo and workspace selector
   - Sidebar with node types and models
   - React Flow canvas (empty initially)
   - AI Assistant chat (bottom-right corner)
@@ -154,7 +154,7 @@ You should see:
 ## Project Structure
 
 ```
-bricker/
+uroq/
 ├── backend/              # Node.js API server
 │   ├── src/
 │   │   ├── assistant/   # Claude integration
@@ -288,7 +288,7 @@ curl -X POST http://localhost:3001/api/assistant/chat \
 ## Support
 
 - **Documentation**: See `README.md` and `CLAUDE.md`
-- **Issues**: https://github.com/your-org/bricker/issues
+- **Issues**: https://github.com/your-org/uroq/issues
 - **PRD**: See `docs/prp/` for product requirements
 
 ## License

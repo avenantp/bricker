@@ -17,4 +17,4 @@ Analyse the provided 000-task-list.md, 001-technical-specifications-refactored.m
 Analyse the master task list master_task_list.txt and expand on it creating a detailed task list for each feature. 
 Analyse the current implemented database schema for reference.
 
-Create only the detailed technical specification and tasklist for `5. dataset diagram view`
+Create only the detailed technical specification and tasklist for `8. business modeling diagram`

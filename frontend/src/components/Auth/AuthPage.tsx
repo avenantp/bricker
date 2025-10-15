@@ -75,14 +75,17 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Auth Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           {/* Logo */}
           <div className="text-center mb-8 flex flex-col items-center">
-            <UroqLogo size="lg" showText={false} />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 mt-4">Welcome to Uroq</h1>
+            <img
+              src="/images/uroq-logo-dark.png"
+              alt="Uroq"
+              className="h-16 mb-4"
+            />
             <p className="text-gray-600">Lakehouse Automation Builder</p>
           </div>
 
@@ -96,7 +99,7 @@ export function AuthPage() {
             </h2>
             <p className="text-sm text-gray-600 mt-1">
               {mode === 'signin' && 'Enter your credentials to continue'}
-              {mode === 'signup' && 'Get started with Bricker'}
+              {mode === 'signup' && 'Get started with Uroq'}
               {mode === 'reset' && 'Enter your email to receive a reset link'}
             </p>
           </div>

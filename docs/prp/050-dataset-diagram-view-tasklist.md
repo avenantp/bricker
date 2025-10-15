@@ -3,35 +3,23 @@
 ## Phase 1: Core Canvas Setup
 
 ### 1.1 Project Structure
-- [ ] **1.1.1** Create diagram feature directory structure:
+- [x] **1.1.1** Create diagram feature directory structure:
   ```
   src/components/Diagram/
-  ├── DatasetDiagramView.tsx (Container)
-  ├── DiagramToolbar.tsx
-  ├── DiagramCanvas.tsx (React Flow wrapper)
+  ├── DatasetDiagramView.tsx (Container) ✓
+  ├── DiagramToolbar.tsx ✓
   ├── nodes/
-  │   ├── DatasetNode.tsx
-  │   ├── NodeHeader.tsx
-  │   ├── NodeBody.tsx
-  │   ├── NodeFooter.tsx
-  │   └── ColumnList.tsx
+  │   ├── DatasetNode.tsx ✓
+  │   └── ColumnList.tsx ✓
   ├── edges/
-  │   ├── RelationshipEdge.tsx
-  │   └── LineageEdge.tsx
-  ├── context-menus/
-  │   ├── DatasetContextMenu.tsx
-  │   ├── EdgeContextMenu.tsx
-  │   └── CanvasContextMenu.tsx
-  ├── dialogs/
-  │   ├── AddRelationshipDialog.tsx
-  │   └── RelationshipDetailsDialog.tsx
+  │   └── DiagramEdge.tsx ✓ (includes Relationship & Lineage)
   └── utils/
-      ├── layoutAlgorithms.ts
-      ├── edgeRouting.ts
-      └── diagramState.ts
+      ├── layoutAlgorithms.ts ✓
+      ├── edgeRouting.ts ✓
+      └── diagramStatePersistence.ts ✓
   ```
-- [ ] **1.1.2** Create TypeScript interfaces in `src/types/diagram.ts`
-- [ ] **1.1.3** Setup Zustand store in `src/store/diagramStore.ts`
+- [x] **1.1.2** Create TypeScript interfaces in `src/types/diagram.ts` ✓
+- [x] **1.1.3** Setup Zustand store in `src/store/diagramStore.ts` ✓
 
 ### 1.2 React Flow Canvas
 - [ ] **1.2.1** Install React Flow: `npm install @xyflow/react`

@@ -63,12 +63,12 @@ CREATE TABLE templates (
 - ✅ Keep: `id`, `name`, `description`, `template_type`, `jinja_content`, `variables`, `language`
 - ✅ Keep: `is_system`, `parent_template_id` (for cloning)
 - ✅ Keep: `category`, `tags` (for organization)
-- ✅ Add: `company_id` (for multi-tenancy - system templates have NULL company_id)
+- ✅ Add: `account_id` (for multi-tenancy - system templates have NULL account_id)
 - ✅ Add: `applies_to_entity_type` (Table, DataVault, DataMart, etc.)
 - ✅ Add: `applies_to_entity_subtype` (Hub, Link, Satellite, Dimension, Fact, etc.)
 - ❌ Remove: `workspace_id` (system templates are global, not workspace-specific)
 - ❌ Remove: `injection_points` (can be derived from Jinja2 blocks in content)
-- ❌ Remove: `is_public` (use company_id = NULL for system templates)
+- ❌ Remove: `is_public` (use account_id = NULL for system templates)
 
 #### 2. `template_fragments` Table ❌ REMOVE
 **Current Purpose**: Fragments that inject into templates at specific injection points
@@ -112,7 +112,7 @@ CREATE TABLE templates (
 ```sql
 CREATE TABLE template_overrides (
   override_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- What template is being overridden
   base_template_id UUID NOT NULL REFERENCES templates(template_id) ON DELETE CASCADE,
@@ -168,7 +168,7 @@ CREATE TABLE template_overrides (
 ```sql
 CREATE TABLE templates (
   template_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   name VARCHAR NOT NULL,
@@ -192,7 +192,7 @@ CREATE TABLE templates (
   variables JSONB DEFAULT '[]'::jsonb,  -- [{name, type, default_value, description, required}]
 
   -- System vs User templates
-  is_system BOOLEAN DEFAULT false,  -- System templates: company_id = NULL
+  is_system BOOLEAN DEFAULT false,  -- System templates: account_id = NULL
 
   -- Cloning
   parent_template_id UUID REFERENCES templates(template_id) ON DELETE SET NULL,
@@ -203,13 +203,13 @@ CREATE TABLE templates (
   updated_at TIMESTAMP DEFAULT NOW(),
 
   -- Constraints
-  UNIQUE(company_id, name),  -- Unique within company (system templates: NULL company)
+  UNIQUE(account_id, name),  -- Unique within company (system templates: NULL company)
 
-  -- System templates must have company_id = NULL
-  CHECK (is_system = false OR company_id IS NULL)
+  -- System templates must have account_id = NULL
+  CHECK (is_system = false OR account_id IS NULL)
 );
 
-CREATE INDEX idx_templates_company ON templates(company_id);
+CREATE INDEX idx_templates_company ON templates(account_id);
 CREATE INDEX idx_templates_system ON templates(is_system) WHERE is_system = true;
 CREATE INDEX idx_templates_type ON templates(template_type);
 CREATE INDEX idx_templates_category ON templates(category);
@@ -221,7 +221,7 @@ CREATE INDEX idx_templates_entity_type ON templates(applies_to_entity_type);
 ```sql
 CREATE TABLE template_overrides (
   override_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- What template is being overridden
   base_template_id UUID NOT NULL REFERENCES templates(template_id) ON DELETE CASCADE,
@@ -261,7 +261,7 @@ CREATE TABLE template_overrides (
   UNIQUE (base_template_id, dataset_id)
 );
 
-CREATE INDEX idx_overrides_company ON template_overrides(company_id);
+CREATE INDEX idx_overrides_company ON template_overrides(account_id);
 CREATE INDEX idx_overrides_template ON template_overrides(base_template_id);
 CREATE INDEX idx_overrides_project ON template_overrides(project_id);
 CREATE INDEX idx_overrides_workspace ON template_overrides(workspace_id);
@@ -355,7 +355,7 @@ LIMIT 1;
 INSERT INTO templates (
   name, description, template_type, category, language,
   applies_to_entity_type, applies_to_entity_subtype,
-  jinja_content, variables, is_system, company_id, created_by
+  jinja_content, variables, is_system, account_id, created_by
 ) VALUES (
   'Data Vault Hub DDL',
   'Standard DDL for Data Vault Hub tables',
@@ -383,7 +383,7 @@ USING DELTA
     {"name": "columns", "type": "array", "required": true}
   ]',
   true,  -- is_system
-  NULL,  -- company_id (system templates are global)
+  NULL,  -- account_id (system templates are global)
   '00000000-0000-0000-0000-000000000000'
 );
 ```
@@ -392,7 +392,7 @@ USING DELTA
 ```sql
 -- Override Hub DDL at project level to add company-specific columns
 INSERT INTO template_overrides (
-  company_id, base_template_id, project_id,
+  account_id, base_template_id, project_id,
   applies_to_entity_type, applies_to_entity_subtype,
   override_type, jinja_content, priority, created_by
 ) VALUES (
@@ -429,7 +429,7 @@ TBLPROPERTIES (
 ```sql
 -- Override template for a specific dataset
 INSERT INTO template_overrides (
-  company_id, base_template_id, dataset_id,
+  account_id, base_template_id, dataset_id,
   override_type, jinja_content, priority, created_by
 ) VALUES (
   'company-uuid',

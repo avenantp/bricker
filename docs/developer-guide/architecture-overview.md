@@ -1,12 +1,12 @@
 # Architecture Overview
 
-This document provides a comprehensive overview of Bricker's system architecture, design patterns, and key architectural decisions.
+This document provides a comprehensive overview of Uroq's system architecture, design patterns, and key architectural decisions.
 
 ## High-Level Architecture
 
 ### System Overview
 
-Bricker is a modern web application built on a three-tier architecture:
+Uroq is a modern web application built on a three-tier architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -57,8 +57,8 @@ Bricker is a modern web application built on a three-tier architecture:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Company (Root Entity)                     │
-│  company_id: UUID (Isolation Boundary)                          │
-│  company_type: individual | organization                        │
+│  account_id: UUID (Isolation Boundary)                          │
+│  account_type: individual | organization                        │
 │  subscription_tier: free | pro | enterprise                     │
 └─────────────────────────────────────────────────────────────────┘
          │
@@ -71,7 +71,7 @@ Bricker is a modern web application built on a three-tier architecture:
 ```
 
 **Key Features:**
-- Every resource has `company_id` for isolation
+- Every resource has `account_id` for isolation
 - Row-Level Security (RLS) enforces boundaries
 - Subscription tiers control resource limits
 - Resources have owners and visibility levels
@@ -82,7 +82,7 @@ Bricker is a modern web application built on a three-tier architecture:
 CREATE POLICY "Users can only access their company's datasets"
 ON datasets
 FOR SELECT
-USING (company_id = auth.company_id());
+USING (account_id = auth.account_id());
 ```
 
 ### 2. Database-First Pattern
@@ -339,7 +339,7 @@ All API requests include token in Authorization header
     ↓
 Backend validates JWT token
     ↓
-Extracts user_id and company_id from token
+Extracts user_id and account_id from token
     ↓
 Attaches to request context
     ↓
@@ -352,16 +352,16 @@ RLS policies enforce access control
 
 ```sql
 -- Company Isolation Policy
-CREATE POLICY "company_isolation"
+CREATE POLICY "account_isolation"
 ON datasets
-USING (company_id = auth.company_id());
+USING (account_id = auth.account_id());
 
 -- Visibility Policy
 CREATE POLICY "visibility_policy"
 ON datasets
 FOR SELECT
 USING (
-  company_id = auth.company_id()
+  account_id = auth.account_id()
   AND (
     visibility = 'public'
     OR owner_id = auth.uid()
@@ -374,7 +374,7 @@ CREATE POLICY "edit_policy"
 ON datasets
 FOR UPDATE
 USING (
-  company_id = auth.company_id()
+  account_id = auth.account_id()
   AND (
     owner_id = auth.uid()
     OR auth.is_admin()
@@ -386,14 +386,14 @@ USING (
 **RLS Helpers:**
 
 ```sql
--- auth.company_id() returns current user's company
-CREATE FUNCTION auth.company_id() RETURNS UUID AS $$
-  SELECT company_id FROM users WHERE id = auth.uid()
+-- auth.account_id() returns current user's company
+CREATE FUNCTION auth.account_id() RETURNS UUID AS $$
+  SELECT account_id FROM users WHERE id = auth.uid()
 $$ LANGUAGE SQL STABLE;
 
 -- auth.is_admin() checks if user is company admin
 CREATE FUNCTION auth.is_admin() RETURNS BOOLEAN AS $$
-  SELECT company_role = 'admin' FROM users WHERE id = auth.uid()
+  SELECT account_role = 'admin' FROM users WHERE id = auth.uid()
 $$ LANGUAGE SQL STABLE;
 ```
 
@@ -644,8 +644,8 @@ ${columns.map(col => `
 **Indexes:**
 ```sql
 -- Company isolation queries
-CREATE INDEX idx_datasets_company_id ON datasets(company_id);
-CREATE INDEX idx_projects_company_id ON projects(company_id);
+CREATE INDEX idx_datasets_account_id ON datasets(account_id);
+CREATE INDEX idx_projects_account_id ON projects(account_id);
 
 -- Common lookups
 CREATE INDEX idx_columns_dataset_id ON columns(dataset_id);

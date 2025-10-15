@@ -17,8 +17,8 @@ After analyzing your requirements and the current database state, here's the rec
 
 ### ✅ KEEP (1 table)
 - **`templates`** - Will be enhanced to support:
-  - System templates (global, company_id = NULL)
-  - Company templates (company_id set)
+  - System templates (global, account_id = NULL)
+  - Company templates (account_id set)
   - Full templates and Fragment templates (via template_type)
   - Entity type/subtype filtering
 
@@ -47,7 +47,7 @@ After analyzing your requirements and the current database state, here's the rec
 ## Your Requirements Met
 
 ### Requirement: Global System Templates
-✅ **Solution**: `templates` table with `is_system = true` and `company_id = NULL`
+✅ **Solution**: `templates` table with `is_system = true` and `account_id = NULL`
 
 ### Requirement: Fragments
 ✅ **Solution**: `templates` table with `template_type = 'Fragment'`
@@ -89,7 +89,7 @@ Resolution Order:
 ```sql
 CREATE TABLE templates (
   template_id UUID PRIMARY KEY,
-  company_id UUID REFERENCES companies,  -- NULL for system templates
+  account_id UUID REFERENCES accounts,  -- NULL for system templates
 
   -- Identity
   name VARCHAR NOT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE templates (
 ```sql
 CREATE TABLE template_overrides (
   override_id UUID PRIMARY KEY,
-  company_id UUID NOT NULL REFERENCES companies,
+  account_id UUID NOT NULL REFERENCES accounts,
 
   -- What template is being overridden
   base_template_id UUID NOT NULL REFERENCES templates,
@@ -166,7 +166,7 @@ CREATE TABLE template_overrides (
 INSERT INTO templates (
   name, template_type, category, language,
   applies_to_entity_type, applies_to_entity_subtype,
-  jinja_content, is_system, company_id
+  jinja_content, is_system, account_id
 ) VALUES (
   'Data Vault Hub DDL',
   'Full',
@@ -188,7 +188,7 @@ INSERT INTO templates (
 ### Example 2: User Overrides at Project Level
 ```sql
 INSERT INTO template_overrides (
-  company_id, base_template_id, project_id,
+  account_id, base_template_id, project_id,
   applies_to_entity_type, applies_to_entity_subtype,
   override_type, jinja_content, priority
 ) VALUES (
@@ -214,7 +214,7 @@ INSERT INTO template_overrides (
 ### Example 3: User Overrides Specific Dataset
 ```sql
 INSERT INTO template_overrides (
-  company_id, base_template_id, dataset_id,
+  account_id, base_template_id, dataset_id,
   override_type, jinja_content, priority
 ) VALUES (
   'my-company-id',

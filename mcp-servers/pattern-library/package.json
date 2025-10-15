@@ -1,5 +1,5 @@
 {
-  "name": "@bricker/pattern-library-mcp",
+  "name": "@uroq/pattern-library-mcp",
   "version": "1.0.0",
   "description": "MCP server providing data modeling patterns and best practices",
   "type": "module",

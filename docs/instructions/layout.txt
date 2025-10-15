@@ -1,0 +1,6 @@
+I've attached a screenshots of the main application layout and I want to replicate the style for this app. 
+I'm looking for the topbar with the app logo navirgating back to the project selection dashboard and the logged in user to be able to logout and manage profile and subcriotion. on the let sidebar will be any top level navigation elements like projects, connections, jobs, templates, configurations etc. Please implement this in React with Tailwind. 
+Reference dialog images @docs\images\sample-layout-1.png and @docs\images\sample-layout-2.png
+
+
+

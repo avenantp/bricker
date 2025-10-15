@@ -58,10 +58,10 @@ A React web application for managing metadata used to generate automation script
 
 ### 3.0 Company Entity (Multi-Tenant Root)
 ```sql
-CREATE TABLE companies (
-  company_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE accounts (
+  account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR NOT NULL,
-  company_type VARCHAR NOT NULL, -- 'individual' | 'organization'
+  account_type VARCHAR NOT NULL, -- 'individual' | 'organization'
 
   -- Subscription
   subscription_tier VARCHAR DEFAULT 'free', -- free | pro | enterprise
@@ -85,14 +85,14 @@ CREATE TABLE companies (
   UNIQUE(name)
 );
 
-CREATE INDEX idx_companies_type ON companies(company_type);
-CREATE INDEX idx_companies_subscription ON companies(subscription_status);
+CREATE INDEX idx_accounts_type ON accounts(account_type);
+CREATE INDEX idx_accounts_subscription ON accounts(subscription_status);
 ```
 
 **Business Rules**:
 - All users must belong to a company
-- Individual users are added as company_type = 'individual'
-- All metadata (projects, workspaces, datasets) is isolated by company_id
+- Individual users are added as account_type = 'individual'
+- All metadata (projects, workspaces, datasets) is isolated by account_id
 - Subscription limits enforced at company level
 - Company name must be unique across system
 
@@ -104,7 +104,7 @@ CREATE INDEX idx_companies_subscription ON companies(subscription_status);
 ```sql
 CREATE TABLE users (
   user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   email VARCHAR NOT NULL UNIQUE,
@@ -112,7 +112,7 @@ CREATE TABLE users (
   avatar_url VARCHAR,
 
   -- Role in company
-  company_role VARCHAR NOT NULL DEFAULT 'member', -- admin | member
+  account_role VARCHAR NOT NULL DEFAULT 'member', -- admin | member
 
   -- Authentication (managed by Supabase Auth)
   auth_user_id UUID UNIQUE, -- Reference to auth.users
@@ -126,7 +126,7 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_company ON users(company_id);
+CREATE INDEX idx_users_company ON users(account_id);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_auth ON users(auth_user_id);
 
@@ -136,7 +136,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 -- Users can only see users in their company
 CREATE POLICY users_isolation_policy ON users
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 ```
 
 **Company Roles**:
@@ -147,7 +147,7 @@ CREATE POLICY users_isolation_policy ON users
 ```sql
 CREATE TABLE projects (
   project_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   name VARCHAR NOT NULL,
   description TEXT,
@@ -162,10 +162,10 @@ CREATE TABLE projects (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, name)
+  UNIQUE(account_id, name)
 );
 
-CREATE INDEX idx_projects_company ON projects(company_id);
+CREATE INDEX idx_projects_company ON projects(account_id);
 CREATE INDEX idx_projects_owner ON projects(owner_id);
 CREATE INDEX idx_projects_visibility ON projects(visibility);
 
@@ -175,7 +175,7 @@ ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 -- Users can only see projects in their company
 CREATE POLICY projects_isolation_policy ON projects
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 
 -- Only owner and admins can update
 CREATE POLICY projects_update_policy ON projects
@@ -183,7 +183,7 @@ CREATE POLICY projects_update_policy ON projects
   USING (
     owner_id = (SELECT user_id FROM users WHERE auth_user_id = auth.uid())
     OR
-    (SELECT company_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
+    (SELECT account_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
   );
 ```
 
@@ -219,7 +219,7 @@ CREATE POLICY projects_update_policy ON projects
 ```sql
 CREATE TABLE workspaces (
   workspace_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
   project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE,
   name VARCHAR NOT NULL,
   description TEXT,
@@ -241,10 +241,10 @@ CREATE TABLE workspaces (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, project_id, name)
+  UNIQUE(account_id, project_id, name)
 );
 
-CREATE INDEX idx_workspaces_company ON workspaces(company_id);
+CREATE INDEX idx_workspaces_company ON workspaces(account_id);
 CREATE INDEX idx_workspaces_project ON workspaces(project_id);
 CREATE INDEX idx_workspaces_owner ON workspaces(owner_id);
 
@@ -254,7 +254,7 @@ ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
 -- Users can only see workspaces in their company
 CREATE POLICY workspaces_isolation_policy ON workspaces
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 ```
 
 **Business Rules**:
@@ -269,7 +269,7 @@ CREATE POLICY workspaces_isolation_policy ON workspaces
 ```sql
 CREATE TABLE datasets (
   dataset_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   fqn VARCHAR NOT NULL, -- Fully Qualified Name
@@ -306,10 +306,10 @@ CREATE TABLE datasets (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, fqn)
+  UNIQUE(account_id, fqn)
 );
 
-CREATE INDEX idx_datasets_company ON datasets(company_id);
+CREATE INDEX idx_datasets_company ON datasets(account_id);
 CREATE INDEX idx_datasets_owner ON datasets(owner_id);
 CREATE INDEX idx_datasets_fqn ON datasets(fqn);
 CREATE INDEX idx_datasets_visibility ON datasets(visibility);
@@ -322,7 +322,7 @@ ALTER TABLE datasets ENABLE ROW LEVEL SECURITY;
 -- Users can only see datasets in their company
 CREATE POLICY datasets_isolation_policy ON datasets
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 
 -- Only owner and admins can update
 CREATE POLICY datasets_update_policy ON datasets
@@ -330,7 +330,7 @@ CREATE POLICY datasets_update_policy ON datasets
   USING (
     owner_id = (SELECT user_id FROM users WHERE auth_user_id = auth.uid())
     OR
-    (SELECT company_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
+    (SELECT account_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
   );
 ```
 
@@ -457,7 +457,7 @@ CREATE POLICY project_datasets_isolation_policy ON project_datasets
   USING (
     project_id IN (
       SELECT project_id FROM projects
-      WHERE company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid())
+      WHERE account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 ```
@@ -498,7 +498,7 @@ CREATE POLICY workspace_datasets_isolation_policy ON workspace_datasets
   USING (
     workspace_id IN (
       SELECT workspace_id FROM workspaces
-      WHERE company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid())
+      WHERE account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 ```

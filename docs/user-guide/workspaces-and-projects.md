@@ -1,6 +1,6 @@
 # Workspaces and Projects Guide
 
-This guide explains how to organize your data models using projects and workspaces in Bricker.
+This guide explains how to organize your data models using projects and workspaces in Uroq.
 
 ## Projects
 
@@ -479,7 +479,7 @@ development workspace → Development environment
 - See [Getting Started](./getting-started.md)
 - See [Datasets and Lineage](./datasets-and-lineage.md)
 - See [Source Control Sync](./source-control-sync.md)
-- Contact support at support@bricker.com
+- Contact support at support@uroq.com
 
 ---
 

@@ -1,12 +1,12 @@
-# Companies and Multi-Tenancy Guide
+# accounts and Multi-Tenancy Guide
 
-Bricker uses a multi-tenant architecture where all resources are organized under **companies**. This guide explains how companies, subscriptions, and resource sharing work.
+Uroq uses a multi-tenant architecture where all resources are organized under **accounts**. This guide explains how accounts, subscriptions, and resource sharing work.
 
-## Understanding Companies
+## Understanding accounts
 
 ### What is a Company?
 
-A **company** is the root container for all your Bricker resources:
+A **company** is the root container for all your Uroq resources:
 - Users
 - Projects
 - Workspaces
@@ -14,7 +14,7 @@ A **company** is the root container for all your Bricker resources:
 - Source control connections
 
 **Key Characteristics:**
-- ✅ Complete data isolation between companies
+- ✅ Complete data isolation between accounts
 - ✅ Shared subscription and billing
 - ✅ Centralized user management
 - ✅ Resource sharing within company
@@ -30,7 +30,7 @@ A **company** is the root container for all your Bricker resources:
 #### Organization Company
 - **Purpose**: Team/organization use
 - **Users**: Multiple users with roles
-- **Use Case**: Companies, teams, departments
+- **Use Case**: accounts, teams, departments
 - **Billing**: Organizational subscription with multiple seats
 
 ### Creating a Company
@@ -70,7 +70,7 @@ A **company** is the root container for all your Bricker resources:
 - Individual users
 - Personal projects
 - Proof of concept
-- Learning Bricker
+- Learning Uroq
 
 ### Pro Tier
 
@@ -501,7 +501,7 @@ Bad: "acme_corp" or "ACME_CORP_123"
 4. Invite team members
 5. Set up access controls
 
-### Merging Companies
+### Merging accounts
 
 **When to Merge:**
 - Company acquisition
@@ -548,7 +548,7 @@ Bad: "acme_corp" or "ACME_CORP_123"
 - Check ownership
 
 **Billing questions?**
-- Contact billing@bricker.com
+- Contact billing@uroq.com
 - Include company name and invoice number
 
 ---

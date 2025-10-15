@@ -107,7 +107,7 @@ export async function generateDatasetYAML(
     metadata: {
       version: '1.0',
       generated_at: new Date().toISOString(),
-      generator: 'bricker-yaml-generator',
+      generator: 'uroq-yaml-generator',
     },
   };
 

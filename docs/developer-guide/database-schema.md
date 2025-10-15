@@ -1,12 +1,12 @@
 # Database Schema Documentation
 
-This document provides comprehensive documentation of the Bricker database schema, including all tables, columns, relationships, indexes, and Row-Level Security (RLS) policies.
+This document provides comprehensive documentation of the Uroq database schema, including all tables, columns, relationships, indexes, and Row-Level Security (RLS) policies.
 
 ## Schema Overview
 
-Bricker uses PostgreSQL (via Supabase) with the following architectural principles:
+Uroq uses PostgreSQL (via Supabase) with the following architectural principles:
 
-1. **Multi-Tenant Isolation**: All data is isolated by `company_id`
+1. **Multi-Tenant Isolation**: All data is isolated by `account_id`
 2. **Row-Level Security (RLS)**: PostgreSQL RLS policies enforce access control
 3. **Shared Resources**: Datasets can be shared across projects via mapping tables
 4. **Audit Trail**: Complete change tracking for all metadata
@@ -16,7 +16,7 @@ Bricker uses PostgreSQL (via Supabase) with the following architectural principl
 
 ```
 ┌──────────────┐
-│  companies   │ (Root Entity)
+│  accounts   │ (Root Entity)
 └──────┬───────┘
        │
        ├──────────────────────────────────────┐
@@ -56,16 +56,16 @@ Bricker uses PostgreSQL (via Supabase) with the following architectural principl
 
 ## Core Tables
 
-### 1. companies
+### 1. accounts
 
 **Purpose**: Root entity for multi-tenant isolation. Every resource belongs to a company.
 
 **Schema**:
 ```sql
-CREATE TABLE companies (
-  company_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE accounts (
+  account_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR NOT NULL UNIQUE,
-  company_type VARCHAR NOT NULL, -- 'individual' | 'organization'
+  account_type VARCHAR NOT NULL, -- 'individual' | 'organization'
 
   -- Subscription
   subscription_tier VARCHAR DEFAULT 'free', -- free | pro | enterprise
@@ -90,8 +90,8 @@ CREATE TABLE companies (
 
 **Indexes**:
 ```sql
-CREATE INDEX idx_companies_type ON companies(company_type);
-CREATE INDEX idx_companies_subscription ON companies(subscription_status);
+CREATE INDEX idx_accounts_type ON accounts(account_type);
+CREATE INDEX idx_accounts_subscription ON accounts(subscription_status);
 ```
 
 **Subscription Tiers**:
@@ -116,7 +116,7 @@ CREATE INDEX idx_companies_subscription ON companies(subscription_status);
 ```sql
 CREATE TABLE users (
   user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   email VARCHAR NOT NULL UNIQUE,
@@ -124,7 +124,7 @@ CREATE TABLE users (
   avatar_url VARCHAR,
 
   -- Role in company
-  company_role VARCHAR NOT NULL DEFAULT 'member', -- admin | member
+  account_role VARCHAR NOT NULL DEFAULT 'member', -- admin | member
 
   -- Authentication (managed by Supabase Auth)
   auth_user_id UUID UNIQUE, -- Reference to auth.users
@@ -141,7 +141,7 @@ CREATE TABLE users (
 
 **Indexes**:
 ```sql
-CREATE INDEX idx_users_company ON users(company_id);
+CREATE INDEX idx_users_company ON users(account_id);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_auth ON users(auth_user_id);
 ```
@@ -153,7 +153,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 -- Users can only see users in their company
 CREATE POLICY users_isolation_policy ON users
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 ```
 
 **Company Roles**:
@@ -170,7 +170,7 @@ CREATE POLICY users_isolation_policy ON users
 ```sql
 CREATE TABLE projects (
   project_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   name VARCHAR NOT NULL,
@@ -189,13 +189,13 @@ CREATE TABLE projects (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, name)
+  UNIQUE(account_id, name)
 );
 ```
 
 **Indexes**:
 ```sql
-CREATE INDEX idx_projects_company ON projects(company_id);
+CREATE INDEX idx_projects_company ON projects(account_id);
 CREATE INDEX idx_projects_owner ON projects(owner_id);
 CREATE INDEX idx_projects_visibility ON projects(visibility);
 ```
@@ -207,7 +207,7 @@ ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 -- Users can only see projects in their company
 CREATE POLICY projects_isolation_policy ON projects
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 
 -- Only owner and admins can update
 CREATE POLICY projects_update_policy ON projects
@@ -215,7 +215,7 @@ CREATE POLICY projects_update_policy ON projects
   USING (
     owner_id = (SELECT user_id FROM users WHERE auth_user_id = auth.uid())
     OR
-    (SELECT company_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
+    (SELECT account_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
   );
 ```
 
@@ -252,7 +252,7 @@ CREATE POLICY projects_update_policy ON projects
 ```sql
 CREATE TABLE workspaces (
   workspace_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
   project_id UUID REFERENCES projects(project_id) ON DELETE CASCADE,
 
   -- Identity
@@ -276,13 +276,13 @@ CREATE TABLE workspaces (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, project_id, name)
+  UNIQUE(account_id, project_id, name)
 );
 ```
 
 **Indexes**:
 ```sql
-CREATE INDEX idx_workspaces_company ON workspaces(company_id);
+CREATE INDEX idx_workspaces_company ON workspaces(account_id);
 CREATE INDEX idx_workspaces_project ON workspaces(project_id);
 CREATE INDEX idx_workspaces_owner ON workspaces(owner_id);
 ```
@@ -294,7 +294,7 @@ ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
 -- Users can only see workspaces in their company
 CREATE POLICY workspaces_isolation_policy ON workspaces
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 ```
 
 ---
@@ -307,7 +307,7 @@ CREATE POLICY workspaces_isolation_policy ON workspaces
 ```sql
 CREATE TABLE datasets (
   dataset_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  company_id UUID NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
 
   -- Identity
   fqn VARCHAR NOT NULL, -- Fully Qualified Name: catalog.schema.table
@@ -344,13 +344,13 @@ CREATE TABLE datasets (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
 
-  UNIQUE(company_id, fqn)
+  UNIQUE(account_id, fqn)
 );
 ```
 
 **Indexes**:
 ```sql
-CREATE INDEX idx_datasets_company ON datasets(company_id);
+CREATE INDEX idx_datasets_company ON datasets(account_id);
 CREATE INDEX idx_datasets_owner ON datasets(owner_id);
 CREATE INDEX idx_datasets_fqn ON datasets(fqn);
 CREATE INDEX idx_datasets_visibility ON datasets(visibility);
@@ -366,7 +366,7 @@ ALTER TABLE datasets ENABLE ROW LEVEL SECURITY;
 -- Users can only see datasets in their company
 CREATE POLICY datasets_isolation_policy ON datasets
   FOR SELECT
-  USING (company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid()));
+  USING (account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid()));
 
 -- Only owner and admins can update
 CREATE POLICY datasets_update_policy ON datasets
@@ -374,7 +374,7 @@ CREATE POLICY datasets_update_policy ON datasets
   USING (
     owner_id = (SELECT user_id FROM users WHERE auth_user_id = auth.uid())
     OR
-    (SELECT company_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
+    (SELECT account_role FROM users WHERE auth_user_id = auth.uid()) = 'admin'
   );
 ```
 
@@ -528,7 +528,7 @@ CREATE POLICY project_datasets_isolation_policy ON project_datasets
   USING (
     project_id IN (
       SELECT project_id FROM projects
-      WHERE company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid())
+      WHERE account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 ```
@@ -578,7 +578,7 @@ CREATE POLICY workspace_datasets_isolation_policy ON workspace_datasets
   USING (
     workspace_id IN (
       SELECT workspace_id FROM workspaces
-      WHERE company_id = (SELECT company_id FROM users WHERE auth_user_id = auth.uid())
+      WHERE account_id = (SELECT account_id FROM users WHERE auth_user_id = auth.uid())
     )
   );
 ```
@@ -745,13 +745,13 @@ CREATE INDEX idx_metadata_changes_uncommitted ON metadata_changes(committed_in_s
 
 ## Helper Functions (RLS)
 
-### auth.company_id()
+### auth.account_id()
 
 Returns the current user's company ID.
 
 ```sql
-CREATE FUNCTION auth.company_id() RETURNS UUID AS $$
-  SELECT company_id FROM users WHERE auth_user_id = auth.uid()
+CREATE FUNCTION auth.account_id() RETURNS UUID AS $$
+  SELECT account_id FROM users WHERE auth_user_id = auth.uid()
 $$ LANGUAGE SQL STABLE;
 ```
 
@@ -761,7 +761,7 @@ Checks if the current user is a company admin.
 
 ```sql
 CREATE FUNCTION auth.is_admin() RETURNS BOOLEAN AS $$
-  SELECT company_role = 'admin' FROM users WHERE auth_user_id = auth.uid()
+  SELECT account_role = 'admin' FROM users WHERE auth_user_id = auth.uid()
 $$ LANGUAGE SQL STABLE;
 ```
 
@@ -853,7 +853,7 @@ WHERE pd.dataset_id = $1;
 ### Foreign Key Constraints
 
 All foreign keys use `ON DELETE CASCADE` or `ON DELETE SET NULL`:
-- `company_id` references: `ON DELETE CASCADE` (delete all company data)
+- `account_id` references: `ON DELETE CASCADE` (delete all company data)
 - `project_id`, `workspace_id`, `dataset_id` references: `ON DELETE CASCADE`
 - `reference_column_id`: `ON DELETE SET NULL` (preserve column, remove reference)
 - `owner_id`, `created_by`: No cascade (allow orphaned records)
@@ -865,12 +865,12 @@ All foreign keys use `ON DELETE CASCADE` or `ON DELETE SET NULL`:
 
 ### Unique Constraints
 
-- `companies.name`: Globally unique
+- `accounts.name`: Globally unique
 - `users.email`: Globally unique
 - `users.auth_user_id`: Globally unique
-- `projects (company_id, name)`: Unique within company
-- `workspaces (company_id, project_id, name)`: Unique within project
-- `datasets (company_id, fqn)`: Unique FQN within company
+- `projects (account_id, name)`: Unique within company
+- `workspaces (account_id, project_id, name)`: Unique within project
+- `datasets (account_id, fqn)`: Unique FQN within company
 - `columns (dataset_id, name)`: Unique column name within dataset
 - `lineage (downstream_column_id, upstream_column_id)`: Unique lineage path
 - `project_datasets (project_id, dataset_id)`: No duplicates
@@ -883,7 +883,7 @@ All foreign keys use `ON DELETE CASCADE` or `ON DELETE SET NULL`:
 ### Index Usage
 
 **Company Isolation**:
-- All queries should filter by `company_id` to leverage `idx_*_company` indexes
+- All queries should filter by `account_id` to leverage `idx_*_company` indexes
 - RLS policies automatically enforce this
 
 **Relationship Lookups**:
@@ -899,7 +899,7 @@ All foreign keys use `ON DELETE CASCADE` or `ON DELETE SET NULL`:
 
 ### Query Optimization Tips
 
-1. **Always filter by company_id first** (even though RLS does this)
+1. **Always filter by account_id first** (even though RLS does this)
 2. **Use indexes on foreign keys** for JOIN operations
 3. **Limit result sets** with LIMIT/OFFSET for pagination
 4. **Use EXPLAIN ANALYZE** to verify query plans
@@ -916,7 +916,7 @@ M_<phase>_<sequence>_<description>.sql
 ```
 
 **Migration Order**:
-1. **M.0**: Multi-tenant foundation (companies, users, mapping tables)
+1. **M.0**: Multi-tenant foundation (accounts, users, mapping tables)
 2. **M.1**: Database migration (rename tables, add columns, create new tables)
 3. **M.2**: Code migration (TypeScript, components, services)
 4. **M.3**: Documentation updates
@@ -929,16 +929,16 @@ M_<phase>_<sequence>_<description>.sql
 ### Row-Level Security (RLS)
 
 **Always Enabled**: All user-facing tables have RLS enabled
-**Company Isolation**: All policies enforce `company_id` filtering
+**Company Isolation**: All policies enforce `account_id` filtering
 **Role-Based Access**: Admins have broader access than members
 
 ### Query Safety
 
 ```sql
--- ✅ GOOD: Filter by company_id explicitly
-SELECT * FROM datasets WHERE company_id = $1;
+-- ✅ GOOD: Filter by account_id explicitly
+SELECT * FROM datasets WHERE account_id = $1;
 
--- ❌ BAD: Missing company_id filter (RLS will add it, but be explicit)
+-- ❌ BAD: Missing account_id filter (RLS will add it, but be explicit)
 SELECT * FROM datasets WHERE dataset_id = $1;
 
 -- ✅ GOOD: Check ownership before update

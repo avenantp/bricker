@@ -1,6 +1,6 @@
 # Migration Guide - Version 1.x to 2.0
 
-This guide helps users migrate from Bricker 1.x (node-based architecture) to Bricker 2.0 (refactored dataset-based architecture with multi-tenancy).
+This guide helps users migrate from Uroq 1.x (node-based architecture) to Uroq 2.0 (refactored dataset-based architecture with multi-tenancy).
 
 ## What's Changed
 
@@ -43,7 +43,7 @@ This guide helps users migrate from Bricker 1.x (node-based architecture) to Bri
 - Table renamed: `branches` → `workspaces`
 - Table renamed: `git_commits` → `source_control_commits`
 - Table removed: `relationships` (merged into `columns`)
-- Tables added: `companies`, `company_users`, `project_datasets`, `workspace_datasets`
+- Tables added: `accounts`, `account_users`, `project_datasets`, `workspace_datasets`
 
 #### UI Changes
 - Component renamed: `DataNode` → `DatasetNode`
@@ -83,8 +83,8 @@ When you upgrade to 2.0, automatic migration runs:
 1. ✅ Tables renamed (nodes → datasets, etc.)
 2. ✅ Company created for your account
 3. ✅ User assigned to company
-4. ✅ Projects assigned `company_id`
-5. ✅ Datasets assigned `company_id`
+4. ✅ Projects assigned `account_id`
+5. ✅ Datasets assigned `account_id`
 6. ✅ Relationships converted to column references
 7. ✅ Mapping tables populated
 
@@ -354,10 +354,10 @@ fetch('/api/columns?dataset_id=ds_123')
 - [Multi-Tenancy](./multi-tenancy.md)
 
 ### Support
-- Migration support: migration@bricker.com
-- General support: support@bricker.com
-- Documentation: docs.bricker.com
-- Community forum: community.bricker.com
+- Migration support: migration@uroq.com
+- General support: support@uroq.com
+- Documentation: docs.uroq.com
+- Community forum: community.uroq.com
 
 ### Feedback
 We want to hear from you:
@@ -365,11 +365,11 @@ We want to hear from you:
 - What was confusing?
 - What could be better?
 
-Send feedback to feedback@bricker.com
+Send feedback to feedback@uroq.com
 
 ---
 
-**Welcome to Bricker 2.0!** 🎉
+**Welcome to Uroq 2.0!** 🎉
 
 We're excited to have you on the new platform. The migration preserves all your work while unlocking powerful new capabilities for team collaboration, data governance, and source control integration.
 

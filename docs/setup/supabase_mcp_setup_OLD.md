@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide walks you through configuring the Supabase Model Context Protocol (MCP) server for the Bricker project with the refactored multi-tenant, subscription-based architecture.
+This guide walks you through configuring the Supabase Model Context Protocol (MCP) server for the Uroq project with the refactored multi-tenant, subscription-based architecture.
 
 **Key Features**:
 - Multi-tenant company isolation
@@ -278,7 +278,7 @@ npm list @supabase/supabase-js dotenv
 
 Expected output:
 ```
-bricker@1.0.0 C:\Code\bricker
+uroq@1.0.0 C:\Code\uroq
 ├── @supabase/supabase-js@2.x.x
 └── dotenv@16.x.x
 ```

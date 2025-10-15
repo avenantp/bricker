@@ -2,7 +2,7 @@
 
 ## Overview
 
-Uroq includes a development mode that bypasses all subscription and access control restrictions, allowing you to test all features without setting up companies, subscriptions, or role-based permissions.
+Uroq includes a development mode that bypasses all subscription and access control restrictions, allowing you to test all features without setting up accounts, subscriptions, or role-based permissions.
 
 ## Enabling Dev Mode
 
@@ -83,7 +83,7 @@ To test different role behaviors:
 
 1. **Disable dev mode**: Set `VITE_DEV_ADMIN_ACCESS=false`
 2. Create a real company in Supabase
-3. Add company_members with different roles
+3. Add account_members with different roles
 4. Test each role's permissions
 
 ## Disabling Dev Mode

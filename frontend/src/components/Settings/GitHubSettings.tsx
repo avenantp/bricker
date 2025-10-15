@@ -165,7 +165,7 @@ export function GitHubSettings() {
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Format: username/repository (e.g., "acme/bricker-metadata")
+              Format: username/repository (e.g., "acme/uroq-metadata")
             </p>
           </div>
 

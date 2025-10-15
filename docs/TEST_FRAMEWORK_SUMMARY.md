@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document summarizes the complete test framework implementation for the Bricker application, including unit tests, integration tests, and test utilities.
+This document summarizes the complete test framework implementation for the Uroq application, including unit tests, integration tests, and test utilities.
 
 ---
 
@@ -280,7 +280,7 @@ This document summarizes the complete test framework implementation for the Bric
 - Role-based access - Owner/Admin/Viewer permissions
 
 **Test Approach**:
-1. Create test users in different companies
+1. Create test users in different accounts
 2. Attempt cross-company data access
 3. Verify Supabase RLS policies block unauthorized access
 4. Test with different user roles
@@ -288,7 +288,7 @@ This document summarizes the complete test framework implementation for the Bric
 ### Company Isolation Tests
 
 **Tables to Test**:
-- ✅ companies - Users can only see their own company
+- ✅ accounts - Users can only see their own company
 - ✅ workspaces - Users can only access workspaces in their company
 - ✅ datasets - Users can only access datasets in their company's workspaces
 - ✅ columns - Users can only access columns in their company's datasets

@@ -1,10 +1,10 @@
 # Testing Guide
 
-Comprehensive testing guide for Bricker's MCP servers, backend, and frontend components.
+Comprehensive testing guide for Uroq's MCP servers, backend, and frontend components.
 
 ## Overview
 
-Bricker uses Jest as the primary testing framework for all TypeScript/JavaScript code. The test suite includes:
+Uroq uses Jest as the primary testing framework for all TypeScript/JavaScript code. The test suite includes:
 
 - **Unit Tests**: Test individual functions and components in isolation
 - **Integration Tests**: Test MCP server communication and workflows

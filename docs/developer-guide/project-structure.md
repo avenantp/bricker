@@ -1,11 +1,11 @@
 # Project Structure Guide
 
-This guide explains the organization of the Bricker codebase.
+This guide explains the organization of the Uroq codebase.
 
 ## Repository Structure
 
 ```
-bricker/
+uroq/
 ├── frontend/              # React frontend application
 ├── backend/               # Node.js backend application
 ├── docs/                  # Documentation
@@ -92,7 +92,7 @@ backend/
 ├── src/
 │   ├── routes/           # API routes
 │   │   ├── auth.ts
-│   │   ├── companies.ts
+│   │   ├── accounts.ts
 │   │   ├── projects.ts
 │   │   ├── workspaces.ts
 │   │   ├── datasets.ts
@@ -135,13 +135,13 @@ backend/
 │   └── index.ts          # Entry point
 │
 ├── migrations/           # Database migrations
-│   ├── M_0_1_create_companies_and_multi_tenancy.sql
+│   ├── M_0_1_create_accounts_and_multi_tenancy.sql
 │   ├── M_0_2_add_multi_tenancy_to_core_tables.sql
 │   ├── M_0_3_create_mapping_tables.sql
 │   └── ...
 │
 ├── seeds/                # Database seed data
-│   ├── 001_companies.ts
+│   ├── 001_accounts.ts
 │   ├── 002_users.ts
 │   └── 003_projects.ts
 │
@@ -283,7 +283,7 @@ docs/
 
 **Key Files:**
 - `auth.ts` - Authentication endpoints
-- `companies.ts` - Company management
+- `accounts.ts` - Company management
 - `projects.ts` - Project CRUD
 - `workspaces.ts` - Workspace CRUD
 - `datasets.ts` - Dataset CRUD
@@ -361,7 +361,7 @@ M_<phase>_<sequence>_<description>.sql
 ```
 
 **Examples:**
-- `M_0_1_create_companies_and_multi_tenancy.sql`
+- `M_0_1_create_accounts_and_multi_tenancy.sql`
 - `M_1_2_add_reference_columns.sql`
 
 **Migration Structure:**

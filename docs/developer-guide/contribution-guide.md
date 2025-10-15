@@ -1,6 +1,6 @@
 # Contribution Guide
 
-Welcome to Bricker! This guide will help you contribute effectively to the project.
+Welcome to Uroq! This guide will help you contribute effectively to the project.
 
 ## Table of Contents
 
@@ -36,7 +36,7 @@ We are committed to providing a welcoming and inspiring community for all.
 
 ### Enforcement
 
-Report unacceptable behavior to dev@bricker.com. All complaints will be reviewed and investigated promptly and fairly.
+Report unacceptable behavior to dev@uroq.com. All complaints will be reviewed and investigated promptly and fairly.
 
 ## Getting Started
 
@@ -80,11 +80,11 @@ Before contributing, ensure you have:
 
 ```bash
 # Fork repository on GitHub first, then:
-git clone git@github.com:your-username/bricker.git
-cd bricker
+git clone git@github.com:your-username/uroq.git
+cd uroq
 
 # Add upstream remote
-git remote add upstream git@github.com:bricker/bricker.git
+git remote add upstream git@github.com:uroq/uroq.git
 
 # Verify remotes
 git remote -v
@@ -252,7 +252,7 @@ interface CreateDatasetDto {
   name: string;
   fqn: string;
   project_id: string;
-  company_id: string;
+  account_id: string;
 }
 
 // ❌ BAD: Object literal
@@ -260,7 +260,7 @@ function createDataset(data: {
   name: string;
   fqn: string;
   project_id: string;
-  company_id: string;
+  account_id: string;
 }) {
   // ...
 }
@@ -395,11 +395,11 @@ const user_name = 'John';
 ```typescript
 // ✅ GOOD: UPPER_CASE for constants
 const MAX_DATASETS = 100;
-const API_BASE_URL = 'https://api.bricker.com';
+const API_BASE_URL = 'https://api.uroq.com';
 
 // ❌ BAD: camelCase for constants
 const maxDatasets = 100;
-const apiBaseUrl = 'https://api.bricker.com';
+const apiBaseUrl = 'https://api.uroq.com';
 ```
 
 **Types/Interfaces:**
@@ -428,7 +428,7 @@ type dataset_status = 'synced' | 'uncommitted' | 'conflict';
 -- ✅ GOOD: snake_case for tables/columns
 CREATE TABLE datasets (
   dataset_id UUID,
-  company_id UUID,
+  account_id UUID,
   created_at TIMESTAMP
 );
 
@@ -500,7 +500,7 @@ describe('dataset-service', () => {
       expect(datasets[0]).toHaveProperty('dataset_id');
     });
 
-    it('should filter by company_id', async () => {
+    it('should filter by account_id', async () => {
       // Test company isolation
     });
   });
@@ -511,7 +511,7 @@ describe('dataset-service', () => {
         name: 'test_dataset',
         fqn: 'main.bronze.test_dataset',
         project_id: 'proj_123',
-        company_id: 'comp_123',
+        account_id: 'comp_123',
       };
 
       const dataset = await createDataset(dto);
@@ -969,7 +969,7 @@ git push origin v2.1.0
 **Communication:**
 - Discord: #dev-general for questions
 - GitHub Issues: For bugs and features
-- Email: dev@bricker.com for sensitive topics
+- Email: dev@uroq.com for sensitive topics
 
 **Office Hours:**
 - Weekly dev sync: Fridays 2pm PST
@@ -991,9 +991,9 @@ git push origin v2.1.0
 
 ---
 
-**Thank you for contributing to Bricker!** 🎉
+**Thank you for contributing to Uroq!** 🎉
 
-Your contributions make Bricker better for everyone. We appreciate your time and effort!
+Your contributions make Uroq better for everyone. We appreciate your time and effort!
 
 ---
 

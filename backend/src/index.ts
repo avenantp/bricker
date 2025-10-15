@@ -35,7 +35,7 @@ app.get('/health', (req, res) => {
 
 async function startServer() {
   try {
-    console.log('[Server] Starting Bricker Backend API...');
+    console.log('[Server] Starting Uroq Backend API...');
 
     // Initialize MCP Server Manager
     const mcpManager = new MCPServerManager([
@@ -60,7 +60,7 @@ async function startServer() {
     // Root endpoint
     app.get('/', (req, res) => {
       res.json({
-        name: 'Bricker Backend API',
+        name: 'Uroq Backend API',
         version: '1.0.0',
         description: 'Databricks automation script generator with AI assistant',
         endpoints: {

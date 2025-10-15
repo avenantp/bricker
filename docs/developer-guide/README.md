@@ -1,13 +1,13 @@
-# Bricker Developer Documentation
+# Uroq Developer Documentation
 
-Welcome to the Bricker developer documentation! This guide will help you understand the architecture, contribute to the codebase, and build on top of Bricker.
+Welcome to the Uroq developer documentation! This guide will help you understand the architecture, contribute to the codebase, and build on top of Uroq.
 
 ## 📚 Documentation Sections
 
 ### Getting Started
 - [Development Setup](./development-setup.md) - Set up your local development environment
 - [Project Structure](./project-structure.md) - Understanding the codebase organization
-- [Contribution Guide](./contribution-guide.md) - How to contribute to Bricker
+- [Contribution Guide](./contribution-guide.md) - How to contribute to Uroq
 
 ### Architecture
 - [Architecture Overview](./architecture-overview.md) - High-level system architecture
@@ -88,7 +88,7 @@ Welcome to the Bricker developer documentation! This guide will help you underst
 ┌─────────────────────────────────────────────────────────────┐
 │                    Database (PostgreSQL)                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │  Companies   │  │   Datasets   │  │   Columns    │       │
+│  │  accounts   │  │   Datasets   │  │   Columns    │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │   Projects   │  │  Workspaces  │  │   Lineage    │       │
@@ -164,8 +164,8 @@ Welcome to the Bricker developer documentation! This guide will help you underst
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/bricker.git
-cd bricker
+git clone https://github.com/your-org/uroq.git
+cd uroq
 
 # Install dependencies
 npm install
@@ -308,7 +308,7 @@ npm test:coverage        # Coverage report
 
 ### Multi-Tenant Security
 
-- **Always** filter by `company_id`
+- **Always** filter by `account_id`
 - **Never** bypass RLS policies
 - **Test** cross-company isolation
 - **Verify** user permissions
@@ -396,10 +396,10 @@ We welcome contributions! Please read our [Contribution Guide](./contribution-gu
 
 ## 📧 Contact
 
-- **Technical Questions**: dev@bricker.com
-- **Bug Reports**: bugs@bricker.com
-- **Feature Requests**: features@bricker.com
-- **Security Issues**: security@bricker.com
+- **Technical Questions**: dev@uroq.com
+- **Bug Reports**: bugs@uroq.com
+- **Feature Requests**: features@uroq.com
+- **Security Issues**: security@uroq.com
 
 ---
 

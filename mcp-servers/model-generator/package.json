@@ -1,5 +1,5 @@
 {
-  "name": "@bricker/model-generator-mcp",
+  "name": "@uroq/model-generator-mcp",
   "version": "1.0.0",
   "description": "MCP server for generating React Flow models and YAML metadata",
   "type": "module",

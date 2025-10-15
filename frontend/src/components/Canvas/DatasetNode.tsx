@@ -1,18 +1,32 @@
 /**
  * Custom Dataset Node Component for React Flow Canvas
  * Displays dataset information with color coding, icons, and sync status
- * Renamed from DataNode to DatasetNode for refactored architecture
+ * Supports expansion to show column details
+ * Based on specification: docs/prp/051-dataset-diagram-view-specification.md
  */
 
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { GitBranch, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
-import type { CanvasNodeData } from '../../types/canvas';
+import {
+  GitBranch,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  XCircle,
+  ChevronDown,
+  ChevronRight,
+  Database,
+  BarChart,
+  Layers,
+} from 'lucide-react';
+import type { DatasetNodeData } from '../../types/diagram';
 import type { SyncStatus } from '../../types/dataset';
 import {
   MEDALLION_TAILWIND_COLORS,
   ENTITY_ICONS,
 } from '../../types/canvas';
+import { ColumnList } from './ColumnList';
+import { useDiagramStore } from '../../store/diagramStore';
 
 /**
  * Get sync status icon and color
@@ -75,7 +89,9 @@ function getSyncStatusIndicator(syncStatus: SyncStatus | undefined, hasUncommitt
   }
 }
 
-export const DatasetNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) => {
+export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeData>) => {
+  const toggleNodeExpansion = useDiagramStore((state) => state.toggleNodeExpansion);
+
   // Get color based on medallion layer
   const colorClass = MEDALLION_TAILWIND_COLORS[data.medallion_layer];
 
@@ -95,15 +111,24 @@ export const DatasetNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) 
     data.has_uncommitted_changes || false
   );
 
+  // Calculate node width based on expansion state
+  const nodeWidth = data.isExpanded ? 'w-[400px]' : 'min-w-[200px] max-w-[300px]';
+
+  // Handle expansion toggle
+  const handleToggleExpansion = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleNodeExpansion(id);
+  };
+
   return (
     <div
       className={`
-        min-w-[200px] max-w-[300px] rounded-lg border-2 shadow-md
+        ${nodeWidth} rounded-lg border-2 shadow-md
         ${colorClass}
         ${selected ? 'ring-4 ring-blue-500' : ''}
-        ${data.isHovered ? 'shadow-lg' : ''}
+        ${data.isHighlighted ? 'ring-2 ring-purple-500' : ''}
         transition-all duration-200
-        relative
+        relative bg-white dark:bg-gray-800
       `}
     >
       {/* Connection handles */}
@@ -124,6 +149,19 @@ export const DatasetNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) 
       {/* Node Header */}
       <div className="px-3 py-2 bg-white bg-opacity-20 backdrop-blur-sm border-b border-white border-opacity-30">
         <div className="flex items-center gap-2">
+          {/* Expansion Toggle Button */}
+          <button
+            onClick={handleToggleExpansion}
+            className="btn-icon p-0.5 hover:bg-white hover:bg-opacity-20 rounded"
+            title={data.isExpanded ? 'Collapse' : 'Expand'}
+          >
+            {data.isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-white" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-white" />
+            )}
+          </button>
+
           <span className="text-2xl" title={data.entity_subtype || data.entity_type}>
             {icon}
           </span>
@@ -166,11 +204,6 @@ export const DatasetNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) 
               {data.medallion_layer}
             </span>
           )}
-          {data.materialization_type && (
-            <span className="px-1.5 py-0.5 bg-white bg-opacity-20 text-white text-xs rounded">
-              {data.materialization_type}
-            </span>
-          )}
           {showConfidenceBadge && (
             <span
               className={`px-1.5 py-0.5 text-xs rounded ${
@@ -194,7 +227,48 @@ export const DatasetNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) 
             </span>
           )}
         </div>
+
+        {/* Statistics row (collapsed state) */}
+        {!data.isExpanded && (
+          <div className="flex items-center gap-3 mt-2 text-xs text-white text-opacity-80">
+            <div className="flex items-center gap-1" title="Columns">
+              <Database className="w-3 h-3" />
+              <span>{data.columnCount || 0}</span>
+            </div>
+            <div className="flex items-center gap-1" title="Relationships">
+              <Layers className="w-3 h-3" />
+              <span>{data.relationshipCount || 0}</span>
+            </div>
+            <div className="flex items-center gap-1" title="Lineage (upstream/downstream)">
+              <BarChart className="w-3 h-3" />
+              <span>
+                {data.lineageCount?.upstream || 0}/{data.lineageCount?.downstream || 0}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Column List (expanded state) */}
+      {data.isExpanded && data.columns && (
+        <ColumnList
+          columns={data.columns}
+          datasetId={data.dataset_id}
+          isReadOnly={false}
+          onAddColumn={() => {
+            // TODO: Implement add column handler
+            console.log('Add column to', data.dataset_id);
+          }}
+          onEditColumn={(columnId) => {
+            // TODO: Implement edit column handler
+            console.log('Edit column', columnId);
+          }}
+          onDeleteColumn={(columnId) => {
+            // TODO: Implement delete column handler
+            console.log('Delete column', columnId);
+          }}
+        />
+      )}
 
       <Handle
         type="source"

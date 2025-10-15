@@ -15,9 +15,12 @@ import { SubscriptionSelectionPage } from './pages/SubscriptionSelectionPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { WorkspacesPage } from './pages/WorkspacesPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
+import { WorkspaceDiagramsPage } from './pages/WorkspaceDiagramsPage';
+import { DiagramTestPage } from './pages/DiagramTestPage';
 import { useAuth } from './hooks/useAuth';
 import { useDevMode } from './hooks/useDevMode';
 import { useStore } from './store/useStore';
+import { SearchProvider } from './contexts/SearchContext';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
@@ -42,23 +45,25 @@ function App() {
 
   return (
     <BrowserRouter>
-      {/* Show loading screen while checking auth */}
-      {authLoading ? (
-        <div className="h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
-            <p className="text-gray-600">Loading...</p>
-            <p className="text-xs text-gray-500 mt-2">
-              If this takes too long, check browser console for errors
-            </p>
+      <SearchProvider>
+        {/* Show loading screen while checking auth */}
+        {authLoading ? (
+          <div className="h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+              <p className="text-gray-600">Loading...</p>
+              <p className="text-xs text-gray-500 mt-2">
+                If this takes too long, check browser console for errors
+              </p>
+            </div>
           </div>
-        </div>
-      ) : !user ? (
-        /* Show auth page if not logged in (even in dev mode) */
-        <AuthPage />
-      ) : (
-        <AppRoutes devModeReady={devModeReady} hasAdminAccess={hasAdminAccess} isDevMode={isDevMode} />
-      )}
+        ) : !user ? (
+          /* Show auth page if not logged in (even in dev mode) */
+          <AuthPage />
+        ) : (
+          <AppRoutes devModeReady={devModeReady} hasAdminAccess={hasAdminAccess} isDevMode={isDevMode} />
+        )}
+      </SearchProvider>
     </BrowserRouter>
   );
 }
@@ -177,7 +182,26 @@ function AppRoutes({ devModeReady, hasAdminAccess, isDevMode }: { devModeReady: 
       <Route path="/projects/:projectId/workspaces" element={<WorkspacesPage />} />
 
       {/* Connections Management for a specific workspace */}
-      <Route path="/workspaces/:workspaceId/connections" element={<ConnectionsPage />} />
+      <Route
+        path="/workspaces/:workspaceId/connections"
+        element={
+          <div className="h-screen flex flex-col overflow-hidden">
+            <Header />
+            <div className="flex-1 flex overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto">
+                <ConnectionsPage />
+              </main>
+            </div>
+          </div>
+        }
+      />
+
+      {/* Workspace Diagrams - List all diagrams for a workspace */}
+      <Route path="/workspaces/:workspaceId/diagrams" element={<WorkspaceDiagramsPage />} />
+
+      {/* Workspace Diagram - View specific diagram */}
+      <Route path="/workspaces/:workspaceId/diagrams/:diagramId" element={<DiagramTestPage />} />
 
       {/* Legacy home page (for backward compatibility during migration) */}
       <Route path="/home" element={<HomePage />} />
@@ -190,6 +214,9 @@ function AppRoutes({ devModeReady, hasAdminAccess, isDevMode }: { devModeReady: 
 
       {/* Workspace settings */}
       <Route path="/workspace/:workspaceId/settings" element={<WorkspaceSettingsPage />} />
+
+      {/* Diagram Test Page - Dev Mode Only */}
+      <Route path="/diagram-test" element={<DevModeRoute isDevMode={isDevMode}><DiagramTestPage /></DevModeRoute>} />
 
       {/* Template Management - Dev Mode Only */}
       <Route path="/templates" element={<DevModeRoute isDevMode={isDevMode}><TemplateLibrary /></DevModeRoute>} />

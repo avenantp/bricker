@@ -1,6 +1,6 @@
 # Development Setup Guide
 
-This guide walks you through setting up your local development environment for Bricker.
+This guide walks you through setting up your local development environment for Uroq.
 
 ## Prerequisites
 
@@ -103,12 +103,12 @@ supabase start
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/bricker.git
-cd bricker
+git clone https://github.com/your-org/uroq.git
+cd uroq
 
 # Or if you forked it:
-git clone https://github.com/your-username/bricker.git
-cd bricker
+git clone https://github.com/your-username/uroq.git
+cd uroq
 ```
 
 ### 2. Install Dependencies
@@ -226,7 +226,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Run migrations via Supabase dashboard:
 1. Go to SQL Editor in Supabase dashboard
 2. Run migration files in order:
-   - `backend/migrations/M_0_1_create_companies_and_multi_tenancy.sql`
+   - `backend/migrations/M_0_1_create_accounts_and_multi_tenancy.sql`
    - `backend/migrations/M_0_2_add_multi_tenancy_to_core_tables.sql`
    - `backend/migrations/M_0_3_create_mapping_tables.sql`
    - Continue with remaining migrations...
@@ -241,7 +241,7 @@ cd backend
 supabase db push
 
 # Or run individual migration
-psql $DATABASE_URL -f migrations/M_0_1_create_companies_and_multi_tenancy.sql
+psql $DATABASE_URL -f migrations/M_0_1_create_accounts_and_multi_tenancy.sql
 ```
 
 **Option C: Using Migration Script**
@@ -263,7 +263,7 @@ npm run migrate -- M_0_1
 psql $DATABASE_URL -c "\dt"
 
 # Should see tables:
-# - companies
+# - accounts
 # - users
 # - projects
 # - workspaces
@@ -366,9 +366,9 @@ curl http://localhost:3000/health
 
 ```bash
 # Test database query
-curl http://localhost:3000/api/companies
+curl http://localhost:3000/api/accounts
 
-# Expected: List of companies or empty array []
+# Expected: List of accounts or empty array []
 ```
 
 ### 4. Check Authentication
@@ -620,7 +620,7 @@ npm run migrate:reset
 1. Check this guide's troubleshooting section
 2. Search GitHub Issues for similar problems
 3. Ask in Discord #dev-help channel
-4. Contact dev team at dev@bricker.com
+4. Contact dev team at dev@uroq.com
 
 **Useful Resources:**
 - [Supabase Documentation](https://supabase.com/docs)

@@ -1,6 +1,6 @@
-# Bricker Architecture
+# Uroq Architecture
 
-This document describes the complete architecture of the Bricker Databricks Automation Builder.
+This document describes the complete architecture of the Uroq Databricks Automation Builder.
 
 ## System Overview
 
@@ -309,7 +309,7 @@ anthropic.messages.stream({
 
 **Backend**:
 ```
-[Server] Starting Bricker Backend API...
+[Server] Starting Uroq Backend API...
 [MCP Manager] Initializing MCP servers...
 [MCP Manager] ✓ schema-analyzer connected
 [Assistant] Processing chat request for workspace: workspace_1

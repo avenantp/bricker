@@ -10,6 +10,7 @@ import { Plus, Search, Grid, List, FolderOpen, Folders } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspaces, useProject } from '../hooks';
 import { useStore } from '../store/useStore';
+import { useSearch } from '../contexts/SearchContext';
 import { WorkspaceCard } from '../components/Workspace/WorkspaceCard';
 import { CreateWorkspaceDialog } from '../components/Workspace/CreateWorkspaceDialog';
 import { DeleteWorkspaceDialog } from '../components/Workspace/DeleteWorkspaceDialog';
@@ -22,6 +23,7 @@ export function WorkspacesPage() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const { isDarkMode } = useStore();
+  const { searchQuery: globalSearch, setSearchPlaceholder } = useSearch();
 
   // Apply dark mode class to document element
   useEffect(() => {
@@ -39,9 +41,13 @@ export function WorkspacesPage() {
   });
 
   // Filter and search state
-  const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'created_at' | 'updated_at'>('updated_at');
   const [page, setPage] = useState(1);
+
+  // Set search placeholder for this page
+  useEffect(() => {
+    setSearchPlaceholder('Search workspaces...');
+  }, [setSearchPlaceholder]);
 
   // Dialog state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -56,7 +62,7 @@ export function WorkspacesPage() {
   // Fetch workspaces
   const { data, isLoading, error, refetch } = useWorkspaces({
     project_id: projectId,
-    search: search || undefined,
+    search: globalSearch || undefined,
     sort_by: sortBy,
     sort_order: 'desc',
     page,
@@ -70,7 +76,7 @@ export function WorkspacesPage() {
   };
 
   const handleOpenWorkspace = (workspaceId: string) => {
-    navigate(`/workspaces/${workspaceId}`);
+    navigate(`/workspaces/${workspaceId}/diagrams`);
   };
 
   const handleDeleteWorkspace = (workspaceId: string) => {
@@ -114,50 +120,20 @@ export function WorkspacesPage() {
 
   return (
     <AppLayout>
-      {/* Page Header with Actions */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {project?.name || 'Workspaces'}
-              </h1>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Manage workspaces for this project
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              New Workspace
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
+      {/* Page Header with Actions and Filters */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search workspaces..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {project?.name || 'Workspaces'}
+              </h1>
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2">
+            <div className="flex-1 flex items-center justify-end gap-3">
+            {/* Filter dropdowns */}
+            <div className="flex items-center gap-2">
               {/* Sort */}
               <select
                 value={sortBy}
@@ -195,6 +171,16 @@ export function WorkspacesPage() {
                 </button>
               </div>
             </div>
+
+            {/* New Workspace Button */}
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="btn-primary inline-flex items-center gap-2 flex-shrink-0 !py-2 text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              New Workspace
+            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -231,14 +217,14 @@ export function WorkspacesPage() {
           <div className="flex flex-col items-center justify-center py-12">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                {search ? 'No workspaces found' : 'No workspaces yet'}
+                {globalSearch ? 'No workspaces found' : 'No workspaces yet'}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {search
+                {globalSearch
                   ? 'Try adjusting your search query'
                   : 'Create your first workspace to get started'}
               </p>
-              {!search && (
+              {!globalSearch && (
                 <button
                   onClick={() => setShowCreateDialog(true)}
                   className="btn-primary inline-flex items-center gap-2"

@@ -9,7 +9,7 @@ This document summarizes the comprehensive migration to align the Supabase datab
 Based on analysis of the current database:
 
 ### Existing Tables (20 required)
-- ✅ companies
+- ✅ accounts
 - ✅ users
 - ✅ projects
 - ✅ workspaces
@@ -31,7 +31,7 @@ Based on analysis of the current database:
 - ✅ project_members (needs renaming to project_users)
 
 ### Tables Needing Renaming
-- `company_members` → `company_users`
+- `account_members` → `account_users`
 - `project_members` → `project_users`
 - `workspace_members` → `workspace_users`
 - `git_commits` → `source_code_commits`
@@ -51,7 +51,7 @@ Based on analysis of the current database:
 This comprehensive migration script performs 10 parts:
 
 ### Part 1: Rename Membership Tables
-- `company_members` → `company_users`
+- `account_members` → `account_users`
 - `project_members` → `project_users`
 - `workspace_members` → `workspace_users`
 
@@ -69,7 +69,7 @@ This comprehensive migration script performs 10 parts:
 - `github_commit_sha` → `source_commit_sha`
 
 **New Columns**:
-- `company_id` - Multi-tenancy support
+- `account_id` - Multi-tenancy support
 - `owner_id` - Resource ownership
 - `visibility` - Access control (public/private/locked)
 
@@ -80,24 +80,24 @@ This comprehensive migration script performs 10 parts:
 
 **New Columns**:
 - `source_provider` - Provider identifier (github/gitlab/bitbucket/azure/other)
-- `company_id` - Multi-tenancy support
+- `account_id` - Multi-tenancy support
 - `owner_id` - Resource ownership
 - `visibility` - Access control
 
 ### Part 5: Update Source Code Commits Table
 **New Columns**:
 - `source_provider` - Provider identifier
-- `company_id` - Multi-tenancy support
+- `account_id` - Multi-tenancy support
 
 ### Part 6: Update Projects Table
 **New Columns**:
-- `company_id` - Multi-tenancy support
+- `account_id` - Multi-tenancy support
 - `owner_id` - Resource ownership
 - `visibility` - Access control
 
 ### Part 7-9: Ensure User Junction Tables Exist
 Creates tables if missing:
-- `company_users` - Company membership with roles
+- `account_users` - Company membership with roles
 - `project_users` - Project access with roles
 - `workspace_users` - Workspace access with roles
 
@@ -108,7 +108,7 @@ Creates tables if missing:
 **New Columns**:
 - `target_platform` - Platform identifier (databricks/snowflake/bigquery/redshift/synapse/other)
 - `platform_config` - JSONB for platform-specific configuration
-- `company_id` - Multi-tenancy support
+- `account_id` - Multi-tenancy support
 
 **Rationale**: Support multiple data platforms (Databricks, Snowflake, BigQuery, Redshift, Azure Synapse)
 
@@ -117,7 +117,7 @@ Creates tables if missing:
 ### Tables Renamed (4)
 | Old Name | New Name | Reason |
 |----------|----------|--------|
-| `company_members` | `company_users` | Naming consistency |
+| `account_members` | `account_users` | Naming consistency |
 | `project_members` | `project_users` | Naming consistency |
 | `workspace_members` | `workspace_users` | Naming consistency |
 | `git_commits` | `source_code_commits` | Multi-provider support |
@@ -134,32 +134,32 @@ Creates tables if missing:
 ### Columns Added
 
 #### datasets table
-- `company_id` - Multi-tenant isolation
+- `account_id` - Multi-tenant isolation
 - `owner_id` - Resource owner
 - `visibility` - Access control level
 
 #### workspaces table
-- `company_id` - Multi-tenant isolation
+- `account_id` - Multi-tenant isolation
 - `owner_id` - Resource owner
 - `visibility` - Access control level
 - `source_provider` - Source control provider
 
 #### projects table
-- `company_id` - Multi-tenant isolation
+- `account_id` - Multi-tenant isolation
 - `owner_id` - Resource owner
 - `visibility` - Access control level
 
 #### source_code_commits table
-- `company_id` - Multi-tenant isolation
+- `account_id` - Multi-tenant isolation
 - `source_provider` - Source control provider
 
 #### environments table
 - `target_platform` - Data platform identifier
 - `platform_config` - Platform-specific configuration (JSONB)
-- `company_id` - Multi-tenant isolation
+- `account_id` - Multi-tenant isolation
 
 ### New Tables Created (if missing)
-- `company_users` - Company membership
+- `account_users` - Company membership
 - `project_users` - Project access control
 - `workspace_users` - Workspace access control
 
@@ -219,7 +219,7 @@ The `target_platform` column in environments table supports:
 ## Multi-Tenancy Support
 
 All core entities now include:
-- `company_id` - For company isolation
+- `account_id` - For company isolation
 - `owner_id` - For resource ownership
 - `visibility` - For access control:
   - `public` - Visible to all company members
@@ -252,7 +252,7 @@ Settings → Database → Backups → Create backup
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_name IN ('company_users', 'project_users', 'workspace_users', 'source_code_commits')
+  AND table_name IN ('account_users', 'project_users', 'workspace_users', 'source_code_commits')
 ORDER BY table_name;
 
 -- Check added columns
@@ -260,7 +260,7 @@ SELECT table_name, column_name
 FROM information_schema.columns
 WHERE table_schema = 'public'
   AND (
-    column_name IN ('company_id', 'owner_id', 'visibility', 'source_provider', 'target_platform', 'platform_config', 'platform_url')
+    column_name IN ('account_id', 'owner_id', 'visibility', 'source_provider', 'target_platform', 'platform_config', 'platform_url')
     OR column_name LIKE 'source_%'
   )
 ORDER BY table_name, column_name;
@@ -268,12 +268,12 @@ ORDER BY table_name, column_name;
 
 ### 5. Populate Multi-Tenancy Data
 ```sql
--- Set company_id for existing projects
+-- Set account_id for existing projects
 UPDATE projects p
-SET company_id = u.company_id
+SET account_id = u.account_id
 FROM users u
 WHERE p.created_by = u.id
-AND p.company_id IS NULL;
+AND p.account_id IS NULL;
 
 -- Set owner_id for existing projects
 UPDATE projects
@@ -301,7 +301,7 @@ interface Workspace {
   source_branch: string; // was git_branch_name
   source_commit_sha: string | null; // was git_commit_sha
   source_provider: SourceProvider;
-  company_id: string;
+  account_id: string;
   owner_id: string;
   visibility: 'public' | 'private' | 'locked';
 }
@@ -309,7 +309,7 @@ interface Workspace {
 interface Dataset {
   source_file_path: string | null; // was github_file_path
   source_commit_sha: string | null; // was github_commit_sha
-  company_id: string;
+  account_id: string;
   owner_id: string;
   visibility: 'public' | 'private' | 'locked';
 }
@@ -320,7 +320,7 @@ interface Environment {
   platform_url: string | null; // was databricks_workspace_url
   target_platform: TargetPlatform;
   platform_config: PlatformConfig | null;
-  company_id: string;
+  account_id: string;
 }
 
 type TargetPlatform = 'databricks' | 'snowflake' | 'bigquery' | 'redshift' | 'synapse' | 'other';
@@ -352,10 +352,10 @@ type PlatformConfig = {
 2. **Update queries**:
    - Change table references
    - Update column names
-   - Add company_id filters to all queries
+   - Add account_id filters to all queries
 
 3. **Update RLS context**:
-   - Use company_id for isolation
+   - Use account_id for isolation
    - Respect visibility settings
    - Check owner_id for permissions
 
@@ -378,7 +378,7 @@ type PlatformConfig = {
 ### Check Table Counts
 ```sql
 SELECT
-  (SELECT COUNT(*) FROM company_users) as company_users,
+  (SELECT COUNT(*) FROM account_users) as account_users,
   (SELECT COUNT(*) FROM project_users) as project_users,
   (SELECT COUNT(*) FROM workspace_users) as workspace_users,
   (SELECT COUNT(*) FROM source_code_commits) as source_code_commits;
@@ -387,7 +387,7 @@ SELECT
 ### Check Multi-Tenancy Columns
 ```sql
 SELECT
-  COUNT(*) FILTER (WHERE company_id IS NOT NULL) as with_company,
+  COUNT(*) FILTER (WHERE account_id IS NOT NULL) as with_company,
   COUNT(*) FILTER (WHERE owner_id IS NOT NULL) as with_owner,
   COUNT(*) as total
 FROM projects;
@@ -413,7 +413,7 @@ If issues occur, rollback script:
 
 ```sql
 -- Rollback table renames
-ALTER TABLE company_users RENAME TO company_members;
+ALTER TABLE account_users RENAME TO account_members;
 ALTER TABLE project_users RENAME TO project_members;
 ALTER TABLE workspace_users RENAME TO workspace_members;
 ALTER TABLE source_code_commits RENAME TO git_commits;
@@ -425,7 +425,7 @@ ALTER TABLE workspaces RENAME COLUMN source_branch TO git_branch_name;
 ALTER TABLE workspaces RENAME COLUMN source_commit_sha TO git_commit_sha;
 
 -- Drop added columns
-ALTER TABLE datasets DROP COLUMN IF EXISTS company_id;
+ALTER TABLE datasets DROP COLUMN IF EXISTS account_id;
 ALTER TABLE datasets DROP COLUMN IF EXISTS owner_id;
 ALTER TABLE datasets DROP COLUMN IF EXISTS visibility;
 

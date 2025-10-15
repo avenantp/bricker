@@ -5,7 +5,7 @@
 -- after all migrations have been applied
 -- Generated: 2025-01-15
 --
--- This is the consolidated schema for the Bricker application
+-- This is the consolidated schema for the Uroq application
 -- All previous migrations have been applied and this represents
 -- the final state
 -- =====================================================

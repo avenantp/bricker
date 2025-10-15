@@ -64,7 +64,7 @@ export class MCPServerManager {
 
       const client = new Client(
         {
-          name: `bricker-mcp-client-${serverName}`,
+          name: `uroq-mcp-client-${serverName}`,
           version: '1.0.0',
         },
         {

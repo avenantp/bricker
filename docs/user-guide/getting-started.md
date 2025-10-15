@@ -1,10 +1,10 @@
-# Getting Started with Bricker
+# Getting Started with Uroq
 
-This guide will walk you through the basics of using Bricker to create and manage data models.
+This guide will walk you through the basics of using Uroq to create and manage data models.
 
 ## Prerequisites
 
-- A Bricker account
+- A Uroq account
 - Basic understanding of data modeling concepts
 - (Optional) A GitHub or GitLab account for source control integration
 
@@ -12,7 +12,7 @@ This guide will walk you through the basics of using Bricker to create and manag
 
 ### 1. Account Setup
 
-When you first sign up for Bricker, you'll be prompted to:
+When you first sign up for Uroq, you'll be prompted to:
 
 1. **Create or join a company**
    - For individual use, a personal company is automatically created
@@ -248,7 +248,7 @@ Now that you've created your first data model:
    - [Source Control Sync](./source-control-sync.md)
 
 2. **Learn About Multi-Tenancy**
-   - [Companies and Subscriptions](./multi-tenancy.md)
+   - [accounts and Subscriptions](./multi-tenancy.md)
    - [Access Control](./access-control.md)
 
 3. **Collaborate with Your Team**
@@ -277,7 +277,7 @@ Now that you've created your first data model:
 
 - Browse other guides in this directory
 - Check the [API Documentation](../api/README.md)
-- Contact support at support@bricker.com
+- Contact support at support@uroq.com
 
 ---
 
