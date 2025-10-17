@@ -181,21 +181,11 @@ function AppRoutes({ devModeReady, hasAdminAccess, isDevMode }: { devModeReady: 
       {/* Workspaces Management for a specific project */}
       <Route path="/projects/:projectId/workspaces" element={<WorkspacesPage />} />
 
-      {/* Connections Management for a specific workspace */}
-      <Route
-        path="/workspaces/:workspaceId/connections"
-        element={
-          <div className="h-screen flex flex-col overflow-hidden">
-            <Header />
-            <div className="flex-1 flex overflow-hidden">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto">
-                <ConnectionsPage />
-              </main>
-            </div>
-          </div>
-        }
-      />
+      {/* Account-level Connections Management */}
+      <Route path="/connections" element={<ConnectionsPage />} />
+
+      {/* Project-specific Connections Management */}
+      <Route path="/projects/:projectId/connections" element={<ConnectionsPage />} />
 
       {/* Workspace Diagrams - List all diagrams for a workspace */}
       <Route path="/workspaces/:workspaceId/diagrams" element={<WorkspaceDiagramsPage />} />

@@ -50,8 +50,8 @@ describe('dataset-service', () => {
         project_id: 'proj_test_123',
         name: 'New Dataset',
         fqn: 'main.bronze.new_dataset',
-        medallion_layer: 'bronze',
-        entity_type: 'table',
+        medallion_layer: 'Bronze',
+        dataset_type: 'Table',
       };
 
       const mockDataset = createMockDataset({
@@ -324,14 +324,14 @@ describe('dataset-service', () => {
       (supabase.from as any).mockReturnValue(mockChain);
 
       const filters = {
-        medallion_layers: ['bronze', 'silver'],
-        entity_types: ['table'],
+        medallion_layers: ['Bronze', 'Silver'],
+        dataset_types: ['Table'],
       };
 
       await getWorkspaceDatasets(mockWorkspaceId, filters);
 
       expect(mockChain.in).toHaveBeenCalledWith('medallion_layer', filters.medallion_layers);
-      expect(mockChain.in).toHaveBeenCalledWith('entity_type', filters.entity_types);
+      expect(mockChain.in).toHaveBeenCalledWith('dataset_type', filters.dataset_types);
     });
 
     it('should handle search query filter', async () => {

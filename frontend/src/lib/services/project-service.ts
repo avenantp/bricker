@@ -847,6 +847,7 @@ export class ProjectService {
    * Store source control credentials (encrypted)
    *
    * Note: In production, implement proper encryption using a KMS or vault service
+   * Credentials are now stored directly in the projects table.
    */
   private async storeSourceControlCredentials(
     projectId: string,
@@ -859,20 +860,14 @@ export class ProjectService {
   ): Promise<void> {
     // TODO: Implement proper encryption
     // For now, storing as-is (THIS IS NOT SECURE - implement encryption in production)
-    const credentialData = {
-      project_id: projectId,
-      provider: credentials.provider,
-      access_token_encrypted: credentials.access_token, // Should be encrypted
-      refresh_token_encrypted: credentials.refresh_token || null, // Should be encrypted
-      username: credentials.username || null
-    };
-
-    // Use upsert to handle both insert and update
     const { error } = await this.supabase
-      .from('project_source_control_credentials')
-      .upsert(credentialData, {
-        onConflict: 'project_id'
-      });
+      .from('projects')
+      .update({
+        source_control_access_token_encrypted: credentials.access_token, // Should be encrypted
+        source_control_refresh_token_encrypted: credentials.refresh_token || null, // Should be encrypted
+        source_control_username: credentials.username || null
+      })
+      .eq('id', projectId);
 
     if (error) {
       throw new Error(`Failed to store credentials: ${error.message}`);
@@ -883,6 +878,7 @@ export class ProjectService {
    * Get source control credentials for a project
    *
    * Note: In production, decrypt credentials before returning
+   * Credentials are now stored directly in the projects table.
    */
   private async getSourceControlCredentials(
     projectId: string
@@ -893,9 +889,9 @@ export class ProjectService {
     username: string | null;
   } | null> {
     const { data, error } = await this.supabase
-      .from('project_source_control_credentials')
-      .select('provider, access_token_encrypted, refresh_token_encrypted, username')
-      .eq('project_id', projectId)
+      .from('projects')
+      .select('source_control_provider, source_control_access_token_encrypted, source_control_refresh_token_encrypted, source_control_username')
+      .eq('id', projectId)
       .single();
 
     if (error) {
@@ -905,7 +901,17 @@ export class ProjectService {
       throw new Error(`Failed to get credentials: ${error.message}`);
     }
 
-    return data;
+    // Return null if no credentials are set
+    if (!data.source_control_access_token_encrypted) {
+      return null;
+    }
+
+    return {
+      provider: data.source_control_provider,
+      access_token_encrypted: data.source_control_access_token_encrypted,
+      refresh_token_encrypted: data.source_control_refresh_token_encrypted,
+      username: data.source_control_username
+    };
   }
 
   // =====================================================

@@ -1,6 +1,9 @@
 /**
  * Workspace Diagram Service
  * Handles all API interactions for workspace diagrams
+ *
+ * UPDATED: Now uses the 'diagrams' table instead of deprecated 'workspace_diagrams' table
+ * Diagrams table provides better structure with diagram_datasets mapping
  */
 
 import { supabase } from '@/lib/supabase';
@@ -17,10 +20,8 @@ import type {
  */
 export async function getWorkspaceDiagrams(filters: WorkspaceDiagramFilters = {}) {
   let query = supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .select('*')
-    .is('deleted_at', null)
-    .order('is_default', { ascending: false })
     .order('created_at', { ascending: false });
 
   // Apply filters
@@ -36,9 +37,11 @@ export async function getWorkspaceDiagrams(filters: WorkspaceDiagramFilters = {}
     query = query.eq('diagram_type', filters.diagram_type);
   }
 
-  if (filters.is_default !== undefined) {
-    query = query.eq('is_default', filters.is_default);
-  }
+  // Note: is_default is not in diagrams table, we can add it if needed
+  // For now, we'll skip this filter
+  // if (filters.is_default !== undefined) {
+  //   query = query.eq('is_default', filters.is_default);
+  // }
 
   if (filters.search) {
     query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
@@ -59,15 +62,13 @@ export async function getWorkspaceDiagrams(filters: WorkspaceDiagramFilters = {}
  */
 export async function getWorkspaceDiagramsWithDetails(filters: WorkspaceDiagramFilters = {}) {
   let query = supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .select(`
       *,
       workspaces!inner(
         name
       )
     `)
-    .is('deleted_at', null)
-    .order('is_default', { ascending: false })
     .order('created_at', { ascending: false });
 
   // Apply filters
@@ -81,10 +82,6 @@ export async function getWorkspaceDiagramsWithDetails(filters: WorkspaceDiagramF
 
   if (filters.diagram_type) {
     query = query.eq('diagram_type', filters.diagram_type);
-  }
-
-  if (filters.is_default !== undefined) {
-    query = query.eq('is_default', filters.is_default);
   }
 
   if (filters.search) {
@@ -113,10 +110,9 @@ export async function getWorkspaceDiagramsWithDetails(filters: WorkspaceDiagramF
  */
 export async function getWorkspaceDiagram(id: string) {
   const { data, error } = await supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .select('*')
     .eq('id', id)
-    .is('deleted_at', null)
     .single();
 
   if (error) {
@@ -128,41 +124,23 @@ export async function getWorkspaceDiagram(id: string) {
 }
 
 /**
- * Get the default diagram for a workspace
+ * Get the first/default diagram for a workspace
+ * Note: diagrams table doesn't have is_default field, so we just get the first one
  */
 export async function getDefaultWorkspaceDiagram(workspaceId: string) {
   const { data, error } = await supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .select('*')
     .eq('workspace_id', workspaceId)
-    .eq('is_default', true)
-    .is('deleted_at', null)
-    .single();
+    .order('created_at', { ascending: true })
+    .limit(1);
 
   if (error) {
-    // If no default found, get the first diagram
-    if (error.code === 'PGRST116') {
-      const { data: diagrams, error: listError } = await supabase
-        .from('workspace_diagrams')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: true })
-        .limit(1);
-
-      if (listError) {
-        console.error('[WorkspaceDiagramService] Error fetching first diagram:', listError);
-        throw listError;
-      }
-
-      return diagrams?.[0] as WorkspaceDiagram | null;
-    }
-
     console.error('[WorkspaceDiagramService] Error fetching default diagram:', error);
     throw error;
   }
 
-  return data as WorkspaceDiagram;
+  return data?.[0] as WorkspaceDiagram | null;
 }
 
 /**
@@ -170,13 +148,14 @@ export async function getDefaultWorkspaceDiagram(workspaceId: string) {
  */
 export async function createWorkspaceDiagram(input: CreateWorkspaceDiagramInput) {
   const { data, error } = await supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .insert({
       workspace_id: input.workspace_id,
+      account_id: input.account_id, // Required in diagrams table
       name: input.name,
       description: input.description || null,
-      is_default: input.is_default || false,
       diagram_type: input.diagram_type || 'dataset',
+      // Note: is_default is not in diagrams table
     })
     .select()
     .single();
@@ -194,7 +173,7 @@ export async function createWorkspaceDiagram(input: CreateWorkspaceDiagramInput)
  */
 export async function updateWorkspaceDiagram(id: string, input: UpdateWorkspaceDiagramInput) {
   const { data, error } = await supabase
-    .from('workspace_diagrams')
+    .from('diagrams')
     .update(input)
     .eq('id', id)
     .select()
@@ -209,12 +188,12 @@ export async function updateWorkspaceDiagram(id: string, input: UpdateWorkspaceD
 }
 
 /**
- * Soft delete a workspace diagram
+ * Delete a workspace diagram (hard delete)
  */
 export async function deleteWorkspaceDiagram(id: string) {
   const { error } = await supabase
-    .from('workspace_diagrams')
-    .update({ deleted_at: new Date().toISOString() })
+    .from('diagrams')
+    .delete()
     .eq('id', id);
 
   if (error) {
@@ -225,21 +204,25 @@ export async function deleteWorkspaceDiagram(id: string) {
 
 /**
  * Set a diagram as the default for its workspace
+ * Note: diagrams table doesn't have is_default field
+ * This function is kept for API compatibility but doesn't do anything
+ * @deprecated diagrams table doesn't support default flag
  */
 export async function setDefaultDiagram(id: string) {
-  // The database trigger will automatically unset other defaults
-  return updateWorkspaceDiagram(id, { is_default: true });
+  console.warn('[WorkspaceDiagramService] setDefaultDiagram is deprecated - diagrams table does not support is_default field');
+  // Just return the diagram unchanged
+  return getWorkspaceDiagram(id);
 }
 
 /**
  * Count datasets in a diagram
+ * Now uses diagram_datasets mapping table
  */
 export async function countDatasetsInDiagram(diagramId: string) {
   const { count, error } = await supabase
-    .from('datasets')
+    .from('diagram_datasets')
     .select('*', { count: 'exact', head: true })
-    .eq('workspace_diagram_id', diagramId)
-    .is('deleted_at', null);
+    .eq('diagram_id', diagramId);
 
   if (error) {
     console.error('[WorkspaceDiagramService] Error counting datasets:', error);
@@ -247,4 +230,60 @@ export async function countDatasetsInDiagram(diagramId: string) {
   }
 
   return count || 0;
+}
+
+/**
+ * Get all dataset IDs in a diagram
+ * Returns a set of dataset IDs that are in the specified diagram
+ */
+export async function getDiagramDatasetIds(diagramId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('diagram_datasets')
+    .select('dataset_id')
+    .eq('diagram_id', diagramId);
+
+  if (error) {
+    console.error('[WorkspaceDiagramService] Error fetching diagram datasets:', error);
+    throw error;
+  }
+
+  return new Set((data || []).map((item) => item.dataset_id));
+}
+
+/**
+ * Add a dataset to a diagram
+ */
+export async function addDatasetToDiagram(diagramId: string, datasetId: string, userId?: string) {
+  const { data, error } = await supabase
+    .from('diagram_datasets')
+    .insert({
+      diagram_id: diagramId,
+      dataset_id: datasetId,
+      created_by: userId || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[WorkspaceDiagramService] Error adding dataset to diagram:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Remove a dataset from a diagram
+ */
+export async function removeDatasetFromDiagram(diagramId: string, datasetId: string) {
+  const { error } = await supabase
+    .from('diagram_datasets')
+    .delete()
+    .eq('diagram_id', diagramId)
+    .eq('dataset_id', datasetId);
+
+  if (error) {
+    console.error('[WorkspaceDiagramService] Error removing dataset from diagram:', error);
+    throw error;
+  }
 }

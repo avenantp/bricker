@@ -83,8 +83,7 @@ export interface WorkspaceMember {
   workspace_id: string;
   user_id: string;
   role: UserRole;
-  added_by: string | null;
-  added_at: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -128,8 +127,7 @@ export interface ProjectMember {
   project_id: string;
   user_id: string;
   role: 'owner' | 'editor' | 'viewer';
-  added_by: string | null;
-  added_at: string | null;
+  created_by: string | null;
   created_at: string;
 }
 

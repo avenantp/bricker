@@ -7,6 +7,8 @@ import { createAssistantRouter } from './routes/assistant.js';
 import githubRouter from './routes/github.js';
 import datasetsRouter from './routes/datasets.js';
 import sourceControlSyncRouter from './routes/source-control-sync.js';
+import connectionsRouter from './routes/connections.js';
+// import projectConnectionsRouter from './routes/project-connections.js'; // Disabled until Supabase env vars are configured
 import {
   changeTrackingMiddleware,
   requestLoggerMiddleware,
@@ -16,8 +18,8 @@ import {
   notFoundHandler,
 } from './middleware/error-handler.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory
+dotenv.config({ path: '../.env' });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +58,8 @@ async function startServer() {
     app.use('/api/github', githubRouter);
     app.use('/api/datasets', datasetsRouter);
     app.use('/api/source-control-sync', sourceControlSyncRouter);
+    app.use('/api/connections', connectionsRouter);
+    // app.use('/api/projects', projectConnectionsRouter); // Disabled until Supabase env vars are configured
 
     // Root endpoint
     app.get('/', (req, res) => {
@@ -69,6 +73,8 @@ async function startServer() {
           github: '/api/github/*',
           datasets: '/api/datasets/*',
           sourceControlSync: '/api/source-control-sync/*',
+          connections: '/api/connections/*',
+          // projects: '/api/projects/*', // Disabled until Supabase env vars are configured
         },
       });
     });

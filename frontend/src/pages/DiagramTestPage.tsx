@@ -4,41 +4,56 @@
  */
 
 import { useEffect } from 'react';
+import { ReactFlowProvider } from '@xyflow/react';
+import { useParams } from 'react-router-dom';
 import { DatasetDiagramView } from '../components/Diagram/DatasetDiagramView';
+import { DatasetTreeView } from '../components/Diagram/DatasetTreeView';
+import { DatasetDetailsPanel } from '../components/Diagram/DatasetDetailsPanel';
+import { DiagramTopBar } from '../components/Diagram/DiagramTopBar';
 import { useDiagramStore } from '../store/diagramStore';
 import { generateMockDiagramData } from '../utils/mockDiagramData';
-import { TopBar } from '../components/Layout/TopBar';
-import { NavigationSidebar } from '../components/Layout/NavigationSidebar';
+import { CollapsedNavigationSidebar } from '../components/Layout/CollapsedNavigationSidebar';
 
 export function DiagramTestPage() {
-  const { setNodes, setEdges, applyLayout, setContext } = useDiagramStore();
+  const { workspaceId, diagramId } = useParams<{ workspaceId: string; diagramId: string }>();
+  const { setNodes, setEdges, applyLayout, setContext, selectedDatasetId } = useDiagramStore();
 
   useEffect(() => {
-    // Set test context
-    setContext('test-account-id', 'test-workspace-id', 'dataset');
+    // Set context with actual route params
+    if (workspaceId && diagramId) {
+      setContext('test-account-id', workspaceId, diagramId);
+    }
 
-    // Generate mock data with 12 nodes
-    const mockData = generateMockDiagramData(12);
-
-    // Load nodes and relationship edges
-    setNodes(mockData.nodes);
-    setEdges(mockData.relationshipEdges);
-
-    // Apply initial hierarchical layout after a short delay
-    setTimeout(() => {
-      applyLayout('hierarchical');
-    }, 100);
-  }, [setNodes, setEdges, applyLayout, setContext]);
+    // TODO: Load actual test data
+    // Mock data removed - add your own test data here
+  }, [setContext, workspaceId, diagramId]);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <TopBar />
-      <div className="flex-1 flex overflow-hidden">
-        <NavigationSidebar />
-        <main className="flex-1 relative">
-          <DatasetDiagramView />
-        </main>
+    <ReactFlowProvider>
+      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <DiagramTopBar />
+        <div className="flex-1 flex overflow-hidden">
+          {/* Collapsed Navigation Sidebar (icon-only) */}
+          <CollapsedNavigationSidebar />
+
+          {/* Dataset TreeView */}
+          <DatasetTreeView
+            className="w-80"
+            workspaceId={workspaceId}
+            diagramId={diagramId}
+          />
+
+          {/* Main Diagram Canvas */}
+          <main className="flex-1 relative">
+            <DatasetDiagramView />
+          </main>
+
+          {/* Dataset Details Panel (right sidebar) */}
+          {selectedDatasetId && (
+            <DatasetDetailsPanel className="w-96" workspaceId={workspaceId} />
+          )}
+        </div>
       </div>
-    </div>
+    </ReactFlowProvider>
   );
 }

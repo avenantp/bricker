@@ -6,17 +6,28 @@ import type { DataModelYAML } from '../github/yaml-storage.js';
 
 const router = express.Router();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Lazy-load Supabase client to avoid loading before environment variables are set
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error('Supabase credentials not configured');
+    }
+    supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+  }
+  return supabase;
+}
 
 /**
  * Helper to get GitHub client for a workspace
  */
 async function getGitHubClientForWorkspace(workspaceId: string): Promise<{ client: GitHubClient; storage: YAMLStorageService } | null> {
   // Get workspace GitHub settings
-  const { data: workspace, error } = await supabase
+  const { data: workspace, error } = await getSupabaseClient()
     .from('workspaces')
     .select('github_repo, github_branch, settings')
     .eq('id', workspaceId)
@@ -92,7 +103,7 @@ router.post('/connect', async (req, res) => {
     }
 
     // Update workspace with GitHub settings
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('workspaces')
       .update({
         github_repo,

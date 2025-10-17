@@ -25,21 +25,24 @@ export function useEdgeRouting() {
     // Check if any node positions have changed
     let positionsChanged = false;
 
-    nodes.forEach((node) => {
+    // Only process nodes that have positions (are on the diagram)
+    const nodesWithPositions = nodes.filter((node) => node.position !== undefined);
+
+    nodesWithPositions.forEach((node) => {
       const prevPos = previousPositionsRef.current[node.id];
       if (
         !prevPos ||
-        prevPos.x !== node.position.x ||
-        prevPos.y !== node.position.y
+        prevPos.x !== node.position!.x ||
+        prevPos.y !== node.position!.y
       ) {
         positionsChanged = true;
       }
-      previousPositionsRef.current[node.id] = { ...node.position };
+      previousPositionsRef.current[node.id] = { ...node.position! };
     });
 
     // Recalculate edge paths if positions changed
-    if (positionsChanged && edges.length > 0) {
-      const edgePaths = calculateAllEdgePaths(nodes, edges, edgeRoutes);
+    if (positionsChanged && edges.length > 0 && nodesWithPositions.length > 0) {
+      const edgePaths = calculateAllEdgePaths(nodesWithPositions, edges, edgeRoutes);
 
       // Update edges with new paths
       const updatedEdges = edges.map((edge) => {
@@ -77,18 +80,23 @@ export function useEdgeRoutingOnExpansion() {
     if (expansionChanged) {
       previousExpansionRef.current = new Set(expandedNodes);
 
-      // Recalculate all edge paths
-      const edgePaths = calculateAllEdgePaths(nodes, edges, edgeRoutes);
+      // Only process nodes that have positions (are on the diagram)
+      const nodesWithPositions = nodes.filter((node) => node.position !== undefined);
 
-      const updatedEdges = edges.map((edge) => {
-        const pathResult = edgePaths[edge.id];
-        if (pathResult) {
-          return toReactFlowEdge(edge, pathResult);
-        }
-        return edge;
-      });
+      if (nodesWithPositions.length > 0 && edges.length > 0) {
+        // Recalculate all edge paths
+        const edgePaths = calculateAllEdgePaths(nodesWithPositions, edges, edgeRoutes);
 
-      setEdges(updatedEdges);
+        const updatedEdges = edges.map((edge) => {
+          const pathResult = edgePaths[edge.id];
+          if (pathResult) {
+            return toReactFlowEdge(edge, pathResult);
+          }
+          return edge;
+        });
+
+        setEdges(updatedEdges);
+      }
     }
   }, [nodes, edges, edgeRoutes, expandedNodes, setEdges]);
 }

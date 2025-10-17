@@ -6,8 +6,7 @@
 import type { Node, Edge, Viewport } from '@xyflow/react';
 import type {
   MedallionLayer,
-  EntityType,
-  EntitySubtype,
+  DatasetType,
   RelationshipType,
   Cardinality,
 } from './canvas';
@@ -31,12 +30,13 @@ export interface DatasetNodeData {
   // Core identifiers
   dataset_id: string;
   name: string;
-  fqn: string;
+  fully_qualified_name: string; // Updated from fqn
+  connection_id?: string; // Connection reference
+  schema?: string; // Schema name
 
   // Classification
   medallion_layer: MedallionLayer;
-  entity_type: EntityType;
-  entity_subtype?: EntitySubtype;
+  dataset_type: DatasetType;
   description?: string;
 
   // Visual state
@@ -162,8 +162,7 @@ export interface DiagramViewport {
  */
 export interface DiagramFilters {
   medallionLayers: MedallionLayer[];
-  entityTypes: EntityType[];
-  entitySubtypes: EntitySubtype[];
+  datasetTypes: DatasetType[];
   hasRelationships?: boolean;
   hasLineage?: boolean;
   aiConfidenceMin?: number; // 0-100
@@ -412,8 +411,7 @@ export const DEFAULT_VIEWPORT: DiagramViewport = {
 
 export const DEFAULT_FILTERS: DiagramFilters = {
   medallionLayers: [],
-  entityTypes: [],
-  entitySubtypes: [],
+  datasetTypes: [],
   hasRelationships: false,
   hasLineage: false,
   aiConfidenceMin: 0,

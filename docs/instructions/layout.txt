@@ -4,3 +4,12 @@ Reference dialog images @docs\images\sample-layout-1.png and @docs\images\sample
 
 
 
+in the dataset diagram view i want the left sidenav to be replaced with a treeview of datasets. 
+it will be a two level treeview with level 1 being dataset.medallion_layer and level 2 the datasets.
+the current sidenav need to be collapse only showing the icons with tooltips on hover.
+
+
+ on the `Edit SQL Server Connection` for MSSQL replace the `Enable SSL/TLS Encryption` with a drop down called Encrypt with values 'Mandatory', 'Optional', 'Strict' and change the connection dialog based on this image, but keeping our themes.
+ 
+ 
+ Server=.;Database=AdventureWorks;Integrated Security=true;Encrypt=true;TrustServerCertificate=true;Application Name=Uroq_MetadataManager

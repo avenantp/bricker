@@ -4,11 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, FileText, Star, MoreVertical, Trash2, Settings, ArrowLeft } from 'lucide-react';
+import { Plus, FileText, Star, MoreVertical, Trash2, Settings, ArrowLeft, Edit } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspaceDiagrams, useWorkspace, useDeleteWorkspaceDiagram, useSetDefaultDiagram } from '../hooks';
 import { useSearch } from '../contexts/SearchContext';
 import { AppLayout } from '../components/Layout';
+import { EditDiagramDialog } from '../components/Diagram/EditDiagramDialog';
 import type { WorkspaceDiagram } from '@/types/workspaceDiagram';
 
 export function WorkspaceDiagramsPage() {
@@ -19,6 +20,7 @@ export function WorkspaceDiagramsPage() {
   // State
   const [diagramToDelete, setDiagramToDelete] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState<string | null>(null);
+  const [diagramToEdit, setDiagramToEdit] = useState<string | null>(null);
 
   // Set search placeholder for this page
   useEffect(() => {
@@ -243,6 +245,17 @@ export function WorkspaceDiagramsPage() {
                             }}
                           />
                           <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDiagramToEdit(diagram.id);
+                                setShowMenu(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </button>
                             {!diagram.is_default && (
                               <button
                                 onClick={(e) => {
@@ -292,6 +305,18 @@ export function WorkspaceDiagramsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Diagram Dialog */}
+      {diagramToEdit && (
+        <EditDiagramDialog
+          diagramId={diagramToEdit}
+          onClose={() => setDiagramToEdit(null)}
+          onSuccess={() => {
+            refetch();
+            setDiagramToEdit(null);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

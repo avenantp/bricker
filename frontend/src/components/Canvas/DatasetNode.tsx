@@ -5,7 +5,7 @@
  * Based on specification: docs/prp/051-dataset-diagram-view-specification.md
  */
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import {
   GitBranch,
@@ -18,15 +18,17 @@ import {
   Database,
   BarChart,
   Layers,
+  MoreVertical,
 } from 'lucide-react';
 import type { DatasetNodeData } from '../../types/diagram';
 import type { SyncStatus } from '../../types/dataset';
 import {
   MEDALLION_TAILWIND_COLORS,
-  ENTITY_ICONS,
+  DATASET_TYPE_ICONS,
 } from '../../types/canvas';
 import { ColumnList } from './ColumnList';
 import { useDiagramStore } from '../../store/diagramStore';
+import { DatasetContextMenu } from '../Diagram/DatasetContextMenu';
 
 /**
  * Get sync status icon and color
@@ -91,15 +93,14 @@ function getSyncStatusIndicator(syncStatus: SyncStatus | undefined, hasUncommitt
 
 export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeData>) => {
   const toggleNodeExpansion = useDiagramStore((state) => state.toggleNodeExpansion);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Get color based on medallion layer
   const colorClass = MEDALLION_TAILWIND_COLORS[data.medallion_layer];
 
-  // Get icon based on entity subtype or type
-  const icon =
-    (data.entity_subtype && ENTITY_ICONS[data.entity_subtype]) ||
-    ENTITY_ICONS[data.entity_type] ||
-    ENTITY_ICONS.Table;
+  // Get icon based on dataset type
+  const icon = DATASET_TYPE_ICONS[data.dataset_type] || DATASET_TYPE_ICONS.Table;
 
   // Determine if confidence score should be shown
   const showConfidenceBadge =
@@ -120,17 +121,35 @@ export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeDa
     toggleNodeExpansion(id);
   };
 
+  // Handle context menu (right-click)
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  // Handle ellipsis button click
+  const handleEllipsisClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setContextMenu({ x: rect.right, y: rect.bottom });
+  };
+
   return (
-    <div
-      className={`
-        ${nodeWidth} rounded-lg border-2 shadow-md
-        ${colorClass}
-        ${selected ? 'ring-4 ring-blue-500' : ''}
-        ${data.isHighlighted ? 'ring-2 ring-purple-500' : ''}
-        transition-all duration-200
-        relative bg-white dark:bg-gray-800
-      `}
-    >
+    <>
+      <div
+        className={`
+          ${nodeWidth} rounded-lg border-2 shadow-md
+          ${colorClass}
+          ${selected ? 'ring-4 ring-blue-500' : ''}
+          ${data.isHighlighted ? 'ring-2 ring-purple-500' : ''}
+          transition-all duration-200
+          relative bg-white dark:bg-gray-800
+        `}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
       {/* Connection handles */}
       <Handle
         type="target"
@@ -162,7 +181,7 @@ export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeDa
             )}
           </button>
 
-          <span className="text-2xl" title={data.entity_subtype || data.entity_type}>
+          <span className="text-2xl" title={data.dataset_type}>
             {icon}
           </span>
           <div className="flex-1 min-w-0">
@@ -173,21 +192,27 @@ export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeDa
               {data.fqn}
             </div>
           </div>
+
+          {/* Ellipsis Button (visible on hover) */}
+          {isHovered && (
+            <button
+              onClick={handleEllipsisClick}
+              className="btn-icon p-1 hover:bg-white hover:bg-opacity-20 rounded transition-opacity"
+              title="More options"
+            >
+              <MoreVertical className="w-4 h-4 text-white" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Node Body */}
       <div className="px-3 py-2 bg-white bg-opacity-10 backdrop-blur-sm">
-        {/* Entity Type & Subtype */}
+        {/* Dataset Type */}
         <div className="flex items-center gap-2 mb-2">
           <span className="px-2 py-0.5 bg-white bg-opacity-20 text-white text-xs rounded">
-            {data.entity_type}
+            {data.dataset_type}
           </span>
-          {data.entity_subtype && (
-            <span className="px-2 py-0.5 bg-white bg-opacity-30 text-white text-xs rounded">
-              {data.entity_subtype}
-            </span>
-          )}
         </div>
 
         {/* Description */}
@@ -276,6 +301,17 @@ export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeDa
         className="w-3 h-3 !bg-blue-600"
       />
     </div>
+
+    {/* Context Menu */}
+    {contextMenu && (
+      <DatasetContextMenu
+        datasetId={id}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        onClose={() => setContextMenu(null)}
+      />
+    )}
+  </>
   );
 });
 

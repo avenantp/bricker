@@ -67,14 +67,15 @@ export interface MSSQLConfiguration {
     username: string;
     password: string;
   };
-  ssl?: {
-    enabled: boolean;
+  encryption?: {
+    mode: 'Mandatory' | 'Optional' | 'Strict';
     trust_server_certificate?: boolean;
   };
   advanced?: {
     connection_timeout?: number;
     command_timeout?: number;
     application_name?: string;
+    additional_properties?: string;
   };
   cdc?: {
     enabled: boolean;
@@ -196,7 +197,6 @@ export type ConnectionConfiguration =
 export interface Connection {
   id: string;
   account_id: string;
-  workspace_id: string | null;
   name: string;
   description: string | null;
   connection_type: ConnectionType;
@@ -224,10 +224,6 @@ export interface ConnectionWithDetails extends Connection {
     full_name: string;
     email: string;
   };
-  workspace?: {
-    id: string;
-    name: string;
-  };
   metadata_cache_count?: number;
 }
 
@@ -254,7 +250,7 @@ export interface ConnectionMetadataCache {
  * Parameters for filtering connections
  */
 export interface ConnectionFilters {
-  workspace_id?: string;
+  account_id?: string;
   connection_type?: ConnectionType;
   is_active?: boolean;
   test_status?: TestStatus;
@@ -393,7 +389,6 @@ export interface ImportMetadataResult {
  */
 export interface CreateConnectionInput {
   account_id: string;
-  workspace_id?: string;
   name: string;
   description?: string;
   connection_type: ConnectionType;
@@ -549,7 +544,7 @@ export function getDefaultConfiguration(type: ConnectionType): Partial<Connectio
       return {
         port: 1433,
         authentication: { type: 'sql_auth', username: '', password: '' },
-        ssl: { enabled: true, trust_server_certificate: false }
+        encryption: { mode: 'Mandatory', trust_server_certificate: false }
       } as Partial<MSSQLConfiguration>;
 
     case ConnectionType.Salesforce:

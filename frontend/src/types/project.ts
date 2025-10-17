@@ -123,6 +123,11 @@ export interface Project {
   source_control_connection_status: SourceControlConnectionStatus | null;
   source_control_last_synced_at: string | null;
   source_control_default_branch: string | null;
+  // Source control credentials (consolidated from project_source_control_credentials table)
+  source_control_access_token_encrypted: string | null;
+  source_control_refresh_token_encrypted: string | null;
+  source_control_token_expires_at: string | null;
+  source_control_username: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -241,7 +246,9 @@ export interface UpdateProjectUserRoleInput {
 }
 
 /**
- * Project source control credentials (from project_source_control_credentials table)
+ * Project source control credentials (DEPRECATED)
+ * @deprecated Credentials are now stored directly in the projects table.
+ * Use Project interface instead.
  */
 export interface ProjectSourceControlCredentials {
   id: string;
@@ -256,7 +263,9 @@ export interface ProjectSourceControlCredentials {
 }
 
 /**
- * Input for storing/updating project source control credentials
+ * Input for storing/updating project source control credentials (DEPRECATED)
+ * @deprecated Credentials are now stored directly in the projects table.
+ * Update the project record directly instead.
  */
 export interface StoreProjectCredentialsInput {
   project_id: string;

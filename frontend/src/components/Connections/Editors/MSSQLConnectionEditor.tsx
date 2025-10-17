@@ -22,9 +22,6 @@ export function MSSQLConnectionEditor({
   onCancel,
   isEdit = false
 }: MSSQLConnectionEditorProps) {
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
-
   // Connection name
   const [name, setName] = useState(initialName);
 
@@ -47,15 +44,22 @@ export function MSSQLConnectionEditor({
   const [password, setPassword] = useState(initialConfig?.authentication?.password || '');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Test connection state
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
-  const [testMessage, setTestMessage] = useState('');
+  // Update databases state
+  const [updating, setUpdating] = useState(false);
+  const [updateResult, setUpdateResult] = useState<'success' | 'error' | null>(null);
+  const [updateMessage, setUpdateMessage] = useState('');
 
-  // SSL Configuration
-  const [sslEnabled, setSslEnabled] = useState(initialConfig?.ssl?.enabled || false);
+  // Encryption Configuration
+  const [encryptMode, setEncryptMode] = useState<'Mandatory' | 'Optional' | 'Strict'>(
+    initialConfig?.encryption?.mode || 'Mandatory'
+  );
   const [trustServerCertificate, setTrustServerCertificate] = useState(
-    initialConfig?.ssl?.trust_server_certificate || false
+    initialConfig?.encryption?.trust_server_certificate || false
+  );
+
+  // Additional Properties
+  const [additionalProperties, setAdditionalProperties] = useState(
+    initialConfig?.advanced?.additional_properties || ''
   );
 
   // Advanced settings
@@ -74,6 +78,7 @@ export function MSSQLConnectionEditor({
 
   // Connection string preview
   const [connectionString, setConnectionString] = useState('');
+  const [showConnectionStringPassword, setShowConnectionStringPassword] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Validation
@@ -92,21 +97,26 @@ export function MSSQLConnectionEditor({
     // Authentication
     if (authType === 'sql_auth') {
       connStr += `;User Id=${username || '<username>'}`;
-      connStr += `;Password=${showPassword ? password : '***'}`;
+      connStr += `;Password=${showConnectionStringPassword ? (password || '<password>') : '***'}`;
     } else if (authType === 'windows_auth') {
       connStr += `;Integrated Security=true`;
     } else if (authType === 'azure_ad') {
       connStr += `;Authentication=ActiveDirectoryPassword`;
       connStr += `;User Id=${username || '<username>'}`;
-      connStr += `;Password=${showPassword ? password : '***'}`;
+      connStr += `;Password=${showConnectionStringPassword ? (password || '<password>') : '***'}`;
     }
 
-    // SSL
-    if (sslEnabled) {
+    // Encryption
+    if (encryptMode === 'Mandatory') {
       connStr += `;Encrypt=true`;
-      if (trustServerCertificate) {
-        connStr += `;TrustServerCertificate=true`;
-      }
+    } else if (encryptMode === 'Optional') {
+      connStr += `;Encrypt=false`;
+    } else if (encryptMode === 'Strict') {
+      connStr += `;Encrypt=Strict`;
+    }
+
+    if (trustServerCertificate) {
+      connStr += `;TrustServerCertificate=true`;
     }
 
     // Advanced
@@ -120,76 +130,70 @@ export function MSSQLConnectionEditor({
       connStr += `;Application Name=${applicationName}`;
     }
 
+    // Additional Properties
+    if (additionalProperties && additionalProperties.trim()) {
+      connStr += `;${additionalProperties}`;
+    }
+
     setConnectionString(connStr);
-  }, [server, port, database, authType, username, password, showPassword, sslEnabled, trustServerCertificate, connectionTimeout, commandTimeout, applicationName]);
+  }, [server, port, database, authType, username, password, showConnectionStringPassword, encryptMode, trustServerCertificate, connectionTimeout, commandTimeout, applicationName, additionalProperties]);
 
-  // Auto-load databases when server and auth are provided
-  useEffect(() => {
-    const canLoadDatabases = server.trim() &&
-      (authType === 'windows_auth' || (username.trim() && password.trim()));
-
-    if (canLoadDatabases && !databasesLoaded) {
-      loadDatabases();
-    }
-  }, [server, authType, username, password]);
-
-  // Test connection function
-  const handleTestConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-    setTestMessage('');
-
-    try {
-      // TODO: Call Supabase Edge Function to test connection
-      // For now, simulate with timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Simulate success
-      setTestResult('success');
-      setTestMessage('Connection successful!');
-
-      // Also load databases on successful test
-      if (!databasesLoaded) {
-        await loadDatabases();
-      }
-    } catch (error) {
-      setTestResult('error');
-      setTestMessage('Connection failed. Please check your credentials.');
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  // Load databases function
-  const loadDatabases = async () => {
+  // Update databases function (loads databases from server)
+  const handleUpdateDatabases = async () => {
+    setUpdating(true);
+    setUpdateResult(null);
+    setUpdateMessage('');
     setLoadingDatabases(true);
+
     try {
-      // TODO: Call Supabase Edge Function to list databases
-      // For now, simulate with timeout and mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call backend API to list databases
+      const response = await fetch('http://localhost:3001/api/connections/mssql/list-databases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          server,
+          port,
+          database: database || 'master',
+          authentication: {
+            type: authType,
+            username,
+            password,
+          },
+          encryption: {
+            mode: encryptMode,
+            trust_server_certificate: trustServerCertificate,
+          },
+        }),
+      });
 
-      // Mock database list
-      const mockDatabases = [
-        'master',
-        'tempdb',
-        'model',
-        'msdb',
-        'AdventureWorks',
-        'WideWorldImporters',
-        'Northwind',
-        'MyDatabase'
-      ];
+      const data = await response.json();
 
-      setAvailableDatabases(mockDatabases);
-      setDatabasesLoaded(true);
+      if (data.success && data.databases) {
+        setAvailableDatabases(data.databases);
+        setDatabasesLoaded(true);
+        setUpdateResult('success');
+        setUpdateMessage(`Found ${data.databases.length} database(s)`);
 
-      // If database is not set, select the first non-system database
-      if (!database && mockDatabases.length > 4) {
-        setDatabase(mockDatabases[4]);
+        // If database is not set, select the first non-system database
+        if (!database && data.databases.length > 0) {
+          const nonSystemDb = data.databases.find(
+            (db: string) => !['master', 'tempdb', 'model', 'msdb'].includes(db)
+          );
+          if (nonSystemDb) {
+            setDatabase(nonSystemDb);
+          }
+        }
+      } else {
+        setUpdateResult('error');
+        setUpdateMessage(data.message || 'Failed to load databases');
       }
-    } catch (error) {
-      console.error('Failed to load databases:', error);
+    } catch (error: any) {
+      setUpdateResult('error');
+      setUpdateMessage(`Failed to load databases: ${error.message || 'Network error'}`);
     } finally {
+      setUpdating(false);
       setLoadingDatabases(false);
     }
   };
@@ -232,14 +236,15 @@ export function MSSQLConnectionEditor({
         username,
         password
       },
-      ssl: {
-        enabled: sslEnabled,
+      encryption: {
+        mode: encryptMode,
         trust_server_certificate: trustServerCertificate
       },
       advanced: {
         connection_timeout: connectionTimeout,
         command_timeout: commandTimeout,
-        application_name: applicationName
+        application_name: applicationName,
+        additional_properties: additionalProperties
       },
       cdc: {
         enabled: cdcEnabled,
@@ -256,7 +261,7 @@ export function MSSQLConnectionEditor({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const canTestConnection = server.trim() &&
+  const canUpdateDatabases = server.trim() &&
     (authType === 'windows_auth' || (username.trim() && password.trim()));
 
   return (
@@ -282,34 +287,9 @@ export function MSSQLConnectionEditor({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('basic')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'basic'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Basic Settings
-          </button>
-          <button
-            onClick={() => setActiveTab('advanced')}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'advanced'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Advanced Settings
-          </button>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'basic' ? (
-            <div className="space-y-4">
+          <div className="space-y-4">
               {/* Connection Name */}
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -328,54 +308,43 @@ export function MSSQLConnectionEditor({
                 {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
               </div>
 
-              {/* Server Address and Port */}
-              <div className="grid grid-cols-4 gap-3">
-                <div className="col-span-3">
-                  <label htmlFor="server" className="block text-sm font-medium text-gray-700 mb-1">
-                    Server Address *
-                  </label>
-                  <input
-                    id="server"
-                    type="text"
-                    value={server}
-                    onChange={(e) => setServer(e.target.value)}
-                    placeholder="sql-server.example.com"
-                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.server ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.server && <p className="text-xs text-red-600 mt-1">{errors.server}</p>}
-                </div>
-                <div>
-                  <label htmlFor="port" className="block text-sm font-medium text-gray-700 mb-1">
-                    Port
-                  </label>
-                  <input
-                    id="port"
-                    type="number"
-                    value={port}
-                    onChange={(e) => setPort(parseInt(e.target.value))}
-                    placeholder="1433"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              {/* Server Name */}
+              <div>
+                <label htmlFor="server" className="block text-sm font-medium text-gray-700 mb-1">
+                  Server name *
+                </label>
+                <input
+                  id="server"
+                  type="text"
+                  value={server}
+                  onChange={(e) => setServer(e.target.value)}
+                  placeholder="."
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.server ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.server && <p className="text-xs text-red-600 mt-1">{errors.server}</p>}
               </div>
 
-              {/* Authentication Type */}
+              {/* Authentication Type and Trust Server Certificate */}
               <div>
-                <label htmlFor="authType" className="block text-sm font-medium text-gray-700 mb-1">
-                  Authentication *
-                </label>
-                <select
-                  id="authType"
-                  value={authType}
-                  onChange={(e) => setAuthType(e.target.value as any)}
-                  className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="sql_auth">SQL Authentication</option>
-                  <option value="windows_auth">Windows Authentication</option>
-                  <option value="azure_ad">Azure AD Authentication</option>
-                </select>
+                <div>
+                  <label htmlFor="authType" className="block text-sm font-medium text-gray-700 mb-1">
+                    Authentication *
+                  </label>
+                  <select
+                    id="authType"
+                    value={authType}
+                    onChange={(e) => setAuthType(e.target.value as any)}
+                    className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="sql_auth">SQL Authentication</option>
+                    <option value="windows_auth">Windows Authentication</option>
+                    <option value="azure_ad">Azure AD Authentication</option>
+                  </select>
+                </div>
+
+                
               </div>
 
               {/* Username and Password */}
@@ -426,32 +395,7 @@ export function MSSQLConnectionEditor({
                 </div>
               )}
 
-              {/* Test Connection Button */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleTestConnection}
-                  disabled={!canTestConnection || testing}
-                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <RefreshCw className={`w-4 h-4 ${testing ? 'animate-spin' : ''}`} />
-                  {testing ? 'Testing...' : 'Test Connection'}
-                </button>
-                {testResult === 'success' && (
-                  <div className="flex items-center gap-2 text-green-600 text-sm">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>{testMessage}</span>
-                  </div>
-                )}
-                {testResult === 'error' && (
-                  <div className="flex items-center gap-2 text-red-600 text-sm">
-                    <XCircle className="w-4 h-4" />
-                    <span>{testMessage}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Database Selection */}
+              {/* Database Selection with Update Button */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label htmlFor="database" className="block text-sm font-medium text-gray-700">
@@ -477,163 +421,149 @@ export function MSSQLConnectionEditor({
                   )}
                 </div>
 
-                {databasesLoaded && !useCustomDatabase ? (
-                  <div className="relative">
-                    <select
-                      id="database"
-                      value={database}
-                      onChange={(e) => setDatabase(e.target.value)}
-                      className={`w-full px-3 py-2 pr-10 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.database ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Select a database...</option>
-                      {availableDatabases.map((db) => (
-                        <option key={db} value={db}>
-                          {db}
-                        </option>
-                      ))}
-                    </select>
-                    {loadingDatabases && (
-                      <RefreshCw className="absolute right-12 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    {databasesLoaded && !useCustomDatabase ? (
+                      <div className="relative">
+                        <select
+                          id="database"
+                          value={database}
+                          onChange={(e) => setDatabase(e.target.value)}
+                          className={`w-full px-3 py-2 pr-10 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.database ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Select a database...</option>
+                          {availableDatabases.map((db) => (
+                            <option key={db} value={db}>
+                              {db}
+                            </option>
+                          ))}
+                        </select>
+                        {loadingDatabases && (
+                          <RefreshCw className="absolute right-12 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+                    ) : (
+                      <input
+                        id="database"
+                        type="text"
+                        value={database}
+                        onChange={(e) => setDatabase(e.target.value)}
+                        placeholder="Enter database name"
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          errors.database ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
                     )}
+                    {errors.database && <p className="text-xs text-red-600 mt-1">{errors.database}</p>}
                   </div>
-                ) : (
-                  <input
-                    id="database"
-                    type="text"
-                    value={database}
-                    onChange={(e) => setDatabase(e.target.value)}
-                    placeholder="Enter database name"
-                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.database ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
+
+                  <button
+                    type="button"
+                    onClick={handleUpdateDatabases}
+                    disabled={!canUpdateDatabases || updating}
+                    className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
+                    {updating ? 'Updating...' : 'Update'}
+                  </button>
+                </div>
+
+                {/* Update Status Messages */}
+                {updateResult === 'success' && (
+                  <div className="flex items-center gap-2 text-green-600 text-sm mt-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>{updateMessage}</span>
+                  </div>
                 )}
-                {errors.database && <p className="text-xs text-red-600 mt-1">{errors.database}</p>}
-                {!databasesLoaded && canTestConnection && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Test connection to load available databases
-                  </p>
+                {updateResult === 'error' && (
+                  <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                    <XCircle className="w-4 h-4" />
+                    <span>{updateMessage}</span>
+                  </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* SSL/TLS Settings */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">SSL/TLS Encryption</h3>
-                <div className="space-y-2">
+
+              {/* Encrypt and Trust Server Certificate */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="encrypt" className="block text-sm font-medium text-gray-700 mb-1">
+                    Encrypt
+                  </label>
+                  <select
+                    id="encrypt"
+                    value={encryptMode}
+                    onChange={(e) => setEncryptMode(e.target.value as 'Mandatory' | 'Optional' | 'Strict')}
+                    className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Mandatory">Mandatory</option>
+                    <option value="Optional">Optional</option>
+                    <option value="Strict">Strict</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={sslEnabled}
-                      onChange={(e) => setSslEnabled(e.target.checked)}
+                      checked={trustServerCertificate}
+                      onChange={(e) => setTrustServerCertificate(e.target.checked)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Enable SSL/TLS Encryption</span>
+                    <span className="text-sm text-gray-700">Trust server certificate</span>
                   </label>
-                  {sslEnabled && (
-                    <label className="flex items-center gap-2 cursor-pointer pl-6">
-                      <input
-                        type="checkbox"
-                        checked={trustServerCertificate}
-                        onChange={(e) => setTrustServerCertificate(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-600">Trust Server Certificate</span>
-                    </label>
-                  )}
                 </div>
               </div>
 
-              {/* Timeout Settings */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Timeout Settings</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="connectionTimeout" className="block text-sm font-medium text-gray-700 mb-1">
-                      Connection Timeout (seconds)
-                    </label>
-                    <input
-                      id="connectionTimeout"
-                      type="number"
-                      value={connectionTimeout}
-                      onChange={(e) => setConnectionTimeout(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="commandTimeout" className="block text-sm font-medium text-gray-700 mb-1">
-                      Command Timeout (seconds)
-                    </label>
-                    <input
-                      id="commandTimeout"
-                      type="number"
-                      value={commandTimeout}
-                      onChange={(e) => setCommandTimeout(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Application Settings */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Application Settings</h3>
-                <div>
-                  <label htmlFor="applicationName" className="block text-sm font-medium text-gray-700 mb-1">
-                    Application Name
-                  </label>
-                  <input
-                    id="applicationName"
-                    type="text"
-                    value={applicationName}
-                    onChange={(e) => setApplicationName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Identifier shown in SQL Server's activity monitor
-                  </p>
-                </div>
-              </div>
-
-              {/* CDC Settings */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Change Data Capture (CDC)</h3>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={cdcEnabled}
-                    onChange={(e) => setCdcEnabled(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Enable CDC Tracking</span>
+              {/* Additional Properties */}
+              <div>
+                <label htmlFor="additionalProperties" className="block text-sm font-medium text-gray-700 mb-1">
+                  Additional Properties
                 </label>
-                <p className="text-xs text-gray-500 mt-2">
-                  Track incremental data changes for efficient delta loads (requires CDC to be enabled on the database)
+                <input
+                  id="additionalProperties"
+                  type="text"
+                  value={additionalProperties}
+                  onChange={(e) => setAdditionalProperties(e.target.value)}
+                  placeholder="e.g. MultipleActiveResultSets=true;Pooling=false"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Additional connection string properties separated by semicolons
                 </p>
               </div>
 
               {/* Connection String Preview */}
               <div className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">Connection String</h3>
-                  <button
-                    type="button"
-                    onClick={copyConnectionString}
-                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  >
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+                  <h3 className="text-sm font-medium text-gray-700">Connection String Preview</h3>
+                  <div className="flex items-center gap-2">
+                    {authType !== 'windows_auth' && (
+                      <button
+                        type="button"
+                        onClick={() => setShowConnectionStringPassword(!showConnectionStringPassword)}
+                        className="text-xs text-gray-600 hover:text-gray-800 flex items-center gap-1"
+                      >
+                        {showConnectionStringPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        {showConnectionStringPassword ? 'Hide' : 'Show'} Password
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={copyConnectionString}
+                      className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    >
+                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
-                <code className="block text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto break-all">
+                <code className="block text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto break-all font-mono">
                   {connectionString}
                 </code>
               </div>
             </div>
-          )}
         </div>
 
         {/* Footer */}

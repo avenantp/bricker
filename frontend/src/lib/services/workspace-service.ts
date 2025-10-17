@@ -71,7 +71,7 @@ export class WorkspaceService {
           source_control_default_branch,
           source_control_connection_status
         ),
-        dataset_count:datasets(count),
+        dataset_count:workspace_datasets(count),
         user_count:workspace_users(count)
       `, { count: 'exact' });
 
@@ -137,7 +137,7 @@ export class WorkspaceService {
           source_control_default_branch,
           source_control_connection_status
         ),
-        dataset_count:datasets(count),
+        dataset_count:workspace_datasets(count),
         user_count:workspace_users(count)
       `)
       .eq('id', workspaceId)
@@ -245,9 +245,9 @@ export class WorkspaceService {
    * Delete a workspace
    */
   async deleteWorkspace(workspaceId: string): Promise<void> {
-    // Check if workspace has datasets
+    // Check if workspace has datasets (via workspace_datasets mapping)
     const { count, error: countError } = await this.supabase
-      .from('datasets')
+      .from('workspace_datasets')
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
 
@@ -257,7 +257,7 @@ export class WorkspaceService {
 
     if (count && count > 0) {
       throw new Error(
-        `Cannot delete workspace: it has ${count} dataset(s). Please delete all datasets first.`
+        `Cannot delete workspace: it has ${count} dataset(s). Please remove all datasets first.`
       );
     }
 
@@ -501,9 +501,9 @@ export class WorkspaceService {
    * Get workspace statistics
    */
   async getWorkspaceStats(workspaceId: string): Promise<WorkspaceStats> {
-    // Get dataset count
+    // Get dataset count (via workspace_datasets mapping)
     const { count: datasetCount, error: datasetError } = await this.supabase
-      .from('datasets')
+      .from('workspace_datasets')
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
 

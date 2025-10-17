@@ -17,9 +17,7 @@ interface YAMLDataset {
     fqn: string;
     name: string;
     medallion_layer?: string;
-    entity_type?: string;
-    entity_subtype?: string;
-    materialization_type?: string;
+    dataset_type?: string;
     description?: string;
     metadata?: Record<string, any>;
     ai_confidence_score?: number;
@@ -71,9 +69,7 @@ export async function generateDatasetYAML(
       fqn: dataset.fqn,
       name: dataset.name,
       medallion_layer: dataset.medallion_layer || undefined,
-      entity_type: dataset.entity_type || undefined,
-      entity_subtype: dataset.entity_subtype || undefined,
-      materialization_type: dataset.materialization_type || undefined,
+      dataset_type: dataset.dataset_type || undefined,
       description: dataset.description || undefined,
       metadata: dataset.metadata || undefined,
       ai_confidence_score: dataset.ai_confidence_score || undefined,
@@ -157,7 +153,7 @@ export async function generateCompactDatasetYAML(
       fqn: dataset.fqn,
       name: dataset.name,
       ...(dataset.medallion_layer && { layer: dataset.medallion_layer }),
-      ...(dataset.entity_type && { type: dataset.entity_type }),
+      ...(dataset.dataset_type && { type: dataset.dataset_type }),
       ...(dataset.description && { desc: dataset.description }),
     },
     columns: columns.map((col) => ({
@@ -276,19 +272,13 @@ export function generateMarkdownDocumentation(
   }
 
   // Metadata
-  if (dataset.medallion_layer || dataset.entity_type) {
+  if (dataset.medallion_layer || dataset.dataset_type) {
     markdown += `## Classification\n\n`;
     if (dataset.medallion_layer) {
       markdown += `- **Medallion Layer:** ${dataset.medallion_layer}\n`;
     }
-    if (dataset.entity_type) {
-      markdown += `- **Entity Type:** ${dataset.entity_type}\n`;
-    }
-    if (dataset.entity_subtype) {
-      markdown += `- **Entity Subtype:** ${dataset.entity_subtype}\n`;
-    }
-    if (dataset.materialization_type) {
-      markdown += `- **Materialization:** ${dataset.materialization_type}\n`;
+    if (dataset.dataset_type) {
+      markdown += `- **Dataset Type:** ${dataset.dataset_type}\n`;
     }
     markdown += `\n`;
   }

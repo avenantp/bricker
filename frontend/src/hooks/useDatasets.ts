@@ -21,25 +21,57 @@ export const datasetKeys = {
   detail: (id: string) => [...datasetKeys.details(), id] as const,
   uncommitted: (workspaceId: string) =>
     [...datasetKeys.all, 'uncommitted', workspaceId] as const,
+  diagramDatasets: (diagramId: string) =>
+    [...datasetKeys.all, 'diagram', diagramId] as const,
 };
 
 /**
  * Fetch all datasets for a workspace
+ * Queries through workspace_datasets junction table
  */
 export function useDatasets(workspaceId: string | undefined) {
   return useQuery({
     queryKey: datasetKeys.list({ workspaceId }),
     queryFn: async () => {
-      if (!workspaceId) return [];
+      if (!workspaceId) {
+        console.log('[useDatasets] No workspaceId provided');
+        return [];
+      }
+
+      console.log('[useDatasets] Fetching datasets for workspace:', workspaceId);
 
       const { data, error } = await supabase
-        .from('datasets')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false });
+        .from('workspace_datasets')
+        .select(`
+          dataset_id,
+          datasets (*)
+        `)
+        .eq('workspace_id', workspaceId);
 
-      if (error) throw error;
-      return data as Dataset[];
+      console.log('[useDatasets] Query result:', {
+        workspaceId,
+        rawData: data,
+        error,
+        dataCount: data?.length || 0
+      });
+
+      if (error) {
+        console.error('[useDatasets] Query error:', error);
+        throw error;
+      }
+
+      // Extract datasets from the junction table response
+      const datasets = (data || [])
+        .map((item: any) => item.datasets)
+        .filter((dataset: any) => dataset !== null) as Dataset[];
+
+      console.log('[useDatasets] Extracted datasets:', {
+        workspaceId,
+        datasetsCount: datasets.length,
+        datasets: datasets.map(d => ({ id: d.id, name: d.name, medallion_layer: d.medallion_layer }))
+      });
+
+      return datasets;
     },
     enabled: !!workspaceId,
   });
@@ -47,6 +79,7 @@ export function useDatasets(workspaceId: string | undefined) {
 
 /**
  * Fetch datasets for a specific project
+ * Queries through project → workspaces → workspace_datasets → datasets
  */
 export function useProjectDatasets(projectId: string | undefined) {
   return useQuery({
@@ -54,19 +87,37 @@ export function useProjectDatasets(projectId: string | undefined) {
     queryFn: async () => {
       if (!projectId) return [];
 
-      // Query through project_datasets mapping table
+      // Step 1: Get all workspaces for this project
+      const { data: workspaces, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('project_id', projectId);
+
+      if (workspaceError) throw workspaceError;
+
+      const workspaceIds = workspaces?.map((w) => w.id) || [];
+      if (workspaceIds.length === 0) return [];
+
+      // Step 2: Get all datasets in these workspaces through workspace_datasets
       const { data, error } = await supabase
-        .from('project_datasets')
+        .from('workspace_datasets')
         .select(`
           dataset_id,
           datasets (*)
         `)
-        .eq('project_id', projectId);
+        .in('workspace_id', workspaceIds);
 
       if (error) throw error;
 
-      // Extract datasets from the join
-      return (data?.map((pd: any) => pd.datasets).filter(Boolean) || []) as Dataset[];
+      // Step 3: Extract unique datasets (same dataset may be in multiple workspaces)
+      const datasetsMap = new Map<string, Dataset>();
+      data?.forEach((wd: any) => {
+        if (wd.datasets && !datasetsMap.has(wd.datasets.id)) {
+          datasetsMap.set(wd.datasets.id, wd.datasets);
+        }
+      });
+
+      return Array.from(datasetsMap.values()) as Dataset[];
     },
     enabled: !!projectId,
   });
@@ -96,6 +147,7 @@ export function useDataset(datasetId: string | undefined) {
 
 /**
  * Fetch uncommitted datasets for a workspace
+ * Queries through workspace_datasets junction table
  */
 export function useUncommittedDatasets(workspaceId: string | undefined) {
   return useQuery({
@@ -104,14 +156,22 @@ export function useUncommittedDatasets(workspaceId: string | undefined) {
       if (!workspaceId) return [];
 
       const { data, error } = await supabase
-        .from('datasets')
-        .select('*')
+        .from('workspace_datasets')
+        .select(`
+          dataset_id,
+          datasets!inner (*)
+        `)
         .eq('workspace_id', workspaceId)
-        .eq('has_uncommitted_changes', true)
-        .order('updated_at', { ascending: false });
+        .eq('datasets.has_uncommitted_changes', true);
 
       if (error) throw error;
-      return data as Dataset[];
+
+      // Extract datasets from the junction table response
+      const datasets = (data || [])
+        .map((item: any) => item.datasets)
+        .filter((dataset: any) => dataset !== null) as Dataset[];
+
+      return datasets;
     },
     enabled: !!workspaceId,
     refetchInterval: 30000, // Poll every 30 seconds for uncommitted changes
@@ -302,68 +362,55 @@ export function useMarkDatasetSynced() {
 }
 
 /**
- * Add dataset to a project (via mapping table)
+ * Fetch dataset IDs that are in a specific diagram
+ * Returns a Set of dataset IDs for efficient lookup
  */
-export function useAddDatasetToProject() {
-  const queryClient = useQueryClient();
+export function useDiagramDatasets(diagramId: string | undefined) {
+  return useQuery({
+    queryKey: datasetKeys.diagramDatasets(diagramId || ''),
+    queryFn: async () => {
+      if (!diagramId) return new Set<string>();
 
-  return useMutation({
-    mutationFn: async ({
-      projectId,
-      datasetId,
-    }: {
-      projectId: string;
-      datasetId: string;
-    }) => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('User not authenticated');
-
-      const { error } = await supabase.from('project_datasets').insert({
-        project_id: projectId,
-        dataset_id: datasetId,
-        added_by: user.user.id,
-      });
+      const { data, error } = await supabase
+        .from('diagram_datasets')
+        .select('dataset_id')
+        .eq('diagram_id', diagramId);
 
       if (error) throw error;
-      return { projectId, datasetId };
+      return new Set((data || []).map((item) => item.dataset_id)) as Set<string>;
     },
-    onSuccess: ({ projectId }) => {
-      // Invalidate project datasets list
-      queryClient.invalidateQueries({
-        queryKey: datasetKeys.list({ projectId }),
-      });
+    enabled: !!diagramId,
+  });
+}
+
+/**
+ * Add dataset to a project (DEPRECATED)
+ * @deprecated Datasets belong to workspaces, not directly to projects.
+ * Use workspace-level hooks instead (e.g., add dataset when creating/updating dataset with workspace_id)
+ */
+export function useAddDatasetToProject() {
+  return useMutation({
+    mutationFn: async () => {
+      throw new Error(
+        'useAddDatasetToProject is deprecated. Datasets belong to workspaces, not directly to projects. ' +
+        'Datasets are added to projects through their workspace membership.'
+      );
     },
   });
 }
 
 /**
- * Remove dataset from a project (via mapping table)
+ * Remove dataset from a project (DEPRECATED)
+ * @deprecated Datasets belong to workspaces, not directly to projects.
+ * Use workspace-level hooks instead
  */
 export function useRemoveDatasetFromProject() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({
-      projectId,
-      datasetId,
-    }: {
-      projectId: string;
-      datasetId: string;
-    }) => {
-      const { error } = await supabase
-        .from('project_datasets')
-        .delete()
-        .eq('project_id', projectId)
-        .eq('dataset_id', datasetId);
-
-      if (error) throw error;
-      return { projectId, datasetId };
-    },
-    onSuccess: ({ projectId }) => {
-      // Invalidate project datasets list
-      queryClient.invalidateQueries({
-        queryKey: datasetKeys.list({ projectId }),
-      });
+    mutationFn: async () => {
+      throw new Error(
+        'useRemoveDatasetFromProject is deprecated. Datasets belong to workspaces, not directly to projects. ' +
+        'Remove datasets from their workspace instead.'
+      );
     },
   });
 }

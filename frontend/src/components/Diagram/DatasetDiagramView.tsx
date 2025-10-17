@@ -4,7 +4,7 @@
  * Based on specification: docs/prp/051-dataset-diagram-view-specification.md
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,6 +13,7 @@ import {
   Panel,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   Connection,
   NodeChange,
@@ -21,9 +22,13 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { useParams } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { useAccount } from '../../hooks/useAccount';
 import { DatasetNode } from '../Canvas/DatasetNode';
 import { edgeTypes } from '../Canvas/DiagramEdge';
 import { DiagramToolbar } from '../Canvas/DiagramToolbar';
+import { Swimlanes } from './Swimlanes';
 import { useDiagramStore } from '../../store/diagramStore';
 import { useAutoEdgeRouting } from '../../hooks/useEdgeRouting';
 import { useFilteredDiagram } from '../../hooks/useSearchAndFilter';
@@ -40,6 +45,16 @@ const nodeTypes = {
  * Main DatasetDiagramView Component
  */
 export function DatasetDiagramView() {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { screenToFlowPosition } = useReactFlow();
+
+  // Route params
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+
+  // Authentication context (optional - used for audit trails)
+  const { user } = useAuth();
+  const { data: account } = useAccount();
+
   // Zustand store
   const {
     nodes: storeNodes,
@@ -54,6 +69,7 @@ export function DatasetDiagramView() {
     loadState,
     saveState,
     applyLayout,
+    addNodeToDiagram,
   } = useDiagramStore();
 
   // Get filtered nodes and edges
@@ -77,11 +93,20 @@ export function DatasetDiagramView() {
 
   // Initialize diagram
   useEffect(() => {
-    // TODO: Get actual accountId and workspaceId from auth context
-    const accountId = 'demo-account-id';
-    const workspaceId = 'demo-workspace-id';
+    // Ensure we have workspace context
+    if (!workspaceId) {
+      console.warn('[DatasetDiagramView] Missing workspaceId');
+      return;
+    }
 
-    // Set context for persistence
+    console.log('[DatasetDiagramView] Initializing diagram', {
+      accountId: account?.id || 'not-required',
+      workspaceId,
+      diagramType: 'dataset'
+    });
+
+    // Set context for persistence (use placeholder for accountId if not available)
+    const accountId = account?.id || 'default-account';
     setContext(accountId, workspaceId, 'dataset');
 
     // Load saved diagram state
@@ -91,10 +116,9 @@ export function DatasetDiagramView() {
 
     // Apply initial layout if no nodes
     if (storeNodes.length === 0) {
-      // TODO: Fetch datasets from API and populate diagram
-      console.log('TODO: Fetch datasets and apply initial layout');
+      console.log('[DatasetDiagramView] No nodes in store, ready for datasets to be added');
     }
-  }, []);
+  }, [account?.id, workspaceId, setContext, loadState, storeNodes.length]);
 
   // Handle node changes
   const handleNodesChange = useCallback(
@@ -165,13 +189,66 @@ export function DatasetDiagramView() {
     return colorMap[colorClass] || '#6b7280';
   }, []);
 
+  // Handle drag over (allow drop)
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  // Handle drop - add dataset to diagram at drop position
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+
+      const datasetId = event.dataTransfer.getData('application/dataset-id');
+      if (!datasetId) return;
+
+      // Check if node already exists on diagram
+      const node = storeNodes.find((n) => n.id === datasetId);
+      if (!node || node.position) return;
+
+      // Get position in flow coordinates
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      // Update node with custom position (overrides swimlane positioning)
+      setStoreNodes(
+        storeNodes.map((n) =>
+          n.id === datasetId ? { ...n, position } : n
+        )
+      );
+    },
+    [storeNodes, setStoreNodes, screenToFlowPosition]
+  );
+
+  // Show error if workspaceId is missing
+  if (!workspaceId) {
+    return (
+      <div className="dataset-diagram-view w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-2">Missing Configuration</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Workspace ID missing from URL.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dataset-diagram-view w-full h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Diagram Toolbar */}
       <DiagramToolbar />
 
       {/* React Flow Canvas */}
-      <div className="flex-1 relative">
+      <div
+        ref={reactFlowWrapper}
+        className="flex-1 relative"
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -197,6 +274,9 @@ export function DatasetDiagramView() {
             color="#94a3b8"
             className="bg-gray-50 dark:bg-gray-900"
           />
+
+          {/* Swimlanes for medallion layers */}
+          <Swimlanes />
 
           {/* Zoom Controls */}
           <Controls
@@ -231,57 +311,6 @@ export function DatasetDiagramView() {
               )}
             </div>
           </Panel>
-
-          {/* Empty State */}
-          {(!nodes || nodes.length === 0) && !isFiltering && (
-            <Panel position="center">
-              <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-8 max-w-md">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">📊</div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    No Datasets Found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Create your first dataset or import metadata to get started with your data model.
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button className="btn-primary">
-                      Create Dataset
-                    </button>
-                    <button className="btn-secondary">
-                      Import Metadata
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </Panel>
-          )}
-
-          {/* No Results State (when filtering) */}
-          {(!nodes || nodes.length === 0) && isFiltering && (
-            <Panel position="center">
-              <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-8 max-w-md">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    No Results Found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    No datasets match your current filters or search query. Try adjusting your criteria.
-                  </p>
-                  <button
-                    onClick={() => {
-                      // TODO: Reset filters
-                      console.log('TODO: Reset filters');
-                    }}
-                    className="btn-secondary"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
-              </div>
-            </Panel>
-          )}
         </ReactFlow>
       </div>
     </div>

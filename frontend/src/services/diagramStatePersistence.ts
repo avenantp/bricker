@@ -115,7 +115,7 @@ export async function saveToSupabase(
   try {
     // Check if record exists
     const { data: existing, error: fetchError } = await supabase
-      .from('diagram_states')
+      .from('diagrams')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('diagram_type', diagramType)
@@ -130,7 +130,7 @@ export async function saveToSupabase(
     if (existing) {
       // Update existing record
       const { data, error } = await supabase
-        .from('diagram_states')
+        .from('diagrams')
         .update({
           view_mode: state.view_mode,
           viewport: state.viewport,
@@ -149,10 +149,11 @@ export async function saveToSupabase(
     } else {
       // Insert new record
       const { data, error } = await supabase
-        .from('diagram_states')
+        .from('diagrams')
         .insert({
           account_id: accountId,
           workspace_id: workspaceId,
+          name: `${diagramType} Diagram`,
           diagram_type: diagramType,
           view_mode: state.view_mode,
           viewport: state.viewport,
@@ -189,7 +190,7 @@ export async function loadFromSupabase(
 ): Promise<LoadDiagramStateResponse> {
   try {
     const { data, error } = await supabase
-      .from('diagram_states')
+      .from('diagrams')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('diagram_type', diagramType)
@@ -407,7 +408,7 @@ export async function clearAllDiagramState(
   // Clear Supabase
   try {
     await supabase
-      .from('diagram_states')
+      .from('diagrams')
       .delete()
       .eq('workspace_id', workspaceId)
       .eq('diagram_type', diagramType);

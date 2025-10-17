@@ -84,9 +84,7 @@ export function nodeToCanvasNode(
       project_id: node.project_id,
       name: node.name,
       medallion_layer: node.medallion_layer,
-      entity_type: node.entity_type,
-      entity_subtype: node.entity_subtype,
-      materialization_type: node.materialization_type,
+      dataset_type: node.dataset_type,
       description: node.description,
       metadata: node.metadata,
       ai_confidence_score: node.ai_confidence_score,
@@ -131,9 +129,7 @@ export async function createNode(
     project_id: payload.project_id,
     name: payload.name,
     medallion_layer: payload.medallion_layer,
-    entity_type: payload.entity_type,
-    entity_subtype: payload.entity_subtype || null,
-    materialization_type: payload.materialization_type || null,
+    dataset_type: payload.dataset_type,
     description: payload.description,
     metadata: payload.metadata || {},
     node_items: [],
@@ -453,17 +449,9 @@ export async function getProjectNodes(
         }
 
         if (
-          filters.entity_types &&
-          filters.entity_types.length > 0 &&
-          !filters.entity_types.includes(node.entity_type)
-        ) {
-          continue;
-        }
-
-        if (
-          filters.entity_subtypes &&
-          filters.entity_subtypes.length > 0 &&
-          !filters.entity_subtypes.includes(node.entity_subtype)
+          filters.dataset_types &&
+          filters.dataset_types.length > 0 &&
+          !filters.dataset_types.includes(node.dataset_type)
         ) {
           continue;
         }

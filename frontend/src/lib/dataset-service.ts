@@ -34,9 +34,7 @@ export async function createDataset(
     name: payload.name,
     fqn: payload.fqn,
     medallion_layer: payload.medallion_layer || null,
-    entity_type: payload.entity_type || null,
-    entity_subtype: payload.entity_subtype || null,
-    materialization_type: payload.materialization_type || null,
+    dataset_type: payload.dataset_type || null,
     description: payload.description || null,
     metadata: payload.metadata || null,
     ai_confidence_score: null,
@@ -175,12 +173,8 @@ export async function getWorkspaceDatasets(
     query = query.in('medallion_layer', filters.medallion_layers);
   }
 
-  if (filters?.entity_types && filters.entity_types.length > 0) {
-    query = query.in('entity_type', filters.entity_types);
-  }
-
-  if (filters?.entity_subtypes && filters.entity_subtypes.length > 0) {
-    query = query.in('entity_subtype', filters.entity_subtypes);
+  if (filters?.dataset_types && filters.dataset_types.length > 0) {
+    query = query.in('dataset_type', filters.dataset_types);
   }
 
   if (filters?.min_confidence_score !== undefined) {
@@ -283,9 +277,7 @@ export async function cloneDataset(
     name: newName,
     fqn: sourceDataset.fqn.replace(sourceDataset.name, newName),
     medallion_layer: sourceDataset.medallion_layer,
-    entity_type: sourceDataset.entity_type,
-    entity_subtype: sourceDataset.entity_subtype,
-    materialization_type: sourceDataset.materialization_type,
+    dataset_type: sourceDataset.dataset_type,
     description: sourceDataset.description
       ? `Copy of ${sourceDataset.description}`
       : null,
@@ -374,12 +366,10 @@ export function datasetToCanvasNode(
     data: {
       uuid: dataset.id,
       fqn: dataset.fqn,
-      project_id: dataset.project_id,
+      project_id: dataset.project_id || '',
       name: dataset.name,
-      medallion_layer: dataset.medallion_layer,
-      entity_type: dataset.entity_type,
-      entity_subtype: dataset.entity_subtype,
-      materialization_type: dataset.materialization_type,
+      medallion_layer: dataset.medallion_layer || 'Bronze',
+      dataset_type: dataset.dataset_type || 'Table',
       description: dataset.description,
       metadata: dataset.metadata,
       ai_confidence_score: dataset.ai_confidence_score,

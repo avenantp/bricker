@@ -7,8 +7,7 @@ import { useState } from 'react';
 import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type {
   MedallionLayer,
-  EntityType,
-  EntitySubtype,
+  DatasetType,
 } from '../../types/canvas';
 import type { NodeFilters } from '../../types/node';
 
@@ -27,23 +26,24 @@ export function NodeFilterPanel({
 }: NodeFilterPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const medallionLayers: MedallionLayer[] = ['Raw', 'Bronze', 'Silver', 'Gold'];
-  const entityTypes: EntityType[] = [
+  const medallionLayers: MedallionLayer[] = ['Source', 'Raw', 'Bronze', 'Silver', 'Gold'];
+  const datasetTypes: DatasetType[] = [
     'Table',
-    'Staging',
-    'PersistentStaging',
-    'DataVault',
-    'DataMart',
-  ];
-  const dataVaultSubtypes: EntitySubtype[] = [
+    'View',
+    'Dimension',
+    'Fact',
     'Hub',
     'Link',
     'Satellite',
     'LinkSatellite',
-    'PIT',
+    'Point In Time',
     'Bridge',
+    'Reference',
+    'Hierarchy Link',
+    'Same as Link',
+    'Reference Satellite',
+    'File',
   ];
-  const dataMartSubtypes: EntitySubtype[] = ['Dimension', 'Fact'];
 
   const handleLayerToggle = (layer: MedallionLayer) => {
     const currentLayers = filters.medallion_layers || [];
@@ -54,22 +54,13 @@ export function NodeFilterPanel({
     onFiltersChange({ ...filters, medallion_layers: newLayers });
   };
 
-  const handleTypeToggle = (type: EntityType) => {
-    const currentTypes = filters.entity_types || [];
+  const handleTypeToggle = (type: DatasetType) => {
+    const currentTypes = filters.dataset_types || [];
     const newTypes = currentTypes.includes(type)
       ? currentTypes.filter((t) => t !== type)
       : [...currentTypes, type];
 
-    onFiltersChange({ ...filters, entity_types: newTypes });
-  };
-
-  const handleSubtypeToggle = (subtype: EntitySubtype) => {
-    const currentSubtypes = filters.entity_subtypes || [];
-    const newSubtypes = currentSubtypes.includes(subtype)
-      ? currentSubtypes.filter((s) => s !== subtype)
-      : [...currentSubtypes, subtype];
-
-    onFiltersChange({ ...filters, entity_subtypes: newSubtypes });
+    onFiltersChange({ ...filters, dataset_types: newTypes });
   };
 
   const handleConfidenceScoreChange = (value: number) => {
@@ -90,8 +81,7 @@ export function NodeFilterPanel({
   const handleClearFilters = () => {
     onFiltersChange({
       medallion_layers: [],
-      entity_types: [],
-      entity_subtypes: [],
+      dataset_types: [],
       min_confidence_score: undefined,
       show_public_nodes: false,
       search_query: undefined,
@@ -100,8 +90,7 @@ export function NodeFilterPanel({
 
   const hasActiveFilters =
     (filters.medallion_layers?.length ?? 0) > 0 ||
-    (filters.entity_types?.length ?? 0) > 0 ||
-    (filters.entity_subtypes?.length ?? 0) > 0 ||
+    (filters.dataset_types?.length ?? 0) > 0 ||
     filters.min_confidence_score !== undefined ||
     filters.show_public_nodes ||
     filters.search_query;
@@ -179,20 +168,20 @@ export function NodeFilterPanel({
             </div>
           </div>
 
-          {/* Entity Types */}
+          {/* Dataset Types */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">
-              Entity Type
+              Dataset Type
             </label>
-            <div className="space-y-1">
-              {entityTypes.map((type) => (
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {datasetTypes.map((type) => (
                 <label
                   key={type}
                   className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-1 rounded cursor-pointer"
                 >
                   <input
                     type="checkbox"
-                    checked={filters.entity_types?.includes(type) || false}
+                    checked={filters.dataset_types?.includes(type) || false}
                     onChange={() => handleTypeToggle(type)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -201,64 +190,6 @@ export function NodeFilterPanel({
               ))}
             </div>
           </div>
-
-          {/* Entity Subtypes */}
-          {((filters.entity_types?.includes('DataVault') ?? false) ||
-            (filters.entity_types?.includes('DataMart') ?? false)) && (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Entity Subtype
-              </label>
-              <div className="space-y-1">
-                {(filters.entity_types?.includes('DataVault') ?? false) && (
-                  <>
-                    <div className="text-xs font-medium text-gray-500 px-1 mt-2">
-                      Data Vault
-                    </div>
-                    {dataVaultSubtypes.map((subtype) => (
-                      <label
-                        key={subtype}
-                        className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-1 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={
-                            filters.entity_subtypes?.includes(subtype) || false
-                          }
-                          onChange={() => handleSubtypeToggle(subtype)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>{subtype}</span>
-                      </label>
-                    ))}
-                  </>
-                )}
-                {(filters.entity_types?.includes('DataMart') ?? false) && (
-                  <>
-                    <div className="text-xs font-medium text-gray-500 px-1 mt-2">
-                      Data Mart
-                    </div>
-                    {dataMartSubtypes.map((subtype) => (
-                      <label
-                        key={subtype}
-                        className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-1 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={
-                            filters.entity_subtypes?.includes(subtype) || false
-                          }
-                          onChange={() => handleSubtypeToggle(subtype)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span>{subtype}</span>
-                      </label>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* AI Confidence Score */}
           <div>

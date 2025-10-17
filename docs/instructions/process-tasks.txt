@@ -34,8 +34,8 @@ for approval to proceed.
 Please perform a thorough verification audit against our specification and tasklist documents.
 
 Reference documents:
-- @docs\prp\041-dataset-column-specification.md - contains all requirements and design specifications
-- @docs\prp\040-dataset-column-tasklist.md - contains the implementation checklist
+- @docs\prp\051-dataset-diagram-view-specification.md - contains all requirements and design specifications
+- @docs\prp\050-dataset-diagram-view-tasklist.md
 
 IMPORTANT ARCHITECTURE NOTE:
 All Row Level Security (RLS) and access control has been moved to the application layer. 

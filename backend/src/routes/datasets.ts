@@ -8,10 +8,21 @@ import { createClient } from '@supabase/supabase-js';
 
 const router = express.Router();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Lazy-load Supabase client to avoid loading before environment variables are set
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error('Supabase credentials not configured');
+    }
+    supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+  }
+  return supabase;
+}
 
 /**
  * Middleware to track changes
@@ -26,7 +37,7 @@ async function trackChange(
   newValue: any = null
 ) {
   try {
-    await supabase.from('metadata_changes').insert({
+    await getSupabaseClient().from('metadata_changes').insert({
       dataset_id: datasetId,
       entity_type: entityType,
       entity_id: entityId,
@@ -46,7 +57,7 @@ async function trackChange(
  */
 async function markDatasetUncommitted(datasetId: string) {
   try {
-    await supabase
+    await getSupabaseClient()
       .from('datasets')
       .update({
         has_uncommitted_changes: true,
@@ -68,18 +79,27 @@ router.get('/:workspace_id', async (req, res) => {
     const { workspace_id } = req.params;
     const { project_id } = req.query;
 
-    let query = supabase
+    let query = getSupabaseClient()
       .from('datasets')
       .select('*')
       .eq('workspace_id', workspace_id)
       .order('created_at', { ascending: false });
 
     if (project_id) {
-      // Filter by project through mapping table
-      const { data: mappings } = await supabase
-        .from('project_datasets')
-        .select('dataset_id')
+      // Filter by project through workspaces
+      // Get all workspace IDs for this project
+      const { data: workspaces } = await getSupabaseClient()
+        .from('workspaces')
+        .select('id')
         .eq('project_id', project_id);
+
+      const workspaceIds = workspaces?.map((w) => w.id) || [];
+
+      // Get all dataset IDs in these workspaces
+      const { data: mappings } = await getSupabaseClient()
+        .from('workspace_datasets')
+        .select('dataset_id')
+        .in('workspace_id', workspaceIds);
 
       const datasetIds = mappings?.map((m) => m.dataset_id) || [];
       query = query.in('id', datasetIds);
@@ -104,7 +124,7 @@ router.get('/detail/:dataset_id', async (req, res) => {
   try {
     const { dataset_id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('datasets')
       .select(
         `
@@ -138,13 +158,13 @@ router.post('/', async (req, res) => {
     }
 
     // Create dataset
-    const { data: dataset, error } = await supabase
+    const { data: dataset, error } = await getSupabaseClient()
       .from('datasets')
       .insert({
         workspace_id,
         ...datasetData,
         has_uncommitted_changes: true,
-        sync_status: 'not_synced',
+        sync_status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -164,14 +184,8 @@ router.post('/', async (req, res) => {
       dataset
     );
 
-    // Add to project if project_id provided
-    if (project_id) {
-      await supabase.from('project_datasets').insert({
-        project_id,
-        dataset_id: dataset.id,
-        added_by: user_id,
-      });
-    }
+    // Note: Datasets are added to workspaces via workspace_datasets, not directly to projects.
+    // Projects contain datasets through: project → workspaces → workspace_datasets → datasets
 
     res.status(201).json({ dataset });
   } catch (error: any) {
@@ -194,14 +208,14 @@ router.put('/:dataset_id', async (req, res) => {
     }
 
     // Get old value
-    const { data: oldDataset } = await supabase
+    const { data: oldDataset } = await getSupabaseClient()
       .from('datasets')
       .select('*')
       .eq('id', dataset_id)
       .single();
 
     // Update dataset
-    const { data: dataset, error } = await supabase
+    const { data: dataset, error } = await getSupabaseClient()
       .from('datasets')
       .update({
         ...updates,
@@ -247,14 +261,14 @@ router.delete('/:dataset_id', async (req, res) => {
     }
 
     // Get dataset before deletion
-    const { data: dataset } = await supabase
+    const { data: dataset } = await getSupabaseClient()
       .from('datasets')
       .select('*')
       .eq('id', dataset_id)
       .single();
 
     // Delete dataset (cascades to columns and lineage via database constraints)
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('datasets')
       .delete()
       .eq('id', dataset_id);
@@ -289,7 +303,7 @@ router.get('/:workspace_id/uncommitted', async (req, res) => {
   try {
     const { workspace_id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('datasets')
       .select('*')
       .eq('workspace_id', workspace_id)
@@ -319,7 +333,7 @@ router.post('/:dataset_id/columns', async (req, res) => {
     }
 
     // Create column
-    const { data: column, error } = await supabase
+    const { data: column, error } = await getSupabaseClient()
       .from('columns')
       .insert({
         dataset_id,
@@ -359,14 +373,14 @@ router.put('/:dataset_id/columns/:column_id', async (req, res) => {
     }
 
     // Get old value
-    const { data: oldColumn } = await supabase
+    const { data: oldColumn } = await getSupabaseClient()
       .from('columns')
       .select('*')
       .eq('id', column_id)
       .single();
 
     // Update column
-    const { data: column, error } = await supabase
+    const { data: column, error } = await getSupabaseClient()
       .from('columns')
       .update({
         ...updates,
@@ -405,14 +419,14 @@ router.delete('/:dataset_id/columns/:column_id', async (req, res) => {
     }
 
     // Get column before deletion
-    const { data: column } = await supabase
+    const { data: column } = await getSupabaseClient()
       .from('columns')
       .select('*')
       .eq('id', column_id)
       .single();
 
     // Delete column
-    const { error } = await supabase.from('columns').delete().eq('id', column_id);
+    const { error } = await getSupabaseClient().from('columns').delete().eq('id', column_id);
 
     if (error) throw error;
 
@@ -432,53 +446,245 @@ router.delete('/:dataset_id/columns/:column_id', async (req, res) => {
 });
 
 /**
- * Add dataset to project
+ * Add dataset to project (DEPRECATED)
  * POST /api/datasets/:dataset_id/projects/:project_id
+ *
+ * @deprecated Datasets belong to workspaces, not directly to projects.
+ * Use POST /api/datasets/:dataset_id/workspaces/:workspace_id instead.
  */
 router.post('/:dataset_id/projects/:project_id', async (req, res) => {
-  try {
-    const { dataset_id, project_id } = req.params;
-    const { user_id } = req.body;
-
-    if (!user_id) {
-      return res.status(400).json({ error: 'User ID required' });
-    }
-
-    const { error } = await supabase.from('project_datasets').insert({
-      project_id,
-      dataset_id,
-      added_by: user_id,
-    });
-
-    if (error) throw error;
-
-    res.json({ success: true, message: 'Dataset added to project' });
-  } catch (error: any) {
-    console.error('[Datasets] Add to project error:', error);
-    res.status(500).json({ error: error.message });
-  }
+  res.status(410).json({
+    error: 'Endpoint deprecated. Datasets belong to workspaces, not directly to projects. Use workspace endpoints instead.',
+    message: 'Use POST /api/datasets/:dataset_id/workspaces/:workspace_id to add dataset to a workspace.'
+  });
 });
 
 /**
- * Remove dataset from project
+ * Remove dataset from project (DEPRECATED)
  * DELETE /api/datasets/:dataset_id/projects/:project_id
+ *
+ * @deprecated Datasets belong to workspaces, not directly to projects.
+ * Use DELETE /api/datasets/:dataset_id/workspaces/:workspace_id instead.
  */
 router.delete('/:dataset_id/projects/:project_id', async (req, res) => {
+  res.status(410).json({
+    error: 'Endpoint deprecated. Datasets belong to workspaces, not directly to projects. Use workspace endpoints instead.',
+    message: 'Use DELETE /api/datasets/:dataset_id/workspaces/:workspace_id to remove dataset from a workspace.'
+  });
+});
+
+/**
+ * Import metadata from SQL Server extraction
+ * POST /api/datasets/import
+ */
+router.post('/import', async (req, res) => {
   try {
-    const { dataset_id, project_id } = req.params;
+    const { workspace_id, account_id, user_id, connection_id, tables } = req.body;
 
-    const { error } = await supabase
-      .from('project_datasets')
-      .delete()
-      .eq('project_id', project_id)
-      .eq('dataset_id', dataset_id);
+    if (!workspace_id || !account_id || !user_id || !connection_id || !tables) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
-    if (error) throw error;
+    console.log(`[Datasets] Importing ${tables.length} table(s) for workspace ${workspace_id}`);
 
-    res.json({ success: true, message: 'Dataset removed from project' });
+    const createdDatasets = [];
+    const addedDatasets = [];
+    const errors = [];
+
+    // Process each table
+    for (const table of tables) {
+      try {
+        // Generate FQN for logging and error tracking
+        const fqn = `${table.schema}.${table.name}`;
+
+        console.log(`[Datasets] Processing table: ${fqn}`);
+
+        // Check if dataset already exists for this account
+        // Note: fully_qualified_name is auto-generated, so we check by connection_id, schema, and name
+        const { data: existingDataset, error: checkError } = await getSupabaseClient()
+          .from('datasets')
+          .select('*')
+          .eq('account_id', account_id)
+          .eq('connection_id', connection_id)
+          .eq('schema', table.schema)
+          .eq('name', table.name)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error(`[Datasets] Error checking for existing dataset ${fqn}:`, checkError);
+          errors.push({ table: fqn, error: checkError.message });
+          continue;
+        }
+
+        let dataset = existingDataset;
+
+        if (existingDataset) {
+          console.log(`[Datasets] Dataset ${fqn} already exists (ID: ${existingDataset.id})`);
+
+          // Check if dataset is already in the workspace
+          const { data: workspaceLink, error: workspaceLinkError } = await getSupabaseClient()
+            .from('workspace_datasets')
+            .select('id')
+            .eq('workspace_id', workspace_id)
+            .eq('dataset_id', existingDataset.id)
+            .maybeSingle();
+
+          if (workspaceLinkError) {
+            console.error(`[Datasets] Error checking workspace link:`, workspaceLinkError);
+          }
+
+          if (!workspaceLink) {
+            // Add existing dataset to workspace
+            const { error: workspaceDatasetError } = await getSupabaseClient()
+              .from('workspace_datasets')
+              .insert({
+                workspace_id,
+                dataset_id: existingDataset.id,
+                added_by: user_id,
+              });
+
+            if (workspaceDatasetError) {
+              console.error(`[Datasets] Error adding existing dataset to workspace:`, workspaceDatasetError);
+              errors.push({ table: fqn, error: `Failed to add to workspace: ${workspaceDatasetError.message}` });
+            } else {
+              console.log(`[Datasets] Added existing dataset ${existingDataset.id} to workspace ${workspace_id}`);
+              addedDatasets.push({
+                id: existingDataset.id,
+                name: existingDataset.name,
+                fqn: existingDataset.fully_qualified_name || fqn,
+                status: 'added_to_workspace',
+              });
+            }
+          } else {
+            console.log(`[Datasets] Dataset ${fqn} already in workspace`);
+            addedDatasets.push({
+              id: existingDataset.id,
+              name: existingDataset.name,
+              fqn: existingDataset.fully_qualified_name || fqn,
+              status: 'already_in_workspace',
+            });
+          }
+        } else {
+          // Create new dataset
+          console.log(`[Datasets] Creating new dataset for ${fqn}`);
+
+          const { data: newDataset, error: datasetError } = await getSupabaseClient()
+            .from('datasets')
+            .insert({
+              account_id,
+              connection_id,
+              schema: table.schema,
+              name: table.name,
+              dataset_type: table.type === 'VIEW' ? 'View' : 'Table',
+              description: table.description || null,
+              has_uncommitted_changes: true,
+              sync_status: 'pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (datasetError) {
+            console.error(`[Datasets] Error creating dataset ${fqn}:`, datasetError);
+            errors.push({ table: fqn, error: datasetError.message });
+            continue;
+          }
+
+          dataset = newDataset;
+          console.log(`[Datasets] Created dataset ${dataset.id} for ${fqn}`);
+
+          // Create columns if provided
+          if (table.columns && table.columns.length > 0) {
+            const columnsToInsert = table.columns.map((col: any, index: number) => ({
+              dataset_id: dataset.id,
+              fqn: `${fqn}.${col.name || col.column_name}`,
+              name: col.name || col.column_name,
+              data_type: col.data_type,
+              position: col.ordinal_position !== undefined ? col.ordinal_position : index + 1,
+              is_nullable: col.is_nullable !== undefined ? col.is_nullable : true,
+              is_primary_key: col.is_primary_key || false,
+              is_foreign_key: col.is_foreign_key || false,
+              default_value: col.default_value || null,
+              description: col.description || null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+
+            const { data: columns, error: columnsError } = await getSupabaseClient()
+              .from('columns')
+              .insert(columnsToInsert)
+              .select();
+
+            if (columnsError) {
+              console.error(`[Datasets] Error creating columns for ${fqn}:`, columnsError);
+              errors.push({ table: fqn, error: `Column creation failed: ${columnsError.message}` });
+            } else {
+              console.log(`[Datasets] Created ${columns.length} column(s) for dataset ${dataset.id}`);
+            }
+          }
+
+          // Track change
+          await trackChange(
+            user_id,
+            dataset.id,
+            'dataset',
+            dataset.id,
+            'insert',
+            null,
+            dataset
+          );
+
+          // Add dataset to workspace
+          const { error: workspaceDatasetError } = await getSupabaseClient()
+            .from('workspace_datasets')
+            .insert({
+              workspace_id,
+              dataset_id: dataset.id,
+              added_by: user_id,
+            });
+
+          if (workspaceDatasetError) {
+            console.error(`[Datasets] Error adding dataset to workspace:`, workspaceDatasetError);
+            // Don't fail the import if workspace mapping fails, just log it
+          } else {
+            console.log(`[Datasets] Added dataset ${dataset.id} to workspace ${workspace_id}`);
+          }
+
+          createdDatasets.push({
+            id: dataset.id,
+            name: dataset.name,
+            fqn: dataset.fully_qualified_name || fqn,
+            status: 'created',
+          });
+        }
+      } catch (tableError: any) {
+        console.error(`[Datasets] Error importing table ${table.schema}.${table.name}:`, tableError);
+        errors.push({ table: `${table.schema}.${table.name}`, error: tableError.message });
+      }
+    }
+
+    const totalProcessed = createdDatasets.length + addedDatasets.length;
+
+    const response = {
+      success: errors.length === 0,
+      imported_count: totalProcessed,
+      created_count: createdDatasets.length,
+      added_count: addedDatasets.length,
+      created_datasets: createdDatasets,
+      added_datasets: addedDatasets,
+      errors: errors.length > 0 ? errors : undefined,
+      message: errors.length === 0
+        ? `Successfully processed ${totalProcessed} dataset(s) (${createdDatasets.length} created, ${addedDatasets.length} added to workspace)`
+        : `Processed ${totalProcessed} dataset(s) with ${errors.length} error(s)`,
+    };
+
+    console.log(`[Datasets] Import complete: ${createdDatasets.length} created, ${addedDatasets.length} added, ${errors.length} errors`);
+
+    res.status(errors.length === 0 ? 201 : 207).json(response);
   } catch (error: any) {
-    console.error('[Datasets] Remove from project error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('[Datasets] Import error:', error);
+    res.status(500).json({ error: error.message, success: false });
   }
 });
 

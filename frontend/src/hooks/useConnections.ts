@@ -260,3 +260,83 @@ export function useImportMetadata(
     ...options
   });
 }
+
+// =====================================================
+// Project Connection Hooks
+// =====================================================
+
+/**
+ * Hook to fetch connections linked to a project
+ */
+export function useProjectConnections(
+  projectId: string,
+  options?: Omit<UseQueryOptions<PaginatedResponse<ConnectionWithDetails>>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: [...connectionKeys.all, 'project', projectId],
+    queryFn: () => connectionService.getProjectConnections(projectId),
+    enabled: !!projectId,
+    staleTime: 30000, // 30 seconds
+    ...options
+  });
+}
+
+/**
+ * Hook to fetch available connections (not yet linked to project)
+ */
+export function useAvailableProjectConnections(
+  projectId: string,
+  options?: Omit<UseQueryOptions<ConnectionWithDetails[]>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery({
+    queryKey: [...connectionKeys.all, 'project', projectId, 'available'],
+    queryFn: () => connectionService.getAvailableProjectConnections(projectId),
+    enabled: !!projectId,
+    staleTime: 30000, // 30 seconds
+    ...options
+  });
+}
+
+/**
+ * Hook to link a connection to a project
+ */
+export function useLinkConnectionToProject(
+  options?: UseMutationOptions<void, Error, { projectId: string; connectionId: string }>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, connectionId }) =>
+      connectionService.linkConnectionToProject(projectId, connectionId),
+    onSuccess: (_, { projectId }) => {
+      // Invalidate project connections list
+      queryClient.invalidateQueries({ queryKey: [...connectionKeys.all, 'project', projectId] });
+
+      // Invalidate available connections list
+      queryClient.invalidateQueries({ queryKey: [...connectionKeys.all, 'project', projectId, 'available'] });
+    },
+    ...options
+  });
+}
+
+/**
+ * Hook to unlink a connection from a project
+ */
+export function useUnlinkConnectionFromProject(
+  options?: UseMutationOptions<void, Error, { projectId: string; connectionId: string }>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, connectionId }) =>
+      connectionService.unlinkConnectionFromProject(projectId, connectionId),
+    onSuccess: (_, { projectId }) => {
+      // Invalidate project connections list
+      queryClient.invalidateQueries({ queryKey: [...connectionKeys.all, 'project', projectId] });
+
+      // Invalidate available connections list
+      queryClient.invalidateQueries({ queryKey: [...connectionKeys.all, 'project', projectId, 'available'] });
+    },
+    ...options
+  });
+}

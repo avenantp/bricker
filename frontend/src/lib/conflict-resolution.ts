@@ -157,10 +157,7 @@ function identifyConflictFields(node1: Node, node2: Node): string[] {
   if (node1.name !== node2.name) fields.push('name');
   if (node1.fqn !== node2.fqn) fields.push('fqn');
   if (node1.medallion_layer !== node2.medallion_layer) fields.push('medallion_layer');
-  if (node1.entity_type !== node2.entity_type) fields.push('entity_type');
-  if (node1.entity_subtype !== node2.entity_subtype) fields.push('entity_subtype');
-  if (node1.materialization_type !== node2.materialization_type)
-    fields.push('materialization_type');
+  if (node1.dataset_type !== node2.dataset_type) fields.push('dataset_type');
   if (node1.description !== node2.description) fields.push('description');
 
   // Compare metadata (deep comparison)
@@ -269,9 +266,7 @@ export function attemptAutoMerge(
     'name',
     'fqn',
     'medallion_layer',
-    'entity_type',
-    'entity_subtype',
-    'materialization_type',
+    'dataset_type',
     'description',
     'ai_confidence_score',
   ];

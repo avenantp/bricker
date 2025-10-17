@@ -4,7 +4,7 @@
  */
 
 import type { DiagramNode, DiagramEdge, Column } from '../types/diagram';
-import type { MedallionLayer, EntityType, EntitySubtype } from '../types/canvas';
+import type { MedallionLayer, DatasetType } from '../types/canvas';
 
 /**
  * Generate mock columns for a dataset
@@ -50,16 +50,14 @@ function generateMockColumns(datasetName: string, count: number): Column[] {
 /**
  * Generate mock dataset nodes
  */
-export function generateMockNodes(count: number = 10): DiagramNode[] {
+export function generateMockNodes(count: number = 10, withPositions: boolean = false): DiagramNode[] {
   const nodes: DiagramNode[] = [];
-  const medallionLayers: MedallionLayer[] = ['Raw', 'Bronze', 'Silver', 'Gold'];
-  const entityTypes: EntityType[] = ['Table', 'View', 'Staging'];
-  const entitySubtypes: EntitySubtype[] = ['Dimension', 'Fact', 'Hub', 'Link', 'Satellite'];
+  const medallionLayers: MedallionLayer[] = ['Source', 'Raw', 'Bronze', 'Silver', 'Gold'];
+  const datasetTypes: DatasetType[] = ['Table', 'View', 'Dimension', 'Fact', 'Hub', 'Link', 'Satellite'];
 
   for (let i = 0; i < count; i++) {
     const layer = medallionLayers[i % medallionLayers.length];
-    const entityType = entityTypes[i % entityTypes.length];
-    const entitySubtype = i % 2 === 0 ? entitySubtypes[i % entitySubtypes.length] : undefined;
+    const datasetType = datasetTypes[i % datasetTypes.length];
 
     const datasetName = `${layer.toLowerCase()}_dataset_${i + 1}`;
     const columnCount = 5 + (i % 15); // 5-20 columns
@@ -67,17 +65,21 @@ export function generateMockNodes(count: number = 10): DiagramNode[] {
     nodes.push({
       id: `node-${i + 1}`,
       type: 'dataset',
-      position: {
-        x: (i % 4) * 400 + 50,
-        y: Math.floor(i / 4) * 300 + 50,
-      },
+      // Only include position if explicitly requested
+      ...(withPositions && {
+        position: {
+          x: (i % 4) * 400 + 50,
+          y: Math.floor(i / 4) * 300 + 50,
+        },
+      }),
       data: {
         dataset_id: `dataset-${i + 1}`,
         name: datasetName,
-        fqn: `catalog.schema.${datasetName}`,
+        fully_qualified_name: `main_catalog.default_schema.${datasetName}`, // Updated from fqn
+        connection_id: `connection-${(i % 3) + 1}`, // Mock connection ID
+        schema: 'default_schema', // Mock schema
         medallion_layer: layer,
-        entity_type: entityType,
-        entity_subtype: entitySubtype,
+        dataset_type: datasetType,
         description: `Sample ${layer} layer dataset for testing`,
         isExpanded: false,
         isHighlighted: false,
@@ -230,8 +232,8 @@ export function generateMockLineageEdges(nodes: DiagramNode[]): DiagramEdge[] {
 /**
  * Generate complete mock diagram data
  */
-export function generateMockDiagramData(nodeCount: number = 12) {
-  const nodes = generateMockNodes(nodeCount);
+export function generateMockDiagramData(nodeCount: number = 12, withPositions: boolean = false) {
+  const nodes = generateMockNodes(nodeCount, withPositions);
   const relationshipEdges = generateMockEdges(nodes);
   const lineageEdges = generateMockLineageEdges(nodes);
 

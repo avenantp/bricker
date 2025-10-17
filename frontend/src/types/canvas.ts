@@ -8,36 +8,27 @@ import type { Node, Edge } from '@xyflow/react';
 /**
  * Medallion layer classification
  */
-export type MedallionLayer = 'Raw' | 'Bronze' | 'Silver' | 'Gold';
+export type MedallionLayer = 'Source' | 'Raw' | 'Bronze' | 'Silver' | 'Gold';
 
 /**
- * Entity types for nodes
+ * Dataset types (combines entity types and subtypes)
  */
-export type EntityType =
+export type DatasetType =
   | 'Table'
-  | 'Staging'
-  | 'PersistentStaging'
-  | 'DataVault'
-  | 'DataMart';
-
-/**
- * Entity subtypes (specific to DataVault and DataMart)
- */
-export type EntitySubtype =
+  | 'View'
   | 'Dimension'
   | 'Fact'
   | 'Hub'
   | 'Link'
   | 'Satellite'
   | 'LinkSatellite'
-  | 'PIT'
+  | 'Point In Time'
   | 'Bridge'
-  | null;
-
-/**
- * Materialization types
- */
-export type MaterializationType = 'Table' | 'View' | 'MaterializedView' | null;
+  | 'Reference'
+  | 'Hierarchy Link'
+  | 'Same as Link'
+  | 'Reference Satellite'
+  | 'File';
 
 /**
  * Relationship types between nodes
@@ -61,9 +52,7 @@ export interface CanvasNodeData {
   // Basic properties
   name: string;
   medallion_layer: MedallionLayer;
-  entity_type: EntityType;
-  entity_subtype: EntitySubtype;
-  materialization_type: MaterializationType;
+  dataset_type: DatasetType;
   description?: string;
 
   // Metadata
@@ -131,8 +120,7 @@ export interface CanvasViewport {
  */
 export interface CanvasFilters {
   medallion_layers: MedallionLayer[];
-  entity_types: EntityType[];
-  entity_subtypes: EntitySubtype[];
+  dataset_types: DatasetType[];
   min_confidence_score?: number;
   show_public_nodes?: boolean;
   search_query?: string;
@@ -151,6 +139,7 @@ export interface CanvasState {
  * Color scheme for medallion layers
  */
 export const MEDALLION_COLORS: Record<MedallionLayer, string> = {
+  Source: '#4A5568', // Dark Gray
   Raw: '#808080', // Gray
   Bronze: '#CD7F32', // Brown
   Silver: '#C0C0C0', // Silver
@@ -161,6 +150,7 @@ export const MEDALLION_COLORS: Record<MedallionLayer, string> = {
  * Color scheme for medallion layers (Tailwind CSS classes)
  */
 export const MEDALLION_TAILWIND_COLORS: Record<MedallionLayer, string> = {
+  Source: 'bg-gray-700 border-gray-800',
   Raw: 'bg-gray-500 border-gray-600',
   Bronze: 'bg-amber-700 border-amber-800',
   Silver: 'bg-gray-400 border-gray-500',
@@ -168,27 +158,31 @@ export const MEDALLION_TAILWIND_COLORS: Record<MedallionLayer, string> = {
 };
 
 /**
- * Icons for entity types/subtypes
+ * Icons for dataset types
  */
-export const ENTITY_ICONS: Record<string, string> = {
-  // Data Vault
-  Hub: '⭕', // Circle
-  Satellite: '🛰️', // Satellite emoji
-  Link: '◆', // Diamond
-  LinkSatellite: '🔗',
-  PIT: '⏱️',
-  Bridge: '🌉',
-
-  // Dimensional
-  Dimension: '📦', // Cube
-  Fact: '⭐', // Star
-
+export const DATASET_TYPE_ICONS: Record<DatasetType, string> = {
   // General
   Table: '📋',
-  Staging: '📥',
-  PersistentStaging: '💾',
-  DataVault: '🏛️',
-  DataMart: '🎯',
+  View: '👁️',
+  File: '📄',
+
+  // Dimensional
+  Dimension: '📦',
+  Fact: '⭐',
+
+  // Data Vault - Core
+  Hub: '⭕',
+  Link: '◆',
+  Satellite: '🛰️',
+  LinkSatellite: '🔗',
+
+  // Data Vault - Advanced
+  'Point In Time': '⏱️',
+  Bridge: '🌉',
+  Reference: '📚',
+  'Hierarchy Link': '🔺',
+  'Same as Link': '🔗',
+  'Reference Satellite': '📡',
 };
 
 /**

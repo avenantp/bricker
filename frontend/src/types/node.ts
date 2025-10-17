@@ -5,9 +5,7 @@
 
 import type {
   MedallionLayer,
-  EntityType,
-  EntitySubtype,
-  MaterializationType,
+  DatasetType,
   RelationshipType,
   Cardinality,
 } from './canvas';
@@ -136,9 +134,7 @@ export interface Node {
   // Basic properties
   name: string;
   medallion_layer: MedallionLayer;
-  entity_type: EntityType;
-  entity_subtype: EntitySubtype;
-  materialization_type: MaterializationType;
+  dataset_type: DatasetType;
   description?: string;
 
   // Metadata
@@ -165,9 +161,7 @@ export interface CreateNodePayload {
   project_id: string;
   name: string;
   medallion_layer: MedallionLayer;
-  entity_type: EntityType;
-  entity_subtype?: EntitySubtype;
-  materialization_type?: MaterializationType;
+  dataset_type: DatasetType;
   description?: string;
   metadata?: NodeMetadata;
   position?: { x: number; y: number }; // Canvas position
@@ -179,9 +173,7 @@ export interface CreateNodePayload {
 export interface UpdateNodePayload {
   name?: string;
   medallion_layer?: MedallionLayer;
-  entity_type?: EntityType;
-  entity_subtype?: EntitySubtype;
-  materialization_type?: MaterializationType;
+  dataset_type?: DatasetType;
   description?: string;
   metadata?: NodeMetadata;
   ai_confidence_score?: number;
@@ -250,8 +242,7 @@ export interface NodeState {
  */
 export interface NodeFilters {
   medallion_layers?: MedallionLayer[];
-  entity_types?: EntityType[];
-  entity_subtypes?: EntitySubtype[];
+  dataset_types?: DatasetType[];
   min_confidence_score?: number;
   show_public_nodes?: boolean;
   search_query?: string;

@@ -15,12 +15,13 @@ import {
   Users,
   Layers,
 } from 'lucide-react';
+import { useStore } from '@/store/useStore';
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  path: string;
+  path: string | ((currentProject: any) => string);
   badge?: string;
 }
 
@@ -32,22 +33,14 @@ const navigationItems: NavItem[] = [
     path: '/projects',
   },
   {
-    id: 'workspaces',
-    label: 'Workspaces',
-    icon: Layers,
-    path: '/workspaces',
-  },
-  {
     id: 'connections',
     label: 'Connections',
     icon: Database,
-    path: '/connections',
-  },
-  {
-    id: 'source-control',
-    label: 'Source Control',
-    icon: GitBranch,
-    path: '/source-control',
+    // Dynamic path based on project context
+    path: (currentProject) =>
+      currentProject
+        ? `/projects/${currentProject.id}/connections`
+        : '/connections',
   },
   {
     id: 'jobs',
@@ -84,9 +77,15 @@ const navigationItems: NavItem[] = [
 export function NavigationSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentProject = useStore((state) => state.currentProject);
 
-  const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+  const getPath = (path: string | ((currentProject: any) => string)): string => {
+    return typeof path === 'function' ? path(currentProject) : path;
+  };
+
+  const isActive = (path: string | ((currentProject: any) => string)) => {
+    const resolvedPath = getPath(path);
+    return location.pathname === resolvedPath || location.pathname.startsWith(resolvedPath + '/');
   };
 
   return (
@@ -96,11 +95,12 @@ export function NavigationSidebar() {
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
+          const resolvedPath = getPath(item.path);
 
           return (
             <button
               key={item.id}
-              onClick={() => navigate(item.path)}
+              onClick={() => navigate(resolvedPath)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                 active
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'

@@ -48,13 +48,12 @@ export class ConnectionService {
       .from('connections')
       .select(`
         *,
-        owner:users!owner_id(id, full_name, email),
-        workspace:workspaces!workspace_id(id, name)
+        owner:users!owner_id(id, full_name, email)
       `, { count: 'exact' });
 
     // Apply filters
-    if (filters.workspace_id) {
-      query = query.eq('workspace_id', filters.workspace_id);
+    if (filters.account_id) {
+      query = query.eq('account_id', filters.account_id);
     }
 
     if (filters.connection_type) {
@@ -93,8 +92,7 @@ export class ConnectionService {
       .from('connections')
       .select(`
         *,
-        owner:users!owner_id(id, full_name, email),
-        workspace:workspaces!workspace_id(id, name)
+        owner:users!owner_id(id, full_name, email)
       `)
       .eq('id', connectionId)
       .single();
@@ -119,7 +117,6 @@ export class ConnectionService {
 
     const connectionData = {
       account_id: input.account_id,
-      workspace_id: input.workspace_id || null,
       name: input.name,
       description: input.description || null,
       connection_type: input.connection_type,
@@ -226,52 +223,154 @@ export class ConnectionService {
 
   /**
    * List schemas from connection
-   * TODO: Implement via edge function or adapter
    */
   async listSchemas(connectionId: string): Promise<SchemaInfo[]> {
     const connection = await this.getConnection(connectionId);
 
-    // TODO: Implement actual schema listing based on connection_type
-    // For now, return stub data
-    return [
-      { name: 'dbo', description: 'Default schema', table_count: 10 },
-      { name: 'sales', description: 'Sales schema', table_count: 5 },
-      { name: 'hr', description: 'HR schema', table_count: 3 }
-    ];
+    // Only support MSSQL for now
+    if (connection.connection_type !== 'MSSQL') {
+      throw new Error(`Schema listing not supported for ${connection.connection_type} connections`);
+    }
+
+    // Get the connection configuration
+    const config = connection.configuration as any;
+
+    // Call the backend API to list databases (schemas)
+    const response = await fetch('/api/connections/mssql/list-databases', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        server: config.server || '',
+        port: config.port || 1433,
+        database: config.database || 'master',
+        authentication: {
+          type: config.authentication?.type || 'sql_auth',
+          username: config.authentication?.username || '',
+          password: config.authentication?.password || '',
+        },
+        encryption: {
+          mode: config.encryption?.mode || 'Mandatory',
+          trust_server_certificate: config.encryption?.trust_server_certificate || false,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || errorData.error || 'Failed to list schemas');
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || result.error || 'Failed to list schemas');
+    }
+
+    // For SQL Server, we need to list schemas, not databases
+    // Let's call a schema listing endpoint instead
+    // For now, we'll query the information schema
+    const schemasResponse = await fetch('/api/connections/mssql/list-schemas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        server: config.server || '',
+        port: config.port || 1433,
+        database: config.database || 'master',
+        authentication: {
+          type: config.authentication?.type || 'sql_auth',
+          username: config.authentication?.username || '',
+          password: config.authentication?.password || '',
+        },
+        encryption: {
+          mode: config.encryption?.mode || 'Mandatory',
+          trust_server_certificate: config.encryption?.trust_server_certificate || false,
+        },
+      }),
+    });
+
+    if (!schemasResponse.ok) {
+      const errorData = await schemasResponse.json();
+      throw new Error(errorData.message || errorData.error || 'Failed to list schemas');
+    }
+
+    const schemasResult = await schemasResponse.json();
+
+    if (!schemasResult.success) {
+      throw new Error(schemasResult.message || schemasResult.error || 'Failed to list schemas');
+    }
+
+    // Transform schemas to SchemaInfo format
+    return (schemasResult.schemas || []).map((schema: any) => ({
+      name: schema.name || schema.schema_name || schema,
+      description: schema.description || undefined,
+      table_count: schema.table_count || schema.tableCount || undefined,
+    }));
   }
 
   /**
    * List tables from schema
-   * TODO: Implement via edge function or adapter
    */
   async listTables(connectionId: string, schema: string): Promise<TableInfo[]> {
     const connection = await this.getConnection(connectionId);
 
-    // TODO: Implement actual table listing based on connection_type
-    // For now, return stub data
-    return [
-      {
-        schema,
-        name: 'customers',
-        table_type: 'TABLE',
-        row_count: 1000,
-        description: 'Customer master data'
+    // Only support MSSQL for now
+    if (connection.connection_type !== 'MSSQL') {
+      throw new Error(`Table listing not supported for ${connection.connection_type} connections`);
+    }
+
+    // Get the connection configuration
+    const config = connection.configuration as any;
+
+    // Call the backend API to list tables in the schema
+    const response = await fetch('/api/connections/mssql/list-tables', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      {
+      body: JSON.stringify({
+        connection: {
+          server: config.server || '',
+          port: config.port || 1433,
+          database: config.database || 'master',
+          authentication: {
+            type: config.authentication?.type || 'sql_auth',
+            username: config.authentication?.username || '',
+            password: config.authentication?.password || '',
+          },
+          encryption: {
+            mode: config.encryption?.mode || 'Mandatory',
+            trustServerCertificate: config.encryption?.trust_server_certificate || false,
+          },
+        },
         schema,
-        name: 'orders',
-        table_type: 'TABLE',
-        row_count: 5000,
-        description: 'Order transactions'
-      },
-      {
-        schema,
-        name: 'products',
-        table_type: 'TABLE',
-        row_count: 500,
-        description: 'Product catalog'
-      }
-    ];
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || errorData.error || 'Failed to list tables');
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.message || result.error || 'Failed to list tables');
+    }
+
+    // Transform tables to TableInfo format
+    return (result.tables || []).map((table: any) => ({
+      schema: table.schema || schema,
+      name: table.name || table.table_name || table,
+      table_type: (table.table_type || 'TABLE') as 'TABLE' | 'VIEW' | 'EXTERNAL',
+      row_count: table.row_count || table.rowCount || undefined,
+      description: table.description || undefined,
+      created_at: table.created_at || table.createdAt || undefined,
+      updated_at: table.updated_at || table.updatedAt || undefined,
+    }));
   }
 
   /**
@@ -408,7 +507,6 @@ export class ConnectionService {
   async isConnectionNameAvailable(
     name: string,
     accountId: string,
-    workspaceId?: string,
     excludeConnectionId?: string
   ): Promise<boolean> {
     let query = this.supabase
@@ -416,10 +514,6 @@ export class ConnectionService {
       .select('id')
       .eq('account_id', accountId)
       .eq('name', name);
-
-    if (workspaceId) {
-      query = query.eq('workspace_id', workspaceId);
-    }
 
     if (excludeConnectionId) {
       query = query.neq('id', excludeConnectionId);
@@ -432,6 +526,132 @@ export class ConnectionService {
     }
 
     return !data; // Available if no data found
+  }
+
+  // =====================================================
+  // Project Connection Methods
+  // =====================================================
+
+  /**
+   * Get connections linked to a project
+   */
+  async getProjectConnections(projectId: string): Promise<PaginatedResponse<ConnectionWithDetails>> {
+    const { data, error, count } = await this.supabase
+      .from('project_connections')
+      .select(`
+        id,
+        created_at,
+        connection:connections (
+          *,
+          owner:users!owner_id(id, full_name, email)
+        )
+      `, { count: 'exact' })
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch project connections: ${error.message}`);
+    }
+
+    // Transform the data to return connection objects with project_connection_id
+    const connections = data?.map((pc: any) => ({
+      ...pc.connection,
+      project_connection_id: pc.id,
+      linked_at: pc.created_at
+    })) || [];
+
+    return createPaginatedResponse(connections, 1, 50, count || 0);
+  }
+
+  /**
+   * Get available connections (not yet linked to this project)
+   */
+  async getAvailableProjectConnections(projectId: string): Promise<ConnectionWithDetails[]> {
+    // First, get the project's account_id
+    const { data: project, error: projectError } = await this.supabase
+      .from('projects')
+      .select('account_id')
+      .eq('id', projectId)
+      .single();
+
+    if (projectError) {
+      throw new Error(`Failed to fetch project: ${projectError.message}`);
+    }
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Get all account connections
+    const { data: allConnections, error: connectionsError } = await this.supabase
+      .from('connections')
+      .select(`
+        *,
+        owner:users!owner_id(id, full_name, email)
+      `)
+      .eq('account_id', project.account_id)
+      .order('name', { ascending: true });
+
+    if (connectionsError) {
+      throw new Error(`Failed to fetch connections: ${connectionsError.message}`);
+    }
+
+    // Get already linked connections for this project
+    const { data: linkedConnections, error: linkedError } = await this.supabase
+      .from('project_connections')
+      .select('connection_id')
+      .eq('project_id', projectId);
+
+    if (linkedError) {
+      throw new Error(`Failed to fetch linked connections: ${linkedError.message}`);
+    }
+
+    // Filter out already linked connections
+    const linkedIds = new Set(linkedConnections?.map((pc: any) => pc.connection_id) || []);
+    const availableConnections = allConnections?.filter(
+      (conn: any) => !linkedIds.has(conn.id)
+    ) || [];
+
+    return availableConnections;
+  }
+
+  /**
+   * Link a connection to a project
+   */
+  async linkConnectionToProject(projectId: string, connectionId: string): Promise<void> {
+    const userId = await this.getCurrentUserId();
+
+    const { error } = await this.supabase
+      .from('project_connections')
+      .insert({
+        project_id: projectId,
+        connection_id: connectionId,
+        created_by: userId
+      });
+
+    if (error) {
+      // Check for unique constraint violation
+      if (error.code === '23505') {
+        throw new Error('Connection is already linked to this project');
+      }
+
+      throw new Error(`Failed to link connection to project: ${error.message}`);
+    }
+  }
+
+  /**
+   * Unlink a connection from a project
+   */
+  async unlinkConnectionFromProject(projectId: string, connectionId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('project_connections')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('connection_id', connectionId);
+
+    if (error) {
+      throw new Error(`Failed to unlink connection from project: ${error.message}`);
+    }
   }
 }
 

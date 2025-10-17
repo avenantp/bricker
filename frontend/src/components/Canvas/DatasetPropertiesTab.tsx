@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Check, X, Plus, Trash2, GitBranch, Clock } from 'lucide-react';
 import type { Dataset, DatasetMetadata } from '@/types/dataset';
-import type { MedallionLayer, EntityType, EntitySubtype, MaterializationType } from '@/types/canvas';
+import type { MedallionLayer, DatasetType } from '@/types/canvas';
 import { validateDatasetName, validateFQN, generateFQN } from '@/utils/validation';
 import { getConfidenceLevelColor } from '@/utils/validation';
 
@@ -30,28 +30,25 @@ interface MetadataEntry {
 // Constants
 // ============================================================================
 
-const MEDALLION_LAYERS: MedallionLayer[] = ['Raw', 'Bronze', 'Silver', 'Gold'];
+const MEDALLION_LAYERS: MedallionLayer[] = ['Source', 'Raw', 'Bronze', 'Silver', 'Gold'];
 
-const ENTITY_TYPES: EntityType[] = [
+const DATASET_TYPES: DatasetType[] = [
   'Table',
-  'Staging',
-  'PersistentStaging',
-  'DataVault',
-  'DataMart',
-];
-
-const DATAVAULT_SUBTYPES: EntitySubtype[] = [
+  'View',
+  'Dimension',
+  'Fact',
   'Hub',
   'Link',
   'Satellite',
   'LinkSatellite',
-  'PIT',
+  'Point In Time',
   'Bridge',
+  'Reference',
+  'Hierarchy Link',
+  'Same as Link',
+  'Reference Satellite',
+  'File',
 ];
-
-const DATAMART_SUBTYPES: EntitySubtype[] = ['Dimension', 'Fact'];
-
-const MATERIALIZATION_TYPES: MaterializationType[] = ['Table', 'View', 'MaterializedView'];
 
 // ============================================================================
 // Dataset Properties Tab Component
@@ -68,13 +65,7 @@ export function DatasetPropertiesTab({
   const [medallionLayer, setMedallionLayer] = useState<MedallionLayer | undefined>(
     dataset.medallion_layer
   );
-  const [entityType, setEntityType] = useState<EntityType | undefined>(dataset.entity_type);
-  const [entitySubtype, setEntitySubtype] = useState<EntitySubtype | undefined>(
-    dataset.entity_subtype
-  );
-  const [materializationType, setMaterializationType] = useState<MaterializationType | undefined>(
-    dataset.materialization_type
-  );
+  const [datasetType, setDatasetType] = useState<DatasetType | undefined>(dataset.dataset_type);
   const [description, setDescription] = useState(dataset.description || '');
   const [metadataEntries, setMetadataEntries] = useState<MetadataEntry[]>([]);
 
@@ -109,12 +100,6 @@ export function DatasetPropertiesTab({
     return generateFQN(medallionLayer, schema, name);
   }, [medallionLayer, name, dataset.fqn]);
 
-  // Determine available subtypes based on entity type
-  const availableSubtypes = useMemo(() => {
-    if (entityType === 'DataVault') return DATAVAULT_SUBTYPES;
-    if (entityType === 'DataMart') return DATAMART_SUBTYPES;
-    return [];
-  }, [entityType]);
 
   // ============================================================================
   // Validation
@@ -151,29 +136,10 @@ export function DatasetPropertiesTab({
     onChange({ medallion_layer: layer });
   };
 
-  const handleEntityTypeChange = (value: string) => {
-    const type = value as EntityType;
-    setEntityType(type);
-
-    // Reset subtype if not applicable
-    if (type !== 'DataVault' && type !== 'DataMart') {
-      setEntitySubtype(undefined);
-      onChange({ entity_type: type, entity_subtype: undefined });
-    } else {
-      onChange({ entity_type: type });
-    }
-  };
-
-  const handleEntitySubtypeChange = (value: string) => {
-    const subtype = value as EntitySubtype;
-    setEntitySubtype(subtype);
-    onChange({ entity_subtype: subtype });
-  };
-
-  const handleMaterializationTypeChange = (value: string) => {
-    const matType = value as MaterializationType;
-    setMaterializationType(matType);
-    onChange({ materialization_type: matType });
+  const handleDatasetTypeChange = (value: string) => {
+    const type = value as DatasetType;
+    setDatasetType(type);
+    onChange({ dataset_type: type });
   };
 
   const handleDescriptionChange = (value: string) => {
@@ -310,61 +276,19 @@ export function DatasetPropertiesTab({
             </select>
           </div>
 
-          {/* Entity Type */}
+          {/* Dataset Type */}
           <div>
-            <label htmlFor="entity-type" className="block text-sm font-medium text-gray-700 mb-1">
-              Entity Type
+            <label htmlFor="dataset-type" className="block text-sm font-medium text-gray-700 mb-1">
+              Dataset Type
             </label>
             <select
-              id="entity-type"
-              value={entityType || ''}
-              onChange={(e) => handleEntityTypeChange(e.target.value)}
+              id="dataset-type"
+              value={datasetType || ''}
+              onChange={(e) => handleDatasetTypeChange(e.target.value)}
               className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select type...</option>
-              {ENTITY_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Entity Subtype (Conditional) */}
-          {availableSubtypes.length > 0 && (
-            <div>
-              <label htmlFor="entity-subtype" className="block text-sm font-medium text-gray-700 mb-1">
-                Entity Subtype
-              </label>
-              <select
-                id="entity-subtype"
-                value={entitySubtype || ''}
-                onChange={(e) => handleEntitySubtypeChange(e.target.value)}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select subtype...</option>
-                {availableSubtypes.map((subtype) => (
-                  <option key={subtype} value={subtype}>
-                    {subtype}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Materialization Type */}
-          <div>
-            <label htmlFor="materialization-type" className="block text-sm font-medium text-gray-700 mb-1">
-              Materialization Type
-            </label>
-            <select
-              id="materialization-type"
-              value={materializationType || ''}
-              onChange={(e) => handleMaterializationTypeChange(e.target.value)}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select type...</option>
-              {MATERIALIZATION_TYPES.map((type) => (
+              {DATASET_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>

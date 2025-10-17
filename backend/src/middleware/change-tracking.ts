@@ -6,10 +6,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Lazy-load Supabase client to avoid loading before environment variables are set
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error('Supabase credentials not configured');
+    }
+    supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+  }
+  return supabase;
+}
 
 export interface ChangeTrackingContext {
   userId: string;
@@ -34,7 +45,7 @@ export function changeTrackingMiddleware(
     newValue?: any
   ) => {
     try {
-      await supabase.from('metadata_changes').insert({
+      await getSupabaseClient().from('metadata_changes').insert({
         dataset_id: context.datasetId,
         entity_type: context.entityType,
         entity_id: context.entityId,
@@ -57,7 +68,7 @@ export function changeTrackingMiddleware(
   // Add helper to mark dataset as uncommitted
   (req as any).markDatasetUncommitted = async (datasetId: string) => {
     try {
-      await supabase
+      await getSupabaseClient()
         .from('datasets')
         .update({
           has_uncommitted_changes: true,
@@ -142,7 +153,7 @@ export async function workspaceAccessMiddleware(
     }
 
     // Check if user has access to workspace
-    const { data: member, error } = await supabase
+    const { data: member, error } = await getSupabaseClient()
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspaceId)

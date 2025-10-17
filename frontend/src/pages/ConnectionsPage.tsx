@@ -4,20 +4,20 @@
  */
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Database, CheckCircle, XCircle, AlertCircle, TrendingUp, ArrowLeft } from 'lucide-react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useConnections, useAccount, useWorkspace } from '../hooks';
+import { useParams } from 'react-router-dom';
+import { Plus, Search, Database, CheckCircle, XCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import { useConnections, useProjectConnections, useAccount } from '../hooks';
 import { useSearch } from '../contexts/SearchContext';
 import { ConnectionCard } from '../components/Connections/ConnectionCard';
 import { CreateConnectionDialog } from '../components/Connections/CreateConnectionDialog';
 import { EditConnectionDialog } from '../components/Connections/EditConnectionDialog';
 import { DeleteConnectionDialog } from '../components/Connections/DeleteConnectionDialog';
 import { CloneConnectionDialog } from '../components/Connections/CloneConnectionDialog';
+import { AppLayout } from '../components/Layout';
 import { ConnectionType } from '@/types/connection';
 
 export function ConnectionsPage() {
-  const { workspaceId } = useParams<{ workspaceId: string }>();
-  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId?: string }>();
   const { searchQuery: globalSearch, setSearchPlaceholder } = useSearch();
   const [selectedType, setSelectedType] = useState<ConnectionType | ''>('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -27,23 +27,34 @@ export function ConnectionsPage() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const isProjectContext = !!projectId;
+
   // Set search placeholder for this page
   useEffect(() => {
-    setSearchPlaceholder('Search connections...');
-  }, [setSearchPlaceholder]);
+    setSearchPlaceholder(isProjectContext ? 'Search project connections...' : 'Search connections...');
+  }, [setSearchPlaceholder, isProjectContext]);
 
   // Fetch user's account
   const { data: account, isLoading: isLoadingAccount } = useAccount();
 
-  // Fetch workspace to get project_id
-  const { data: workspace } = useWorkspace(workspaceId || '');
+  // Fetch connections based on context
+  const accountConnectionsQuery = useConnections(
+    {
+      search: globalSearch || undefined,
+      connection_type: selectedType || undefined
+    },
+    { enabled: !isProjectContext }
+  );
 
-  // Fetch connections
-  const { data, isLoading, error, refetch } = useConnections({
-    workspace_id: workspaceId,
-    search: globalSearch || undefined,
-    connection_type: selectedType || undefined
-  });
+  const projectConnectionsQuery = useProjectConnections(
+    projectId || '',
+    { enabled: isProjectContext }
+  );
+
+  // Use the appropriate query based on context
+  const { data, isLoading, error, refetch } = isProjectContext
+    ? projectConnectionsQuery
+    : accountConnectionsQuery;
 
   const handleEditConnection = (connectionId: string) => {
     setConnectionToEdit(connectionId);
@@ -162,27 +173,15 @@ export function ConnectionsPage() {
   }, [data?.data]);
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <AppLayout>
       {/* Header with Actions and Filters */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (workspace?.project_id) {
-                  navigate(`/projects/${workspace.project_id}/workspaces`);
-                } else {
-                  navigate(-1); // Fallback to browser back
-                }
-              }}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
-              title="Back to workspaces"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Connections</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {isProjectContext ? 'Project Connections' : 'Account Connections'}
+              </h1>
             </div>
 
             {/* Filters */}
@@ -280,9 +279,8 @@ export function ConnectionsPage() {
       </div>
 
       {/* Dialogs */}
-      {showCreateDialog && workspaceId && account && (
+      {showCreateDialog && account && (
         <CreateConnectionDialog
-          workspaceId={workspaceId}
           accountId={account.id}
           onClose={() => setShowCreateDialog(false)}
           onSuccess={() => {
@@ -403,6 +401,6 @@ export function ConnectionsPage() {
       >
         <span className="text-lg font-semibold text-gray-600 group-hover:text-blue-600">?</span>
       </button>
-    </div>
+    </AppLayout>
   );
 }

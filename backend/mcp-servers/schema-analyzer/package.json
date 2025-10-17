@@ -1,0 +1,19 @@
+{
+  "name": "schema-analyzer-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for analyzing database schemas and detecting relationships",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

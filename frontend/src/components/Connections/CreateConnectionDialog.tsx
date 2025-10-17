@@ -11,14 +11,12 @@ import { ConnectionType, getConnectionTypeLabel, getDefaultConfiguration, type M
 import { MSSQLConnectionEditor } from './Editors/MSSQLConnectionEditor';
 
 interface CreateConnectionDialogProps {
-  workspaceId: string;
   accountId: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
 export function CreateConnectionDialog({
-  workspaceId,
   accountId,
   onClose,
   onSuccess
@@ -60,7 +58,6 @@ export function CreateConnectionDialog({
     try {
       await createConnectionMutation.mutateAsync({
         account_id: accountId,
-        workspace_id: workspaceId,
         name: overrideName || name.trim(),
         description: description.trim() || undefined,
         connection_type: connectionType,

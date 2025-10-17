@@ -8,9 +8,7 @@ import { Plus, Info } from 'lucide-react';
 import { BaseDialog, DialogField, DialogInput, DialogTextarea, DialogSelect } from '@/components/Common/BaseDialog';
 import type {
   MedallionLayer,
-  EntityType,
-  EntitySubtype,
-  MaterializationType,
+  DatasetType,
 } from '../../types/canvas';
 import type { CreateNodePayload } from '../../types/node';
 
@@ -33,10 +31,7 @@ export function CreateNodeDialog({
 }: CreateNodeDialogProps) {
   const [name, setName] = useState('');
   const [medallionLayer, setMedallionLayer] = useState<MedallionLayer>('Bronze');
-  const [entityType, setEntityType] = useState<EntityType>('Table');
-  const [entitySubtype, setEntitySubtype] = useState<EntitySubtype>(null);
-  const [materializationType, setMaterializationType] =
-    useState<MaterializationType>('Table');
+  const [datasetType, setDatasetType] = useState<DatasetType>('Table');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,24 +41,11 @@ export function CreateNodeDialog({
     if (isOpen) {
       setName('');
       setMedallionLayer('Bronze');
-      setEntityType('Table');
-      setEntitySubtype(null);
-      setMaterializationType('Table');
+      setDatasetType('Table');
       setDescription('');
       setError(null);
     }
   }, [isOpen]);
-
-  // Update entity subtype when entity type changes
-  useEffect(() => {
-    if (entityType === 'DataVault') {
-      setEntitySubtype('Hub');
-    } else if (entityType === 'DataMart') {
-      setEntitySubtype('Dimension');
-    } else {
-      setEntitySubtype(null);
-    }
-  }, [entityType]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -80,9 +62,7 @@ export function CreateNodeDialog({
         project_id: projectId,
         name: name.trim(),
         medallion_layer: medallionLayer,
-        entity_type: entityType,
-        entity_subtype: entitySubtype,
-        materialization_type: materializationType,
+        dataset_type: datasetType,
         description: description.trim() || undefined,
         position: initialPosition,
       };
@@ -98,27 +78,41 @@ export function CreateNodeDialog({
 
   if (!isOpen) return null;
 
-  // Determine available entity types based on project type
-  const availableEntityTypes: EntityType[] = ['Table', 'Staging', 'PersistentStaging'];
-  if (projectType === 'DataVault') {
-    availableEntityTypes.push('DataVault');
-  }
-  if (projectType === 'Dimensional') {
-    availableEntityTypes.push('DataMart');
-  }
+  // All available dataset types
+  const availableDatasetTypes: DatasetType[] = [
+    'Table',
+    'View',
+    'Dimension',
+    'Fact',
+    'Hub',
+    'Link',
+    'Satellite',
+    'LinkSatellite',
+    'Point In Time',
+    'Bridge',
+    'Reference',
+    'Hierarchy Link',
+    'Same as Link',
+    'Reference Satellite',
+    'File',
+  ];
 
-  // Get subtype options based on entity type
-  const getSubtypeOptions = (): EntitySubtype[] => {
-    if (entityType === 'DataVault') {
-      return ['Hub', 'Link', 'Satellite', 'LinkSatellite', 'PIT', 'Bridge'];
+  // Filter dataset types based on project type
+  const getFilteredDatasetTypes = (): DatasetType[] => {
+    if (projectType === 'DataVault') {
+      return availableDatasetTypes.filter((type) =>
+        ['Hub', 'Link', 'Satellite', 'LinkSatellite', 'Point In Time', 'Bridge', 'Table', 'View'].includes(type)
+      );
     }
-    if (entityType === 'DataMart') {
-      return ['Dimension', 'Fact'];
+    if (projectType === 'Dimensional') {
+      return availableDatasetTypes.filter((type) =>
+        ['Dimension', 'Fact', 'Table', 'View'].includes(type)
+      );
     }
-    return [null];
+    return availableDatasetTypes;
   };
 
-  const subtypeOptions = getSubtypeOptions();
+  const filteredDatasetTypes = getFilteredDatasetTypes();
 
   return (
     <BaseDialog
@@ -159,6 +153,7 @@ export function CreateNodeDialog({
           value={medallionLayer}
           onChange={(value) => setMedallionLayer(value as MedallionLayer)}
           options={[
+            { value: 'Source', label: 'Source' },
             { value: 'Raw', label: 'Raw (Landing)' },
             { value: 'Bronze', label: 'Bronze' },
             { value: 'Silver', label: 'Silver' },
@@ -168,63 +163,28 @@ export function CreateNodeDialog({
         />
       </DialogField>
 
-      {/* Entity Type */}
-      <DialogField label="Entity Type" required>
+      {/* Dataset Type */}
+      <DialogField label="Dataset Type" required>
         <DialogSelect
-          value={entityType}
-          onChange={(value) => setEntityType(value as EntityType)}
-          options={availableEntityTypes.map((type) => ({
+          value={datasetType}
+          onChange={(value) => setDatasetType(value as DatasetType)}
+          options={filteredDatasetTypes.map((type) => ({
             value: type,
             label: type
           }))}
           disabled={loading}
         />
-        {(entityType === 'DataVault' || entityType === 'DataMart') && (
+        {projectType !== 'Standard' && (
           <div className="mt-2 flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
             <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-blue-800">
-              {entityType === 'DataVault' &&
+              {projectType === 'DataVault' &&
                 'Data Vault entities follow specific naming patterns and relationships.'}
-              {entityType === 'DataMart' &&
-                'Data Mart entities are designed for analytical querying and reporting.'}
+              {projectType === 'Dimensional' &&
+                'Dimensional models are designed for analytical querying and reporting.'}
             </p>
           </div>
         )}
-      </DialogField>
-
-      {/* Entity Subtype (conditional) */}
-      {subtypeOptions.length > 1 && subtypeOptions[0] !== null && (
-        <DialogField label="Entity Subtype" required>
-          <DialogSelect
-            value={entitySubtype || ''}
-            onChange={(value) =>
-              setEntitySubtype((value as EntitySubtype) || null)
-            }
-            options={subtypeOptions.map((subtype) => ({
-              value: subtype || '',
-              label: subtype || ''
-            }))}
-            disabled={loading}
-          />
-        </DialogField>
-      )}
-
-      {/* Materialization Type */}
-      <DialogField label="Materialization Type">
-        <DialogSelect
-          value={materializationType || ''}
-          onChange={(value) =>
-            setMaterializationType(
-              (value as MaterializationType) || null
-            )
-          }
-          options={[
-            { value: 'Table', label: 'Table' },
-            { value: 'View', label: 'View' },
-            { value: 'MaterializedView', label: 'Materialized View' }
-          ]}
-          disabled={loading}
-        />
       </DialogField>
 
       {/* Description */}

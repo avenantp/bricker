@@ -1,14 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Stop-Process -Force)",
-      "mcp__ide__getDiagnostics",
-      "Bash(npm install:*)",
-      "Bash(npm run dev)",
-      "Bash(npx tsc:*)",
-      "Bash(test:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell:*)",
+      "Bash(npm run dev:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(taskkill:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet run)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Read(//c/Varigence/Products/Hadron/BimlExtensionLibrary/Database/Providers/**)",
+      "Read(//c/Varigence/Products/BimlFlex/BimlFlexUX/api/Server/Domain/**)",
+      "WebFetch(domain:localhost)",
+      "Bash(chmod:*)",
+      "Bash(npx @modelcontextprotocol/inspector)",
       "Bash(psql:*)",
-      "Bash(npx supabase db reset:*)"
+      "Bash(node apply-migration.js:*)",
+      "Bash(node apply-migration-via-rpc.js:*)",
+      "Bash(node apply-migration-fetch.js:*)"
     ],
     "deny": [],
     "ask": []

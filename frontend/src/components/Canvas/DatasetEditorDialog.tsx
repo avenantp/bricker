@@ -102,8 +102,8 @@ export function DatasetEditorDialog({
     id: datasetId,
     name: 'Sample Dataset',
     description: 'Sample dataset for testing',
-    medallion_layer: 'bronze',
-    entity_type: 'table',
+    medallion_layer: 'Bronze',
+    dataset_type: 'Table',
   } as Dataset);
 
   const [columns, setColumns] = useState<Column[]>([]);

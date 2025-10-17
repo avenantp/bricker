@@ -11,17 +11,28 @@ import yaml from 'js-yaml';
 
 const router = express.Router();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Lazy-load Supabase client to avoid loading before environment variables are set
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      throw new Error('Supabase credentials not configured');
+    }
+    supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+  }
+  return supabase;
+}
 
 /**
  * Helper to get source control client for a workspace
  * Currently supports GitHub, can be extended for other providers
  */
 async function getSourceControlClientForWorkspace(workspaceId: string) {
-  const { data: workspace, error } = await supabase
+  const { data: workspace, error } = await getSupabaseClient()
     .from('workspaces')
     .select('source_control_provider, source_control_repo, source_control_branch, settings')
     .eq('id', workspaceId)
@@ -107,7 +118,7 @@ router.get('/:workspace_id/uncommitted', async (req, res) => {
     const { workspace_id } = req.params;
 
     // Get all uncommitted datasets with change counts
-    const { data: datasets, error } = await supabase
+    const { data: datasets, error } = await getSupabaseClient()
       .from('datasets')
       .select('id, name, updated_at')
       .eq('workspace_id', workspace_id)
@@ -118,14 +129,14 @@ router.get('/:workspace_id/uncommitted', async (req, res) => {
     // Get change counts for each dataset
     const summary = await Promise.all(
       datasets.map(async (dataset) => {
-        const { count: changeCount } = await supabase
+        const { count: changeCount } = await getSupabaseClient()
           .from('metadata_changes')
           .select('*', { count: 'exact', head: true })
           .eq('dataset_id', dataset.id)
           .is('committed_at', null);
 
         // Get entity types with changes
-        const { data: changes } = await supabase
+        const { data: changes } = await getSupabaseClient()
           .from('metadata_changes')
           .select('entity_type')
           .eq('dataset_id', dataset.id)
@@ -168,7 +179,7 @@ router.post('/:workspace_id/commit', async (req, res) => {
     const sourceControl = await getSourceControlClientForWorkspace(workspace_id);
 
     // Get dataset with columns and lineage
-    const { data: dataset, error: datasetError } = await supabase
+    const { data: dataset, error: datasetError } = await getSupabaseClient()
       .from('datasets')
       .select(
         `
@@ -195,7 +206,7 @@ router.post('/:workspace_id/commit', async (req, res) => {
     const commitResult = await sourceControl.commitFile(filePath, yamlContent, message);
 
     // Create commit record
-    const { data: commit } = await supabase
+    const { data: commit } = await getSupabaseClient()
       .from('source_control_commits')
       .insert({
         dataset_id,
@@ -210,14 +221,14 @@ router.post('/:workspace_id/commit', async (req, res) => {
       .single();
 
     // Mark changes as committed
-    await supabase
+    await getSupabaseClient()
       .from('metadata_changes')
       .update({ committed_at: new Date().toISOString(), commit_id: commit.id })
       .eq('dataset_id', dataset_id)
       .is('committed_at', null);
 
     // Update dataset sync status
-    await supabase
+    await getSupabaseClient()
       .from('datasets')
       .update({
         has_uncommitted_changes: false,
@@ -240,7 +251,7 @@ router.post('/:workspace_id/commit', async (req, res) => {
 
     // Mark dataset with sync error
     if (req.body.dataset_id) {
-      await supabase
+      await getSupabaseClient()
         .from('datasets')
         .update({
           sync_status: 'error',
@@ -273,7 +284,7 @@ router.post('/:workspace_id/commit-multiple', async (req, res) => {
     for (const dataset_id of dataset_ids) {
       try {
         // Get dataset with columns and lineage
-        const { data: dataset, error: datasetError } = await supabase
+        const { data: dataset, error: datasetError } = await getSupabaseClient()
           .from('datasets')
           .select(
             `
@@ -304,7 +315,7 @@ router.post('/:workspace_id/commit-multiple', async (req, res) => {
         );
 
         // Create commit record
-        const { data: commit } = await supabase
+        const { data: commit } = await getSupabaseClient()
           .from('source_control_commits')
           .insert({
             dataset_id,
@@ -319,14 +330,14 @@ router.post('/:workspace_id/commit-multiple', async (req, res) => {
           .single();
 
         // Mark changes as committed
-        await supabase
+        await getSupabaseClient()
           .from('metadata_changes')
           .update({ committed_at: new Date().toISOString(), commit_id: commit.id })
           .eq('dataset_id', dataset_id)
           .is('committed_at', null);
 
         // Update dataset sync status
-        await supabase
+        await getSupabaseClient()
           .from('datasets')
           .update({
             has_uncommitted_changes: false,
@@ -353,7 +364,7 @@ router.post('/:workspace_id/commit-multiple', async (req, res) => {
         });
 
         // Mark dataset with sync error
-        await supabase
+        await getSupabaseClient()
           .from('datasets')
           .update({
             sync_status: 'error',
@@ -408,7 +419,7 @@ router.post('/:workspace_id/pull', async (req, res) => {
         const yamlData = yaml.load(content) as any;
 
         // Check if dataset exists locally
-        const { data: existingDataset } = await supabase
+        const { data: existingDataset } = await getSupabaseClient()
           .from('datasets')
           .select('*, source_control_commit_sha')
           .eq('id', yamlData.id)
@@ -430,7 +441,7 @@ router.post('/:workspace_id/pull', async (req, res) => {
           }
 
           // Update existing dataset
-          await supabase
+          await getSupabaseClient()
             .from('datasets')
             .update({
               name: yamlData.name,
@@ -449,7 +460,7 @@ router.post('/:workspace_id/pull', async (req, res) => {
           updates.push({ dataset_id: yamlData.id, action: 'updated' });
         } else {
           // Create new dataset from source control
-          const { data: newDataset } = await supabase
+          const { data: newDataset } = await getSupabaseClient()
             .from('datasets')
             .insert({
               id: yamlData.id,
@@ -502,7 +513,7 @@ router.post('/:workspace_id/push', async (req, res) => {
     }
 
     // Get all uncommitted datasets
-    const { data: datasets, error } = await supabase
+    const { data: datasets, error } = await getSupabaseClient()
       .from('datasets')
       .select('id')
       .eq('workspace_id', workspace_id)
@@ -546,7 +557,7 @@ router.get('/:workspace_id/history/:dataset_id', async (req, res) => {
   try {
     const { dataset_id } = req.params;
 
-    const { data: commits, error } = await supabase
+    const { data: commits, error } = await getSupabaseClient()
       .from('source_control_commits')
       .select('*')
       .eq('dataset_id', dataset_id)

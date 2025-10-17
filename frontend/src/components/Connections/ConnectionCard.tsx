@@ -54,7 +54,11 @@ export function ConnectionCard({ connection, onEdit, onDelete, onClone }: Connec
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
+    <div
+      className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+      onDoubleClick={onEdit}
+      title="Double-click to edit"
+    >
       <div className="p-6">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">

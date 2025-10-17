@@ -81,6 +81,7 @@ interface DiagramStore {
 
   setNodes: (nodes: DiagramNode[]) => void;
   addNode: (node: DiagramNode) => void;
+  addNodeToDiagram: (nodeId: string) => void;
   updateNode: (nodeId: string, updates: Partial<DiagramNode['data']>) => void;
   deleteNode: (nodeId: string) => void;
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
@@ -238,6 +239,45 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
       nodes: [...state.nodes, node],
       isDirty: true,
     })),
+
+  addNodeToDiagram: (nodeId) =>
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      if (!node || node.position) return state; // Already has position
+
+      // Define swimlane X positions (left to right based on medallion layer)
+      const SWIMLANE_WIDTH = 400;
+      const LAYER_X_POSITIONS: Record<string, number> = {
+        Source: 50,
+        Raw: SWIMLANE_WIDTH + 50,
+        Bronze: SWIMLANE_WIDTH * 2 + 50,
+        Silver: SWIMLANE_WIDTH * 3 + 50,
+        Gold: SWIMLANE_WIDTH * 4 + 50,
+      };
+
+      // Calculate Y position (avoid overlaps within layer)
+      const nodesInLayer = state.nodes.filter(
+        (n) => n.data.medallion_layer === node.data.medallion_layer && n.position
+      );
+      const NODE_HEIGHT = 200; // Estimated height with spacing
+      const yPosition = nodesInLayer.length * NODE_HEIGHT + 50;
+
+      const xPosition = LAYER_X_POSITIONS[node.data.medallion_layer] || 50;
+
+      // Update node with position
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId
+            ? { ...n, position: { x: xPosition, y: yPosition } }
+            : n
+        ),
+        savedPositions: {
+          ...state.savedPositions,
+          [nodeId]: { x: xPosition, y: yPosition },
+        },
+        isDirty: true,
+      };
+    }),
 
   updateNode: (nodeId, updates) =>
     set((state) => ({

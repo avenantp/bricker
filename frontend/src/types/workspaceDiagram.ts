@@ -3,7 +3,11 @@
  * Types for workspace diagrams (multiple diagrams per workspace)
  */
 
-export type DiagramType = 'dataset' | 'workflow' | 'pipeline';
+// Match database schema: diagram_type IN ('dataset', 'business_model', 'lineage', 'erd')
+export type DiagramType = 'dataset' | 'business_model' | 'lineage' | 'erd';
+
+// Match database schema: view_mode IN ('relationships', 'lineage')
+export type ViewMode = 'relationships' | 'lineage';
 
 export interface WorkspaceDiagram {
   id: string;
@@ -14,6 +18,7 @@ export interface WorkspaceDiagram {
   // Diagram metadata
   is_default: boolean;
   diagram_type: DiagramType;
+  view_mode: ViewMode;
 
   // Multi-tenancy
   account_id: string;
@@ -22,7 +27,6 @@ export interface WorkspaceDiagram {
   // Timestamps
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface WorkspaceDiagramWithDetails extends WorkspaceDiagram {
@@ -34,10 +38,12 @@ export interface WorkspaceDiagramWithDetails extends WorkspaceDiagram {
 
 export interface CreateWorkspaceDiagramInput {
   workspace_id: string;
+  account_id: string;
   name: string;
   description?: string;
   is_default?: boolean;
   diagram_type?: DiagramType;
+  view_mode?: ViewMode;
 }
 
 export interface UpdateWorkspaceDiagramInput {
@@ -45,6 +51,7 @@ export interface UpdateWorkspaceDiagramInput {
   description?: string;
   is_default?: boolean;
   diagram_type?: DiagramType;
+  view_mode?: ViewMode;
 }
 
 export interface WorkspaceDiagramFilters {
