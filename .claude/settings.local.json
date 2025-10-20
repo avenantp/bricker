@@ -23,7 +23,11 @@
       "Bash(psql:*)",
       "Bash(node apply-migration.js:*)",
       "Bash(node apply-migration-via-rpc.js:*)",
-      "Bash(node apply-migration-fetch.js:*)"
+      "Bash(node apply-migration-fetch.js:*)",
+      "Bash(npm install:*)",
+      "Bash(npx supabase:*)",
+      "Bash(cat:*)",
+      "Bash(pg_dump:*)"
     ],
     "deny": [],
     "ask": []

@@ -79,6 +79,7 @@ export async function getDataset(datasetId: string): Promise<Dataset | null> {
     .from('datasets')
     .select('*')
     .eq('id', datasetId)
+    .is('deleted_at', null)
     .single();
 
   if (error) {
@@ -129,7 +130,7 @@ export async function updateDataset(
 }
 
 /**
- * Delete a dataset from Supabase
+ * Delete a dataset from Supabase (soft delete)
  */
 export async function deleteDataset(
   datasetId: string,
@@ -138,20 +139,26 @@ export async function deleteDataset(
   // Get dataset info before deleting for audit log
   const dataset = await getDataset(datasetId);
 
-  const { error } = await supabase
-    .from('datasets')
-    .delete()
-    .eq('id', datasetId);
+  // Use soft delete RPC function (cascades to columns)
+  const { data, error } = await supabase.rpc('soft_delete_dataset', {
+    p_dataset_id: datasetId,
+    p_deleted_by: userId
+  });
 
   if (error) {
-    throw new Error(`Failed to delete dataset: ${error.message}`);
+    throw new Error(`Failed to soft delete dataset: ${error.message}`);
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.message || 'Dataset not found or already deleted');
   }
 
   // Log deletion in audit_logs
   if (dataset) {
-    await logAuditChange('dataset', datasetId, 'delete', userId, {
+    await logAuditChange('dataset', datasetId, 'soft_delete', userId, {
       dataset_name: dataset.name,
       fqn: dataset.fqn,
+      columns_deleted: data.columns_deleted
     });
   }
 }
@@ -166,7 +173,8 @@ export async function getWorkspaceDatasets(
   let query = supabase
     .from('datasets')
     .select('*')
-    .eq('workspace_id', workspaceId);
+    .eq('workspace_id', workspaceId)
+    .is('deleted_at', null);
 
   // Apply filters
   if (filters?.medallion_layers && filters.medallion_layers.length > 0) {
@@ -390,7 +398,8 @@ export async function getUncommittedDatasetsCount(
     .from('datasets')
     .select('*', { count: 'exact', head: true })
     .eq('workspace_id', workspaceId)
-    .eq('has_uncommitted_changes', true);
+    .eq('has_uncommitted_changes', true)
+    .is('deleted_at', null);
 
   if (error) {
     throw new Error(`Failed to count uncommitted datasets: ${error.message}`);
@@ -444,6 +453,72 @@ export async function markDatasetSyncError(
   if (error) {
     throw new Error(`Failed to mark dataset sync error: ${error.message}`);
   }
+}
+
+/**
+ * Restore a soft deleted dataset
+ */
+export async function restoreDataset(
+  datasetId: string,
+  userId: string
+): Promise<void> {
+  const { data, error } = await supabase.rpc('restore_deleted', {
+    p_table_name: 'datasets',
+    p_record_id: datasetId
+  });
+
+  if (error) {
+    throw new Error(`Failed to restore dataset: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Dataset not found or not deleted');
+  }
+
+  // Log restoration
+  await logAuditChange('dataset', datasetId, 'restore', userId, {});
+}
+
+/**
+ * Get soft deleted datasets for a workspace
+ */
+export async function getDeletedDatasets(workspaceId: string): Promise<Dataset[]> {
+  const { data, error } = await supabase
+    .from('datasets')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch deleted datasets: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Permanently delete a dataset (only if already soft deleted)
+ */
+export async function permanentlyDeleteDataset(
+  datasetId: string,
+  userId: string
+): Promise<void> {
+  const { data, error} = await supabase.rpc('permanent_delete', {
+    p_table_name: 'datasets',
+    p_record_id: datasetId
+  });
+
+  if (error) {
+    throw new Error(`Failed to permanently delete dataset: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Dataset not found or not soft deleted');
+  }
+
+  // Log permanent deletion
+  await logAuditChange('dataset', datasetId, 'permanent_delete', userId, {});
 }
 
 /**

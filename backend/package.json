@@ -10,7 +10,11 @@
     "start": "node dist/index.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage"
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "cleanup": "cross-env NODE_OPTIONS=--no-deprecation tsx src/jobs/cleanup-soft-deleted.ts",
+    "cleanup:30": "cross-env NODE_OPTIONS=--no-deprecation tsx src/jobs/cleanup-soft-deleted.ts 30",
+    "cleanup:60": "cross-env NODE_OPTIONS=--no-deprecation tsx src/jobs/cleanup-soft-deleted.ts 60",
+    "cleanup:90": "cross-env NODE_OPTIONS=--no-deprecation tsx src/jobs/cleanup-soft-deleted.ts 90"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

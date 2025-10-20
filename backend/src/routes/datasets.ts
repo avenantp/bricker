@@ -83,6 +83,7 @@ router.get('/:workspace_id', async (req, res) => {
       .from('datasets')
       .select('*')
       .eq('workspace_id', workspace_id)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (project_id) {
@@ -129,11 +130,12 @@ router.get('/detail/:dataset_id', async (req, res) => {
       .select(
         `
         *,
-        columns (*),
-        lineage (*)
+        columns!inner (*)
       `
       )
       .eq('id', dataset_id)
+      .is('deleted_at', null)
+      .is('columns.deleted_at', null)
       .single();
 
     if (error) throw error;
@@ -248,7 +250,7 @@ router.put('/:dataset_id', async (req, res) => {
 });
 
 /**
- * Delete dataset
+ * Delete dataset (soft delete)
  * DELETE /api/datasets/:dataset_id
  */
 router.delete('/:dataset_id', async (req, res) => {
@@ -260,37 +262,107 @@ router.delete('/:dataset_id', async (req, res) => {
       return res.status(400).json({ error: 'User ID required' });
     }
 
-    // Get dataset before deletion
-    const { data: dataset } = await getSupabaseClient()
-      .from('datasets')
-      .select('*')
-      .eq('id', dataset_id)
-      .single();
-
-    // Delete dataset (cascades to columns and lineage via database constraints)
-    const { error } = await getSupabaseClient()
-      .from('datasets')
-      .delete()
-      .eq('id', dataset_id);
+    // Use soft delete function (cascades to columns)
+    const { data, error } = await getSupabaseClient()
+      .rpc('soft_delete_dataset', {
+        p_dataset_id: dataset_id,
+        p_deleted_by: user_id
+      });
 
     if (error) throw error;
 
-    // Track deletion
-    if (dataset) {
-      await trackChange(
-        user_id,
-        dataset_id,
-        'dataset',
-        dataset_id,
-        'delete',
-        dataset,
-        null
-      );
+    if (!data?.success) {
+      return res.status(404).json({ error: data?.message || 'Dataset not found or already deleted' });
     }
 
-    res.json({ success: true, message: 'Dataset deleted' });
+    // Track deletion
+    await trackChange(
+      user_id,
+      dataset_id,
+      'dataset',
+      dataset_id,
+      'delete',
+      { id: dataset_id },
+      null
+    );
+
+    res.json({
+      success: true,
+      message: 'Dataset soft deleted',
+      deleted_counts: {
+        columns: data.columns_deleted
+      }
+    });
   } catch (error: any) {
-    console.error('[Datasets] Delete error:', error);
+    console.error('[Datasets] Soft delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Restore soft deleted dataset
+ * POST /api/datasets/:dataset_id/restore
+ */
+router.post('/:dataset_id/restore', async (req, res) => {
+  try {
+    const { dataset_id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    // Use restore function
+    const { data, error } = await getSupabaseClient()
+      .rpc('restore_deleted', {
+        p_table_name: 'datasets',
+        p_record_id: dataset_id
+      });
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: 'Dataset not found or not deleted' });
+    }
+
+    // Track restoration
+    await trackChange(
+      user_id,
+      dataset_id,
+      'dataset',
+      dataset_id,
+      'restore',
+      null,
+      { id: dataset_id }
+    );
+
+    res.json({ success: true, message: 'Dataset restored' });
+  } catch (error: any) {
+    console.error('[Datasets] Restore error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get soft deleted datasets for a workspace
+ * GET /api/datasets/:workspace_id/deleted
+ */
+router.get('/:workspace_id/deleted', async (req, res) => {
+  try {
+    const { workspace_id } = req.params;
+
+    const { data, error } = await getSupabaseClient()
+      .from('datasets')
+      .select('*')
+      .eq('workspace_id', workspace_id)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ datasets: data || [] });
+  } catch (error: any) {
+    console.error('[Datasets] Get deleted error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -308,6 +380,7 @@ router.get('/:workspace_id/uncommitted', async (req, res) => {
       .select('*')
       .eq('workspace_id', workspace_id)
       .eq('has_uncommitted_changes', true)
+      .is('deleted_at', null)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
@@ -406,7 +479,40 @@ router.put('/:dataset_id/columns/:column_id', async (req, res) => {
 });
 
 /**
- * Delete column
+ * Permanently delete dataset (only if already soft deleted)
+ * DELETE /api/datasets/:dataset_id/permanent
+ */
+router.delete('/:dataset_id/permanent', async (req, res) => {
+  try {
+    const { dataset_id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    // Use permanent delete function
+    const { data, error } = await getSupabaseClient()
+      .rpc('permanent_delete', {
+        p_table_name: 'datasets',
+        p_record_id: dataset_id
+      });
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: 'Dataset not found or not soft deleted' });
+    }
+
+    res.json({ success: true, message: 'Dataset permanently deleted' });
+  } catch (error: any) {
+    console.error('[Datasets] Permanent delete error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Delete column (soft delete)
  * DELETE /api/datasets/:dataset_id/columns/:column_id
  */
 router.delete('/:dataset_id/columns/:column_id', async (req, res) => {
@@ -418,29 +524,68 @@ router.delete('/:dataset_id/columns/:column_id', async (req, res) => {
       return res.status(400).json({ error: 'User ID required' });
     }
 
-    // Get column before deletion
-    const { data: column } = await getSupabaseClient()
-      .from('columns')
-      .select('*')
-      .eq('id', column_id)
-      .single();
-
-    // Delete column
-    const { error } = await getSupabaseClient().from('columns').delete().eq('id', column_id);
+    // Use soft delete function
+    const { data, error } = await getSupabaseClient()
+      .rpc('soft_delete', {
+        p_table_name: 'columns',
+        p_record_id: column_id,
+        p_deleted_by: user_id
+      });
 
     if (error) throw error;
 
-    // Track deletion
-    if (column) {
-      await trackChange(user_id, dataset_id, 'column', column_id, 'delete', column, null);
+    if (!data) {
+      return res.status(404).json({ error: 'Column not found or already deleted' });
     }
+
+    // Track deletion
+    await trackChange(user_id, dataset_id, 'column', column_id, 'delete', { id: column_id }, null);
 
     // Mark dataset as uncommitted
     await markDatasetUncommitted(dataset_id);
 
-    res.json({ success: true, message: 'Column deleted' });
+    res.json({ success: true, message: 'Column soft deleted' });
   } catch (error: any) {
-    console.error('[Datasets] Delete column error:', error);
+    console.error('[Datasets] Soft delete column error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Restore soft deleted column
+ * POST /api/datasets/:dataset_id/columns/:column_id/restore
+ */
+router.post('/:dataset_id/columns/:column_id/restore', async (req, res) => {
+  try {
+    const { dataset_id, column_id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID required' });
+    }
+
+    // Use restore function
+    const { data, error } = await getSupabaseClient()
+      .rpc('restore_deleted', {
+        p_table_name: 'columns',
+        p_record_id: column_id
+      });
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: 'Column not found or not deleted' });
+    }
+
+    // Track restoration
+    await trackChange(user_id, dataset_id, 'column', column_id, 'restore', null, { id: column_id });
+
+    // Mark dataset as uncommitted
+    await markDatasetUncommitted(dataset_id);
+
+    res.json({ success: true, message: 'Column restored' });
+  } catch (error: any) {
+    console.error('[Datasets] Restore column error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -508,6 +653,7 @@ router.post('/import', async (req, res) => {
           .eq('connection_id', connection_id)
           .eq('schema', table.schema)
           .eq('name', table.name)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (checkError) {

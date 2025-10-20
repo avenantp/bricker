@@ -65,7 +65,8 @@ export class ProjectService {
         owner:users!owner_id(id, full_name, email),
         workspace_count:workspaces(count),
         user_count:project_users(count)
-      `, { count: 'exact' });
+      `, { count: 'exact' })
+      .is('deleted_at', null);
 
     // Filter by account_id
     if (params.account_id) {
@@ -125,6 +126,7 @@ export class ProjectService {
         user_count:project_users(count)
       `)
       .eq('id', projectId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -225,14 +227,15 @@ export class ProjectService {
   }
 
   /**
-   * Delete a project
+   * Delete a project (soft delete)
    */
-  async deleteProject(projectId: string): Promise<void> {
-    // Check if project has workspaces
+  async deleteProject(projectId: string, userId: string): Promise<void> {
+    // Check if project has active workspaces
     const { count, error: countError } = await this.supabase
       .from('workspaces')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId);
+      .eq('project_id', projectId)
+      .is('deleted_at', null);
 
     if (countError) {
       throw new Error(`Failed to check project dependencies: ${countError.message}`);
@@ -240,17 +243,22 @@ export class ProjectService {
 
     if (count && count > 0) {
       throw new Error(
-        `Cannot delete project: it has ${count} workspace(s). Please delete all workspaces first.`
+        `Cannot delete project: it has ${count} active workspace(s). Please delete all workspaces first.`
       );
     }
 
-    const { error } = await this.supabase
-      .from('projects')
-      .delete()
-      .eq('id', projectId);
+    // Use soft delete function (cascades to workspaces)
+    const { data, error } = await this.supabase.rpc('soft_delete_project', {
+      p_project_id: projectId,
+      p_deleted_by: userId
+    });
 
     if (error) {
-      throw new Error(`Failed to delete project: ${error.message}`);
+      throw new Error(`Failed to soft delete project: ${error.message}`);
+    }
+
+    if (!data?.success) {
+      throw new Error(data?.message || 'Project not found or already deleted');
     }
   }
 
@@ -443,21 +451,23 @@ export class ProjectService {
    * Get project statistics
    */
   async getProjectStats(projectId: string): Promise<ProjectStats> {
-    // Get workspace count
+    // Get active workspace count
     const { count: workspaceCount, error: workspaceError } = await this.supabase
       .from('workspaces')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId);
+      .eq('project_id', projectId)
+      .is('deleted_at', null);
 
     if (workspaceError) {
       throw new Error(`Failed to fetch workspace count: ${workspaceError.message}`);
     }
 
-    // Get dataset count across all workspaces
+    // Get dataset count across all active workspaces
     const { data: workspaces, error: workspacesError } = await this.supabase
       .from('workspaces')
       .select('id')
-      .eq('project_id', projectId);
+      .eq('project_id', projectId)
+      .is('deleted_at', null);
 
     if (workspacesError) {
       throw new Error(`Failed to fetch workspaces: ${workspacesError.message}`);
@@ -470,7 +480,8 @@ export class ProjectService {
       const { count, error: datasetError } = await this.supabase
         .from('datasets')
         .select('id', { count: 'exact', head: true })
-        .in('workspace_id', workspaceIds);
+        .in('workspace_id', workspaceIds)
+        .is('deleted_at', null);
 
       if (datasetError) {
         throw new Error(`Failed to fetch dataset count: ${datasetError.message}`);
@@ -505,6 +516,7 @@ export class ProjectService {
       .from('projects')
       .select('*')
       .eq('account_id', accountId)
+      .is('deleted_at', null)
       .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
       .order('name', { ascending: true })
       .limit(20);
@@ -912,6 +924,64 @@ export class ProjectService {
       refresh_token_encrypted: data.source_control_refresh_token_encrypted,
       username: data.source_control_username
     };
+  }
+
+  // =====================================================
+  // Soft Delete Management
+  // =====================================================
+
+  /**
+   * Restore a soft deleted project
+   */
+  async restoreProject(projectId: string, userId: string): Promise<void> {
+    const { data, error } = await this.supabase.rpc('restore_deleted', {
+      p_table_name: 'projects',
+      p_record_id: projectId
+    });
+
+    if (error) {
+      throw new Error(`Failed to restore project: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Project not found or not deleted');
+    }
+  }
+
+  /**
+   * Get soft deleted projects for an account
+   */
+  async getDeletedProjects(accountId: string): Promise<Project[]> {
+    const { data, error } = await this.supabase
+      .from('projects')
+      .select('*')
+      .eq('account_id', accountId)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch deleted projects: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Permanently delete a project (only if already soft deleted)
+   */
+  async permanentlyDeleteProject(projectId: string, userId: string): Promise<void> {
+    const { data, error } = await this.supabase.rpc('permanent_delete', {
+      p_table_name: 'projects',
+      p_record_id: projectId
+    });
+
+    if (error) {
+      throw new Error(`Failed to permanently delete project: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Project not found or not soft deleted');
+    }
   }
 
   // =====================================================

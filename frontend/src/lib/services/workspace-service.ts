@@ -73,7 +73,8 @@ export class WorkspaceService {
         ),
         dataset_count:workspace_datasets(count),
         user_count:workspace_users(count)
-      `, { count: 'exact' });
+      `, { count: 'exact' })
+      .is('deleted_at', null);
 
     // Filter by project_id
     if (params.project_id) {
@@ -141,6 +142,7 @@ export class WorkspaceService {
         user_count:workspace_users(count)
       `)
       .eq('id', workspaceId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -242,32 +244,53 @@ export class WorkspaceService {
   }
 
   /**
-   * Delete a workspace
+   * Delete a workspace (soft delete)
    */
-  async deleteWorkspace(workspaceId: string): Promise<void> {
-    // Check if workspace has datasets (via workspace_datasets mapping)
-    const { count, error: countError } = await this.supabase
+  async deleteWorkspace(workspaceId: string, userId: string): Promise<void> {
+    // Check if workspace has active datasets (via workspace_datasets mapping)
+    const { data: datasetMappings, error: mappingError } = await this.supabase
       .from('workspace_datasets')
-      .select('id', { count: 'exact', head: true })
+      .select('dataset_id')
       .eq('workspace_id', workspaceId);
 
-    if (countError) {
-      throw new Error(`Failed to check workspace dependencies: ${countError.message}`);
+    if (mappingError) {
+      throw new Error(`Failed to check workspace dependencies: ${mappingError.message}`);
     }
 
-    if (count && count > 0) {
-      throw new Error(
-        `Cannot delete workspace: it has ${count} dataset(s). Please remove all datasets first.`
-      );
+    if (datasetMappings && datasetMappings.length > 0) {
+      const datasetIds = datasetMappings.map(m => m.dataset_id);
+
+      // Check how many of these datasets are active (not soft deleted)
+      const { count: activeCount, error: countError } = await this.supabase
+        .from('datasets')
+        .select('id', { count: 'exact', head: true })
+        .in('id', datasetIds)
+        .is('deleted_at', null);
+
+      if (countError) {
+        throw new Error(`Failed to check active datasets: ${countError.message}`);
+      }
+
+      if (activeCount && activeCount > 0) {
+        throw new Error(
+          `Cannot delete workspace: it has ${activeCount} active dataset(s). Please remove all datasets first.`
+        );
+      }
     }
 
-    const { error } = await this.supabase
-      .from('workspaces')
-      .delete()
-      .eq('id', workspaceId);
+    // Use soft delete generic function (no cascade function exists for workspaces)
+    const { data, error } = await this.supabase.rpc('soft_delete', {
+      p_table_name: 'workspaces',
+      p_record_id: workspaceId,
+      p_deleted_by: userId
+    });
 
     if (error) {
-      throw new Error(`Failed to delete workspace: ${error.message}`);
+      throw new Error(`Failed to soft delete workspace: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Workspace not found or already deleted');
     }
   }
 
@@ -598,6 +621,64 @@ export class WorkspaceService {
 
     if (error) {
       throw new Error(`Failed to mark workspace as unsynced: ${error.message}`);
+    }
+  }
+
+  // =====================================================
+  // Soft Delete Management
+  // =====================================================
+
+  /**
+   * Restore a soft deleted workspace
+   */
+  async restoreWorkspace(workspaceId: string, userId: string): Promise<void> {
+    const { data, error } = await this.supabase.rpc('restore_deleted', {
+      p_table_name: 'workspaces',
+      p_record_id: workspaceId
+    });
+
+    if (error) {
+      throw new Error(`Failed to restore workspace: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Workspace not found or not deleted');
+    }
+  }
+
+  /**
+   * Get soft deleted workspaces for a project
+   */
+  async getDeletedWorkspaces(projectId: string): Promise<Workspace[]> {
+    const { data, error } = await this.supabase
+      .from('workspaces')
+      .select('*')
+      .eq('project_id', projectId)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false});
+
+    if (error) {
+      throw new Error(`Failed to fetch deleted workspaces: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Permanently delete a workspace (only if already soft deleted)
+   */
+  async permanentlyDeleteWorkspace(workspaceId: string, userId: string): Promise<void> {
+    const { data, error } = await this.supabase.rpc('permanent_delete', {
+      p_table_name: 'workspaces',
+      p_record_id: workspaceId
+    });
+
+    if (error) {
+      throw new Error(`Failed to permanently delete workspace: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error('Workspace not found or not soft deleted');
     }
   }
 
