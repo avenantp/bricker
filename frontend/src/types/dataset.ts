@@ -45,6 +45,8 @@ export interface Dataset {
   schema?: string; // Schema name within catalog
 
   // Classification
+  // NOTE: medallion_layer is now stored on the connection, not the dataset
+  // This field is populated from connections.medallion_layer when querying
   medallion_layer?: MedallionLayer;
   dataset_type?: DatasetType;
 
@@ -82,7 +84,7 @@ export interface CreateDatasetInput {
   connection_id?: string; // Required for FQN generation
   name: string;
   schema?: string; // Schema within catalog
-  medallion_layer?: MedallionLayer;
+  // NOTE: medallion_layer is set on the connection, not on individual datasets
   dataset_type?: DatasetType;
   description?: string;
   metadata?: DatasetMetadata;
@@ -105,7 +107,7 @@ export interface UpdateDatasetInput {
   name?: string;
   schema?: string; // Updating schema will auto-update fully_qualified_name
   connection_id?: string; // Updating connection_id will auto-update fully_qualified_name
-  medallion_layer?: MedallionLayer;
+  // NOTE: medallion_layer is set on the connection, not on individual datasets
   dataset_type?: DatasetType;
   description?: string;
   metadata?: DatasetMetadata;

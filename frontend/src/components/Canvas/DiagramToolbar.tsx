@@ -215,25 +215,27 @@ export function DiagramToolbar() {
 
       <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
 
-      {/* Zoom Controls */}
+      {/* Zoom Controls - Note: These are placeholders. Actual zoom is handled by React Flow Controls */}
       <div className="flex items-center gap-1">
         <button
           onClick={() => {
-            // TODO: Implement zoom in
-            console.log('Zoom in');
+            // Zoom in handled by React Flow Controls component
+            console.log('Use React Flow Controls for zoom in');
           }}
-          className="btn-icon p-1.5"
-          title="Zoom In"
+          className="btn-icon p-1.5 opacity-50 cursor-not-allowed"
+          title="Zoom In (use controls at bottom-right)"
+          disabled
         >
           <ZoomIn className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         </button>
         <button
           onClick={() => {
-            // TODO: Implement zoom out
-            console.log('Zoom out');
+            // Zoom out handled by React Flow Controls component
+            console.log('Use React Flow Controls for zoom out');
           }}
-          className="btn-icon p-1.5"
-          title="Zoom Out"
+          className="btn-icon p-1.5 opacity-50 cursor-not-allowed"
+          title="Zoom Out (use controls at bottom-right)"
+          disabled
         >
           <ZoomOut className="w-4 h-4 text-gray-600 dark:text-gray-400" />
         </button>

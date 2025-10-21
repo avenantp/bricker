@@ -27,13 +27,13 @@ export async function createDataset(
   const now = new Date().toISOString();
 
   // Prepare dataset object
+  // NOTE: medallion_layer is now set on the connection, not the dataset
   const dataset = {
     account_id: payload.account_id,
     workspace_id: payload.workspace_id,
     project_id: payload.project_id,
     name: payload.name,
     fqn: payload.fqn,
-    medallion_layer: payload.medallion_layer || null,
     dataset_type: payload.dataset_type || null,
     description: payload.description || null,
     metadata: payload.metadata || null,
@@ -73,11 +73,15 @@ export async function createDataset(
 
 /**
  * Get a dataset by ID
+ * NOTE: medallion_layer is populated from the associated connection
  */
 export async function getDataset(datasetId: string): Promise<Dataset | null> {
   const { data, error } = await supabase
     .from('datasets')
-    .select('*')
+    .select(`
+      *,
+      connections!inner(medallion_layer)
+    `)
     .eq('id', datasetId)
     .is('deleted_at', null)
     .single();
@@ -90,7 +94,14 @@ export async function getDataset(datasetId: string): Promise<Dataset | null> {
     throw new Error(`Failed to fetch dataset: ${error.message}`);
   }
 
-  return data;
+  // Flatten the connection medallion_layer into the dataset object
+  const dataset = {
+    ...data,
+    medallion_layer: data.connections?.medallion_layer || null,
+    connections: undefined, // Remove the nested connection object
+  };
+
+  return dataset as Dataset;
 }
 
 /**

@@ -352,7 +352,14 @@ CREATE TABLE public.diagrams (
     -- Diagram metadata
     is_template boolean DEFAULT false,
     version integer DEFAULT 1,
-    diagram_state jsonb DEFAULT '{}'::jsonb,
+
+    -- Diagram state (broken down for better querying)
+    viewport jsonb DEFAULT '{"x": 0, "y": 0, "zoom": 1}'::jsonb,
+    node_positions jsonb DEFAULT '{}'::jsonb,
+    node_expansions jsonb DEFAULT '{}'::jsonb,
+    filters jsonb DEFAULT '{}'::jsonb,
+    layout_type character varying DEFAULT 'hierarchical'::character varying,
+    layout_direction character varying DEFAULT 'TB'::character varying,
 
     -- Settings
     visibility character varying DEFAULT 'private'::character varying,

@@ -663,6 +663,7 @@ router.post('/import', async (req, res) => {
         }
 
         let dataset = existingDataset;
+        let datasetWasCreated = false;
 
         if (existingDataset) {
           console.log(`[Datasets] Dataset ${fqn} already exists (ID: ${existingDataset.id})`);
@@ -711,6 +712,7 @@ router.post('/import', async (req, res) => {
             });
           }
         } else {
+          datasetWasCreated = true;
           // Create new dataset
           console.log(`[Datasets] Creating new dataset for ${fqn}`);
 
@@ -740,37 +742,7 @@ router.post('/import', async (req, res) => {
           dataset = newDataset;
           console.log(`[Datasets] Created dataset ${dataset.id} for ${fqn}`);
 
-          // Create columns if provided
-          if (table.columns && table.columns.length > 0) {
-            const columnsToInsert = table.columns.map((col: any, index: number) => ({
-              dataset_id: dataset.id,
-              fqn: `${fqn}.${col.name || col.column_name}`,
-              name: col.name || col.column_name,
-              data_type: col.data_type,
-              position: col.ordinal_position !== undefined ? col.ordinal_position : index + 1,
-              is_nullable: col.is_nullable !== undefined ? col.is_nullable : true,
-              is_primary_key: col.is_primary_key || false,
-              is_foreign_key: col.is_foreign_key || false,
-              default_value: col.default_value || null,
-              description: col.description || null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }));
-
-            const { data: columns, error: columnsError } = await getSupabaseClient()
-              .from('columns')
-              .insert(columnsToInsert)
-              .select();
-
-            if (columnsError) {
-              console.error(`[Datasets] Error creating columns for ${fqn}:`, columnsError);
-              errors.push({ table: fqn, error: `Column creation failed: ${columnsError.message}` });
-            } else {
-              console.log(`[Datasets] Created ${columns.length} column(s) for dataset ${dataset.id}`);
-            }
-          }
-
-          // Track change
+          // Track change for new dataset
           await trackChange(
             user_id,
             dataset.id,
@@ -803,6 +775,147 @@ router.post('/import', async (req, res) => {
             fqn: dataset.fully_qualified_name || fqn,
             status: 'created',
           });
+        }
+
+        // Check if columns exist for this dataset (for both new and existing datasets)
+        const { data: existingColumns } = await getSupabaseClient()
+          .from('columns')
+          .select('id')
+          .eq('dataset_id', dataset.id)
+          .is('deleted_at', null);
+
+        // Create columns if provided and they don't exist yet
+        if (table.columns && table.columns.length > 0 && (!existingColumns || existingColumns.length === 0)) {
+          console.log(`[Datasets] Creating ${table.columns.length} column(s) for dataset ${dataset.id}`);
+
+          // Find primary key columns from keys metadata
+          const primaryKeyColumns = new Set<string>();
+          if (table.keys && table.keys.length > 0) {
+            const primaryKeys = table.keys.filter((key: any) => key.type === 'PRIMARY KEY');
+            for (const pk of primaryKeys) {
+              if (pk.columns) {
+                for (const colName of pk.columns) {
+                  primaryKeyColumns.add(colName);
+                }
+              }
+            }
+          }
+
+          const columnsToInsert = table.columns.map((col: any, index: number) => {
+            const columnName = col.name || col.column_name;
+            return {
+              dataset_id: dataset.id,
+              name: columnName,
+              data_type: col.data_type,
+              ordinal_position: col.ordinal_position || index + 1,
+              is_nullable: col.is_nullable !== undefined ? col.is_nullable : true,
+              is_primary_key: primaryKeyColumns.has(columnName),
+              is_foreign_key: false, // Will be set to true when we create references below
+              default_value: col.default_value || col.column_default || null,
+              max_length: col.max_length || null,
+              precision: col.precision || null,
+              scale: col.scale || null,
+              is_identity: col.is_identity || false,
+              is_computed: col.is_computed || false,
+            };
+          });
+
+          const { data: columns, error: columnsError } = await getSupabaseClient()
+            .from('columns')
+            .insert(columnsToInsert)
+            .select();
+
+          if (columnsError) {
+            console.error(`[Datasets] Error creating columns for ${fqn}:`, columnsError);
+            errors.push({ table: fqn, error: `Column creation failed: ${columnsError.message}` });
+          } else {
+            console.log(`[Datasets] Created ${columns.length} column(s) for dataset ${dataset.id}`);
+
+            // Now process foreign keys to create references
+            if (table.keys && table.keys.length > 0) {
+              const foreignKeys = table.keys.filter((key: any) => key.type === 'FOREIGN KEY');
+
+              for (const fk of foreignKeys) {
+                try {
+                  // Find the referenced dataset by schema and table name
+                  const { data: referencedDataset, error: refDatasetError } = await getSupabaseClient()
+                    .from('datasets')
+                    .select('id')
+                    .eq('account_id', account_id)
+                    .eq('connection_id', connection_id)
+                    .eq('schema', fk.referenced_schema)
+                    .eq('name', fk.referenced_table)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+
+                  if (refDatasetError || !referencedDataset) {
+                    console.warn(`[Datasets] Referenced dataset ${fk.referenced_schema}.${fk.referenced_table} not found for FK ${fk.name}`);
+                    continue;
+                  }
+
+                  // For each column in the foreign key, create a reference
+                  for (let i = 0; i < (fk.columns?.length || 0); i++) {
+                    const sourceColumnName = fk.columns[i];
+                    const targetColumnName = fk.referenced_columns?.[i];
+
+                    if (!sourceColumnName || !targetColumnName) {
+                      console.warn(`[Datasets] Missing column names for FK ${fk.name}`);
+                      continue;
+                    }
+
+                    // Find source column ID
+                    const sourceColumn = columns.find((c: any) => c.name === sourceColumnName);
+                    if (!sourceColumn) {
+                      console.warn(`[Datasets] Source column ${sourceColumnName} not found for FK ${fk.name}`);
+                      continue;
+                    }
+
+                    // Find target column ID
+                    const { data: targetColumns, error: targetColError } = await getSupabaseClient()
+                      .from('columns')
+                      .select('id')
+                      .eq('dataset_id', referencedDataset.id)
+                      .eq('name', targetColumnName)
+                      .is('deleted_at', null)
+                      .maybeSingle();
+
+                    if (targetColError || !targetColumns) {
+                      console.warn(`[Datasets] Target column ${targetColumnName} not found in ${fk.referenced_schema}.${fk.referenced_table}`);
+                      continue;
+                    }
+
+                    // Create the reference
+                    const { error: refError } = await getSupabaseClient()
+                      .from('references')
+                      .insert({
+                        source_column_id: sourceColumn.id,
+                        target_column_id: targetColumns.id,
+                        relationship_type: 'foreign_key',
+                        constraint_name: fk.name,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                      });
+
+                    if (refError) {
+                      console.error(`[Datasets] Error creating reference for FK ${fk.name}:`, refError);
+                    } else {
+                      console.log(`[Datasets] Created reference: ${sourceColumnName} -> ${fk.referenced_schema}.${fk.referenced_table}.${targetColumnName}`);
+
+                      // Mark source column as foreign key
+                      await getSupabaseClient()
+                        .from('columns')
+                        .update({ is_foreign_key: true })
+                        .eq('id', sourceColumn.id);
+                    }
+                  }
+                } catch (fkError: any) {
+                  console.error(`[Datasets] Error processing FK ${fk.name}:`, fkError);
+                }
+              }
+            }
+          }
+        } else if (existingColumns && existingColumns.length > 0) {
+          console.log(`[Datasets] Dataset ${dataset.id} already has ${existingColumns.length} column(s), skipping column creation`);
         }
       } catch (tableError: any) {
         console.error(`[Datasets] Error importing table ${table.schema}.${table.name}:`, tableError);

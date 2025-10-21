@@ -175,36 +175,48 @@ export interface DiagramFilters {
  */
 export interface DiagramState {
   workspace_id: string;
-  diagram_id: string;
+  diagram_id?: string;
   diagram_type: DiagramType;
-  view_mode: ViewMode;
   viewport: DiagramViewport;
   node_positions: Record<string, { x: number; y: number }>;
   node_expansions: Record<string, boolean>;
-  edge_routes: Record<string, EdgeRoute>;
   filters: DiagramFilters;
-  last_saved: string;
-  version: number;
+  layout_type: LayoutType;
+  layout_direction: 'LR' | 'TB' | 'RL' | 'BT';
+  last_saved?: string;
+  version?: number;
 }
 
 /**
- * Diagram state from database
+ * Diagram record from database (diagrams table)
+ * State columns are now individual fields, not nested in diagram_state
  */
 export interface DiagramStateRecord {
   id: string;
   account_id: string;
   workspace_id: string;
+  name: string;
+  description?: string;
   diagram_type: DiagramType;
-  view_mode: ViewMode;
+  owner_id?: string;
+  is_template: boolean;
+  version: number;
+
+  // Individual state columns (no longer nested)
   viewport: DiagramViewport;
   node_positions: Record<string, { x: number; y: number }>;
   node_expansions: Record<string, boolean>;
-  edge_routes: Record<string, EdgeRoute>;
   filters: DiagramFilters;
+  layout_type: string;
+  layout_direction: string;
+
+  visibility: string;
+  settings: any;
   last_modified_by?: string;
   created_at: string;
   updated_at: string;
-  version: number;
+  created_by?: string;
+  updated_by?: string;
 }
 
 // =====================================================
@@ -307,14 +319,14 @@ export interface NodeDimensions {
  * Request to save diagram state
  */
 export interface SaveDiagramStateRequest {
-  workspace_id: string;
-  diagram_type: DiagramType;
-  view_mode: ViewMode;
+  workspace_id?: string;
+  diagram_type?: DiagramType;
   viewport: DiagramViewport;
   node_positions: Record<string, { x: number; y: number }>;
   node_expansions: Record<string, boolean>;
-  edge_routes: Record<string, EdgeRoute>;
   filters: DiagramFilters;
+  layout_type: LayoutType;
+  layout_direction: 'LR' | 'TB' | 'RL' | 'BT';
 }
 
 /**

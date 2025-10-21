@@ -30,10 +30,31 @@ export function useFilteredDiagram(): {
   const searchQuery = useDiagramStore((state) => state.searchQuery);
   const filters = useDiagramStore((state) => state.filters);
 
+  console.log('[useFilteredDiagram] 🔍 Hook inputs:', {
+    nodesCount: nodes.length,
+    edgesCount: edges.length,
+    searchQuery,
+    filters,
+    nodeIds: nodes.map(n => n.id)
+  });
+
   // Memoize filtered results
-  const { filteredNodes, filteredEdges } = useMemo(() => {
-    return getFilteredDiagram(nodes, edges, searchQuery, filters);
+  const { nodes: filteredNodes, edges: filteredEdges } = useMemo(() => {
+    console.log('[useFilteredDiagram] 🔄 useMemo recomputing filtered results');
+    const result = getFilteredDiagram(nodes, edges, searchQuery, filters);
+    console.log('[useFilteredDiagram] ✅ useMemo result:', {
+      filteredNodesCount: result.nodes.length,
+      filteredEdgesCount: result.edges.length,
+      nodeIds: result.nodes.map(n => n.id)
+    });
+    return result;
   }, [nodes, edges, searchQuery, filters]);
+
+  console.log('[useFilteredDiagram] 📤 Returning from hook:', {
+    filteredNodesCount: filteredNodes?.length || 0,
+    filteredEdgesCount: filteredEdges?.length || 0,
+    nodeIds: filteredNodes?.map(n => n.id) || []
+  });
 
   // Check if any filters are active
   const isFiltering = useMemo(() => {

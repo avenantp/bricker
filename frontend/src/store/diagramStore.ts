@@ -26,6 +26,10 @@ import {
   forceImmediateSave,
 } from '../services/diagramStatePersistence';
 import { applyLayout as applyLayoutAlgorithm } from '../services/layoutAlgorithms';
+import {
+  savePendingChanges,
+  type DiagramDatasetChange,
+} from '../services/diagramDatasetService';
 
 // =====================================================
 // Store Interface
@@ -37,6 +41,7 @@ interface DiagramStore {
   selectedDatasetId: string | null;
   expandedNodes: Set<string>;
   layoutType: LayoutType;
+  layoutDirection: 'LR' | 'TB' | 'RL' | 'BT';
 
   // Canvas State
   nodes: DiagramNode[];
@@ -59,14 +64,25 @@ interface DiagramStore {
   isDirty: boolean; // Has unsaved changes
   lastSaved: string | null;
 
+  // Pending Diagram-Dataset Changes
+  pendingDatasetChanges: DiagramDatasetChange[];
+  diagramId: string | null; // Current diagram ID
+
   // Loading States
   isLoading: boolean;
   isSaving: boolean;
 
   // Context for persistence
+  // Note: accountId stores user.id (not account.id) for audit trail purposes
   accountId: string | null;
   workspaceId: string | null;
   diagramType: DiagramType;
+
+  // =====================================================
+  // Utility Functions
+  // =====================================================
+
+  findNonOverlappingPosition: (preferredPosition: { x: number; y: number }) => { x: number; y: number };
 
   // =====================================================
   // View Mode Actions
@@ -153,9 +169,17 @@ interface DiagramStore {
   markDirty: () => void;
   markClean: () => void;
   setLastSaved: (timestamp: string) => void;
-  setContext: (accountId: string, workspaceId: string, diagramType: DiagramType) => void;
+  // Note: First parameter is userId (named accountId for historical reasons, stores user.id not account.id)
+  setContext: (accountId: string | null, workspaceId: string, diagramType: DiagramType, diagramId?: string) => void;
+  loadDiagramDatasets: () => Promise<void>;
   saveState: (immediate?: boolean) => Promise<void>;
   loadState: (workspaceId: string, diagramType: DiagramType) => Promise<void>;
+
+  // Diagram-Dataset Actions
+  addPendingDatasetChange: (change: DiagramDatasetChange) => void;
+  removePendingDatasetChange: (datasetId: string) => void;
+  clearPendingDatasetChanges: () => void;
+  savePendingDatasetChanges: () => Promise<void>;
 
   // =====================================================
   // Utility Actions
@@ -173,6 +197,7 @@ const initialState = {
   selectedDatasetId: null,
   expandedNodes: new Set<string>(),
   layoutType: 'hierarchical' as LayoutType,
+  layoutDirection: 'TB' as const,
 
   nodes: [],
   edges: [],
@@ -199,6 +224,9 @@ const initialState = {
   isDirty: false,
   lastSaved: null,
 
+  pendingDatasetChanges: [],
+  diagramId: null,
+
   isLoading: false,
   isSaving: false,
 
@@ -213,6 +241,78 @@ const initialState = {
 
 export const useDiagramStore = create<DiagramStore>((set, get) => ({
   ...initialState,
+
+  // =====================================================
+  // Utility Functions (Collision Detection)
+  // =====================================================
+
+  /**
+   * Find a position that doesn't overlap with existing nodes
+   * Useful for adjusting drag-drop positions to avoid collisions
+   */
+  findNonOverlappingPosition: (preferredPosition: { x: number; y: number }) => {
+    const state = get();
+    const NODE_WIDTH = 300;
+    const NODE_HEIGHT = 150;
+    const SPACING = 30;
+
+    const doNodesOverlap = (
+      pos1: { x: number; y: number },
+      pos2: { x: number; y: number }
+    ): boolean => {
+      return (
+        Math.abs(pos1.x - pos2.x) < NODE_WIDTH + SPACING &&
+        Math.abs(pos1.y - pos2.y) < NODE_HEIGHT + SPACING
+      );
+    };
+
+    const existingNodes = state.nodes.filter((n) => n.position);
+
+    // Check if preferred position is free
+    const hasOverlap = existingNodes.some((node) =>
+      doNodesOverlap(preferredPosition, node.position!)
+    );
+
+    if (!hasOverlap) {
+      return preferredPosition;
+    }
+
+    // Try positions in a spiral pattern around the preferred position
+    const maxAttempts = 20;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const offset = attempt * (NODE_HEIGHT + SPACING);
+
+      // Try below
+      let candidatePosition = { x: preferredPosition.x, y: preferredPosition.y + offset };
+      if (!existingNodes.some((n) => doNodesOverlap(candidatePosition, n.position!))) {
+        return candidatePosition;
+      }
+
+      // Try above
+      candidatePosition = { x: preferredPosition.x, y: preferredPosition.y - offset };
+      if (!existingNodes.some((n) => doNodesOverlap(candidatePosition, n.position!))) {
+        return candidatePosition;
+      }
+
+      // Try right
+      candidatePosition = { x: preferredPosition.x + offset, y: preferredPosition.y };
+      if (!existingNodes.some((n) => doNodesOverlap(candidatePosition, n.position!))) {
+        return candidatePosition;
+      }
+
+      // Try left
+      candidatePosition = { x: preferredPosition.x - offset, y: preferredPosition.y };
+      if (!existingNodes.some((n) => doNodesOverlap(candidatePosition, n.position!))) {
+        return candidatePosition;
+      }
+    }
+
+    // Fallback: offset significantly to the right and down
+    return {
+      x: preferredPosition.x + NODE_WIDTH + SPACING,
+      y: preferredPosition.y + NODE_HEIGHT + SPACING,
+    };
+  },
 
   // =====================================================
   // View Mode Actions
@@ -235,15 +335,33 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
     set({ nodes, isDirty: true }),
 
   addNode: (node) =>
-    set((state) => ({
-      nodes: [...state.nodes, node],
-      isDirty: true,
-    })),
+    set((state) => {
+      // Add pending change for diagram_datasets table
+      const pendingChange: DiagramDatasetChange = {
+        dataset_id: node.data.dataset_id || node.id,
+        action: 'add',
+        location: node.position || null,
+        is_expanded: node.data.isExpanded || false,
+      };
+
+      return {
+        nodes: [...state.nodes, node],
+        pendingDatasetChanges: [...state.pendingDatasetChanges, pendingChange],
+        isDirty: true,
+      };
+    }),
 
   addNodeToDiagram: (nodeId) =>
     set((state) => {
       const node = state.nodes.find((n) => n.id === nodeId);
-      if (!node || node.position) return state; // Already has position
+      // Skip if node doesn't exist or doesn't need positioning
+      if (!node || !node.data.needsPositioning) return state;
+
+      // Define node dimensions and spacing
+      const NODE_WIDTH = 300;
+      const NODE_HEIGHT = 150;
+      const VERTICAL_SPACING = 50;
+      const HORIZONTAL_SPACING = 100;
 
       // Define swimlane X positions (left to right based on medallion layer)
       const SWIMLANE_WIDTH = 400;
@@ -255,26 +373,75 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
         Gold: SWIMLANE_WIDTH * 4 + 50,
       };
 
-      // Calculate Y position (avoid overlaps within layer)
-      const nodesInLayer = state.nodes.filter(
-        (n) => n.data.medallion_layer === node.data.medallion_layer && n.position
-      );
-      const NODE_HEIGHT = 200; // Estimated height with spacing
-      const yPosition = nodesInLayer.length * NODE_HEIGHT + 50;
+      // Helper function to check if two nodes overlap
+      const doNodesOverlap = (
+        pos1: { x: number; y: number },
+        pos2: { x: number; y: number },
+        padding = 20
+      ): boolean => {
+        return (
+          Math.abs(pos1.x - pos2.x) < NODE_WIDTH + padding &&
+          Math.abs(pos1.y - pos2.y) < NODE_HEIGHT + padding
+        );
+      };
+
+      // Find a position that doesn't overlap with existing nodes
+      const findAvailablePosition = (preferredX: number): { x: number; y: number } => {
+        const existingNodes = state.nodes.filter((n) => n.position && n.id !== nodeId);
+
+        // Try positions in the same column first
+        let yPosition = 50;
+        const maxAttempts = 50;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const candidatePosition = { x: preferredX, y: yPosition };
+
+          // Check if this position overlaps with any existing node
+          const hasOverlap = existingNodes.some((existingNode) =>
+            doNodesOverlap(candidatePosition, existingNode.position!)
+          );
+
+          if (!hasOverlap) {
+            return candidatePosition;
+          }
+
+          // Try next Y position
+          yPosition += NODE_HEIGHT + VERTICAL_SPACING;
+        }
+
+        // If no position found in column, try offset positions
+        return { x: preferredX + HORIZONTAL_SPACING, y: 50 };
+      };
 
       const xPosition = LAYER_X_POSITIONS[node.data.medallion_layer] || 50;
+      const position = findAvailablePosition(xPosition);
 
-      // Update node with position
+      // Get dataset_id for updating pending change
+      const datasetId = node.data.dataset_id || nodeId;
+
+      // Update location in pending changes if this dataset has a pending add
+      const updatedPendingChanges = state.pendingDatasetChanges.map((change) =>
+        change.dataset_id === datasetId && change.action === 'add'
+          ? { ...change, location: position }
+          : change
+      );
+
+      // Update node with position and clear needsPositioning flag
       return {
         nodes: state.nodes.map((n) =>
           n.id === nodeId
-            ? { ...n, position: { x: xPosition, y: yPosition } }
+            ? {
+                ...n,
+                position,
+                data: { ...n.data, needsPositioning: false }
+              }
             : n
         ),
         savedPositions: {
           ...state.savedPositions,
-          [nodeId]: { x: xPosition, y: yPosition },
+          [nodeId]: position,
         },
+        pendingDatasetChanges: updatedPendingChanges,
         isDirty: true,
       };
     }),
@@ -290,25 +457,49 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
     })),
 
   deleteNode: (nodeId) =>
-    set((state) => ({
-      nodes: state.nodes.filter((node) => node.id !== nodeId),
-      edges: state.edges.filter(
-        (edge) => edge.source !== nodeId && edge.target !== nodeId
-      ),
-      isDirty: true,
-    })),
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+
+      // Add pending change for diagram_datasets table
+      const pendingChange: DiagramDatasetChange = {
+        dataset_id: node?.data.dataset_id || nodeId,
+        action: 'remove',
+      };
+
+      return {
+        nodes: state.nodes.filter((n) => n.id !== nodeId),
+        edges: state.edges.filter(
+          (edge) => edge.source !== nodeId && edge.target !== nodeId
+        ),
+        pendingDatasetChanges: [...state.pendingDatasetChanges, pendingChange],
+        isDirty: true,
+      };
+    }),
 
   updateNodePosition: (nodeId, position) =>
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId ? { ...node, position } : node
-      ),
-      savedPositions: {
-        ...state.savedPositions,
-        [nodeId]: position,
-      },
-      isDirty: true,
-    })),
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      const datasetId = node?.data.dataset_id || nodeId;
+
+      // Update location in pending changes if this dataset has a pending add
+      const updatedPendingChanges = state.pendingDatasetChanges.map((change) =>
+        change.dataset_id === datasetId && change.action === 'add'
+          ? { ...change, location: position }
+          : change
+      );
+
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId ? { ...n, position } : n
+        ),
+        savedPositions: {
+          ...state.savedPositions,
+          [nodeId]: position,
+        },
+        pendingDatasetChanges: updatedPendingChanges,
+        isDirty: true,
+      };
+    }),
 
   // Node Expansion
   toggleNodeExpansion: (nodeId) =>
@@ -608,12 +799,103 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
   setLastSaved: (timestamp) =>
     set({ lastSaved: timestamp }),
 
-  setContext: (accountId, workspaceId, diagramType) =>
-    set({ accountId, workspaceId, diagramType }),
+  setContext: (accountId, workspaceId, diagramType, diagramId) =>
+    set({ accountId, workspaceId, diagramType, diagramId: diagramId || null }),
+
+  loadDiagramDatasets: async () => {
+    const state = get();
+    const { diagramId } = state;
+
+    if (!diagramId) {
+      console.warn('[DiagramStore] Cannot load diagram datasets: diagramId not set');
+      return;
+    }
+
+    try {
+      set({ isLoading: true });
+
+      console.log('[DiagramStore] Loading diagram datasets for diagram:', diagramId);
+
+      // Import the service function
+      const { getDiagramDatasets } = await import('../services/diagramDatasetService');
+      const { supabase } = await import('../lib/supabase');
+
+      // Get the diagram_datasets entries
+      const diagramDatasets = await getDiagramDatasets(diagramId);
+
+      console.log('[DiagramStore] Found diagram datasets:', {
+        count: diagramDatasets.length,
+        datasets: diagramDatasets,
+      });
+
+      if (diagramDatasets.length === 0) {
+        set({ isLoading: false });
+        return;
+      }
+
+      // Get the full dataset information for each dataset
+      const datasetIds = diagramDatasets.map((dd) => dd.dataset_id);
+
+      const { data: datasets, error } = await supabase
+        .from('datasets')
+        .select('*')
+        .in('id', datasetIds);
+
+      if (error) {
+        console.error('[DiagramStore] Error fetching datasets:', error);
+        throw error;
+      }
+
+      console.log('[DiagramStore] Loaded datasets from database:', datasets);
+
+      // Create nodes for each dataset with saved positions
+      const newNodes: DiagramNode[] = datasets.map((dataset) => {
+        const diagramDataset = diagramDatasets.find((dd) => dd.dataset_id === dataset.id);
+        const savedPosition = diagramDataset?.location as { x: number; y: number } | null;
+
+        return {
+          id: dataset.id,
+          type: 'dataset',
+          position: savedPosition || { x: 0, y: 0 },
+          data: {
+            dataset_id: dataset.id,
+            name: dataset.name,
+            fully_qualified_name: dataset.fully_qualified_name || dataset.name,
+            medallion_layer: dataset.medallion_layer || 'Source',
+            dataset_type: dataset.dataset_type || 'table',
+            description: dataset.description,
+            sync_status: dataset.sync_status,
+            has_uncommitted_changes: dataset.has_uncommitted_changes,
+            last_synced_at: dataset.last_synced_at,
+            created_at: dataset.created_at,
+            updated_at: dataset.updated_at,
+            columnCount: 0,
+            relationshipCount: 0,
+            lineageCount: { upstream: 0, downstream: 0 },
+            isExpanded: diagramDataset?.is_expanded || false,
+            isHighlighted: false,
+          },
+        };
+      });
+
+      console.log('[DiagramStore] Created nodes from datasets:', newNodes);
+
+      set({
+        nodes: newNodes,
+        isLoading: false,
+      });
+
+      console.log('[DiagramStore] Diagram datasets loaded successfully');
+    } catch (error) {
+      console.error('[DiagramStore] Failed to load diagram datasets:', error);
+      set({ isLoading: false });
+      throw error;
+    }
+  },
 
   saveState: async (immediate = false) => {
     const state = get();
-    const { accountId, workspaceId, diagramType, viewport, savedPositions, edgeRoutes, filters, viewMode } = state;
+    const { accountId, workspaceId, diagramType, viewport, savedPositions, filters, layoutType, layoutDirection } = state;
 
     if (!accountId || !workspaceId) {
       console.warn('[DiagramStore] Cannot save: accountId or workspaceId not set');
@@ -621,22 +903,32 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
     }
 
     const stateToSave = {
-      workspace_id: workspaceId,
-      diagram_type: diagramType,
-      view_mode: viewMode,
       viewport,
       node_positions: savedPositions,
       node_expansions: Object.fromEntries(
         Array.from(state.expandedNodes).map((id) => [id, true])
       ),
-      edge_routes: edgeRoutes,
       filters,
+      layout_type: layoutType,
+      layout_direction: layoutDirection,
     };
 
     try {
       if (immediate) {
         set({ isSaving: true });
+
+        // Save diagram state
         const result = await forceImmediateSave(accountId, workspaceId, diagramType, stateToSave);
+
+        // Set diagram ID if not already set (for new diagrams)
+        if (!get().diagramId && result.diagram_state.id) {
+          console.log('[DiagramStore] Setting diagram ID after save:', result.diagram_state.id);
+          set({ diagramId: result.diagram_state.id });
+        }
+
+        // Also save pending diagram-dataset changes
+        await get().savePendingDatasetChanges();
+
         set({
           isDirty: false,
           lastSaved: result.diagram_state.updated_at,
@@ -672,13 +964,14 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
         }
 
         set({
-          viewMode: loadedState.view_mode || 'relationships',
           viewport: loadedState.viewport || DEFAULT_VIEWPORT,
           savedPositions: loadedState.node_positions || {},
           expandedNodes: expandedNodesSet,
-          edgeRoutes: loadedState.edge_routes || {},
           filters: loadedState.filters || DEFAULT_FILTERS,
+          layoutType: (loadedState.layout_type as LayoutType) || 'hierarchical',
+          layoutDirection: loadedState.layout_direction || 'TB',
           lastSaved: loadedState.last_saved || null,
+          diagramId: loadedState.diagram_id || null, // Set diagram ID from loaded data
           isDirty: false,
           isLoading: false,
           workspaceId,
@@ -698,6 +991,88 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
     } catch (error) {
       console.error('[DiagramStore] Failed to load state:', error);
       set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  // =====================================================
+  // Diagram-Dataset Actions
+  // =====================================================
+
+  addPendingDatasetChange: (change) =>
+    set((state) => ({
+      pendingDatasetChanges: [...state.pendingDatasetChanges, change],
+      isDirty: true,
+    })),
+
+  removePendingDatasetChange: (datasetId) =>
+    set((state) => ({
+      pendingDatasetChanges: state.pendingDatasetChanges.filter(
+        (change) => change.dataset_id !== datasetId
+      ),
+    })),
+
+  clearPendingDatasetChanges: () =>
+    set({ pendingDatasetChanges: [] }),
+
+  savePendingDatasetChanges: async () => {
+    const state = get();
+    const { diagramId, pendingDatasetChanges, accountId } = state;
+
+    if (!diagramId) {
+      console.warn('[DiagramStore] Cannot save pending changes: diagramId not set', {
+        diagramId,
+        pendingChangesCount: pendingDatasetChanges.length,
+      });
+      return;
+    }
+
+    if (pendingDatasetChanges.length === 0) {
+      console.log('[DiagramStore] No pending dataset changes to save');
+      return;
+    }
+
+    try {
+      set({ isSaving: true });
+
+      console.log('[DiagramStore] Saving pending dataset changes:', {
+        diagramId,
+        changesCount: pendingDatasetChanges.length,
+        changes: pendingDatasetChanges,
+      });
+
+      // Use the auth user ID if available and valid
+      // Ensure we only pass valid UUIDs (or undefined) to avoid foreign key errors
+      const isValidUUID = (str: string | null) => {
+        if (!str) return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(str);
+      };
+
+      const userId = (accountId && isValidUUID(accountId)) ? accountId : undefined;
+
+      console.log('[DiagramStore] User ID for audit trail:', userId);
+
+      const result = await savePendingChanges(
+        diagramId,
+        pendingDatasetChanges,
+        userId
+      );
+
+      console.log('[DiagramStore] Pending changes saved:', result);
+
+      // Clear pending changes after successful save
+      set({
+        pendingDatasetChanges: [],
+        isSaving: false,
+      });
+
+      if (result.errors.length > 0) {
+        console.error('[DiagramStore] Some changes failed to save:', result.errors);
+      }
+    } catch (error) {
+      console.error('[DiagramStore] Failed to save pending dataset changes:', error);
+      set({ isSaving: false });
       throw error;
     }
   },

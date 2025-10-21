@@ -44,7 +44,10 @@ export function useDatasets(workspaceId: string | undefined) {
         .from('workspace_datasets')
         .select(`
           dataset_id,
-          datasets (*)
+          datasets (
+            *,
+            connections!inner(medallion_layer)
+          )
         `)
         .eq('workspace_id', workspaceId);
 
@@ -60,9 +63,17 @@ export function useDatasets(workspaceId: string | undefined) {
         throw error;
       }
 
-      // Extract datasets from the junction table response
+      // Extract datasets from the junction table response and flatten connection data
       const datasets = (data || [])
-        .map((item: any) => item.datasets)
+        .map((item: any) => {
+          if (!item.datasets) return null;
+          // Flatten the connection medallion_layer into the dataset object
+          return {
+            ...item.datasets,
+            medallion_layer: item.datasets.connections?.medallion_layer || null,
+            connections: undefined, // Remove the nested connection object
+          };
+        })
         .filter((dataset: any) => dataset !== null) as Dataset[];
 
       console.log('[useDatasets] Extracted datasets:', {
@@ -103,17 +114,26 @@ export function useProjectDatasets(projectId: string | undefined) {
         .from('workspace_datasets')
         .select(`
           dataset_id,
-          datasets (*)
+          datasets (
+            *,
+            connections!inner(medallion_layer)
+          )
         `)
         .in('workspace_id', workspaceIds);
 
       if (error) throw error;
 
-      // Step 3: Extract unique datasets (same dataset may be in multiple workspaces)
+      // Step 3: Extract unique datasets (same dataset may be in multiple workspaces) and flatten connection data
       const datasetsMap = new Map<string, Dataset>();
       data?.forEach((wd: any) => {
         if (wd.datasets && !datasetsMap.has(wd.datasets.id)) {
-          datasetsMap.set(wd.datasets.id, wd.datasets);
+          // Flatten the connection medallion_layer into the dataset object
+          const dataset = {
+            ...wd.datasets,
+            medallion_layer: wd.datasets.connections?.medallion_layer || null,
+            connections: undefined, // Remove the nested connection object
+          };
+          datasetsMap.set(dataset.id, dataset);
         }
       });
 
@@ -125,6 +145,7 @@ export function useProjectDatasets(projectId: string | undefined) {
 
 /**
  * Fetch a single dataset by ID
+ * NOTE: Joins with connections to populate medallion_layer
  */
 export function useDataset(datasetId: string | undefined) {
   return useQuery({
@@ -134,12 +155,21 @@ export function useDataset(datasetId: string | undefined) {
 
       const { data, error } = await supabase
         .from('datasets')
-        .select('*')
+        .select(`
+          *,
+          connections!inner(medallion_layer)
+        `)
         .eq('id', datasetId)
         .single();
 
       if (error) throw error;
-      return data as Dataset;
+
+      // Flatten the connection medallion_layer into the dataset object
+      return {
+        ...data,
+        medallion_layer: data.connections?.medallion_layer || null,
+        connections: undefined, // Remove the nested connection object
+      } as Dataset;
     },
     enabled: !!datasetId,
   });
@@ -159,16 +189,27 @@ export function useUncommittedDatasets(workspaceId: string | undefined) {
         .from('workspace_datasets')
         .select(`
           dataset_id,
-          datasets!inner (*)
+          datasets!inner (
+            *,
+            connections!inner(medallion_layer)
+          )
         `)
         .eq('workspace_id', workspaceId)
         .eq('datasets.has_uncommitted_changes', true);
 
       if (error) throw error;
 
-      // Extract datasets from the junction table response
+      // Extract datasets from the junction table response and flatten connection data
       const datasets = (data || [])
-        .map((item: any) => item.datasets)
+        .map((item: any) => {
+          if (!item.datasets) return null;
+          // Flatten the connection medallion_layer into the dataset object
+          return {
+            ...item.datasets,
+            medallion_layer: item.datasets.connections?.medallion_layer || null,
+            connections: undefined, // Remove the nested connection object
+          };
+        })
         .filter((dataset: any) => dataset !== null) as Dataset[];
 
       return datasets;

@@ -5,9 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { Database } from 'lucide-react';
-import { BaseDialog, DialogField, DialogInput, DialogTextarea } from '@/components/Common/BaseDialog';
+import { BaseDialog, DialogField, DialogInput, DialogTextarea, DialogSelect } from '@/components/Common/BaseDialog';
 import { useConnection, useUpdateConnection } from '@/hooks';
-import { ConnectionType, getConnectionTypeLabel, type MSSQLConfiguration } from '@/types/connection';
+import { ConnectionType, MedallionLayer, getConnectionTypeLabel, type MSSQLConfiguration } from '@/types/connection';
 import { MSSQLConnectionEditor } from './Editors/MSSQLConnectionEditor';
 
 interface EditConnectionDialogProps {
@@ -24,6 +24,16 @@ export function EditConnectionDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [showEditor, setShowEditor] = useState(false);
+
+  // New metadata fields
+  const [medallionLayer, setMedallionLayer] = useState('');
+  const [recordSource, setRecordSource] = useState('');
+
+  // Type-specific fields
+  const [container, setContainer] = useState('');
+  const [externalLocation, setExternalLocation] = useState('');
+  const [catalog, setCatalog] = useState('');
+  const [connectionStringEncrypted, setConnectionStringEncrypted] = useState('');
 
   // Fetch connection data
   const { data: connection, isLoading } = useConnection(connectionId);
@@ -43,6 +53,12 @@ export function EditConnectionDialog({
     if (connection) {
       setName(connection.name);
       setDescription(connection.description || '');
+      setMedallionLayer(connection.medallion_layer || '');
+      setRecordSource(connection.record_source || '');
+      setContainer(connection.container || '');
+      setExternalLocation(connection.external_location || '');
+      setCatalog(connection.catalog || '');
+      setConnectionStringEncrypted(connection.connection_string_encrypted || '');
     }
   }, [connection]);
 
@@ -73,7 +89,15 @@ export function EditConnectionDialog({
         connectionId: connection.id,
         input: {
           name: name.trim(),
-          description: description.trim() || undefined
+          description: description.trim() || undefined,
+          // Metadata fields
+          medallion_layer: medallionLayer || undefined,
+          record_source: recordSource.trim() || undefined,
+          // Type-specific fields
+          container: container.trim() || undefined,
+          external_location: externalLocation.trim() || undefined,
+          catalog: catalog.trim() || undefined,
+          connection_string_encrypted: connectionStringEncrypted.trim() || undefined
         }
       });
     } catch (error) {
@@ -90,7 +114,15 @@ export function EditConnectionDialog({
         input: {
           name: overrideName || name.trim(),
           description: description.trim() || undefined,
-          configuration: config
+          configuration: config,
+          // Metadata fields
+          medallion_layer: medallionLayer || undefined,
+          record_source: recordSource.trim() || undefined,
+          // Type-specific fields
+          container: container.trim() || undefined,
+          external_location: externalLocation.trim() || undefined,
+          catalog: catalog.trim() || undefined,
+          connection_string_encrypted: connectionStringEncrypted.trim() || undefined
         }
       });
     } catch (error) {
@@ -156,7 +188,7 @@ export function EditConnectionDialog({
       primaryButtonDisabled={updateConnectionMutation.isPending}
       secondaryButtonLabel="Cancel"
       onSecondaryAction={onClose}
-      width="500px"
+      width="600px"
       height="auto"
       headerActions={
         <div className="p-2 bg-blue-100 rounded-lg">
@@ -183,6 +215,64 @@ export function EditConnectionDialog({
         <p className="mt-1 text-xs text-gray-500">
           Connection type cannot be changed
         </p>
+      </DialogField>
+
+      {/* Medallion Layer */}
+      <DialogField label="Medallion Layer (Integration Stage)">
+        <DialogSelect
+          value={medallionLayer}
+          onChange={setMedallionLayer}
+          options={Object.entries(MedallionLayer).map(([key, value]) => ({
+            value: value,
+            label: value
+          }))}
+          placeholder="Select Layer..."
+        />
+      </DialogField>
+
+      {/* Record Source */}
+      <DialogField label="Record Source">
+        <DialogInput
+          value={recordSource}
+          onChange={setRecordSource}
+          placeholder="Record source identifier"
+        />
+      </DialogField>
+
+      {/* Container */}
+      <DialogField label="Container">
+        <DialogInput
+          value={container}
+          onChange={setContainer}
+          placeholder="Container or bucket name"
+        />
+      </DialogField>
+
+      {/* External Location */}
+      <DialogField label="External Location">
+        <DialogInput
+          value={externalLocation}
+          onChange={setExternalLocation}
+          placeholder="abfss://container@account.dfs.core.windows.net/"
+        />
+      </DialogField>
+
+      {/* Catalog */}
+      <DialogField label="Catalog">
+        <DialogInput
+          value={catalog}
+          onChange={setCatalog}
+          placeholder="Catalog name (for Databricks)"
+        />
+      </DialogField>
+
+      {/* Connection String */}
+      <DialogField label="Connection String">
+        <DialogInput
+          value={connectionStringEncrypted}
+          onChange={setConnectionStringEncrypted}
+          placeholder="Connection string (encrypted)"
+        />
       </DialogField>
 
       {/* Description */}

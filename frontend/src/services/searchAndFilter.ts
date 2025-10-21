@@ -30,13 +30,20 @@ export function searchNodes(
   nodes: DiagramNode[],
   searchQuery: string
 ): DiagramNode[] {
+  console.log('[searchNodes] 🔍 Starting search:', {
+    inputNodesCount: nodes.length,
+    searchQuery,
+    isEmpty: !searchQuery || searchQuery.trim() === ''
+  });
+
   if (!searchQuery || searchQuery.trim() === '') {
+    console.log('[searchNodes] ✅ No search query, returning all nodes:', nodes.length);
     return nodes;
   }
 
   const query = searchQuery.trim();
 
-  return nodes.filter((node) => {
+  const results = nodes.filter((node) => {
     const data = node.data;
 
     // Search in name, FQN, description
@@ -62,6 +69,14 @@ export function searchNodes(
 
     return false;
   });
+
+  console.log('[searchNodes] ✅ Search complete:', {
+    inputCount: nodes.length,
+    outputCount: results.length,
+    filteredOut: nodes.length - results.length
+  });
+
+  return results;
 }
 
 // =====================================================
@@ -75,62 +90,123 @@ export function filterNodes(
   nodes: DiagramNode[],
   filters: DiagramFilters
 ): DiagramNode[] {
+  console.log('[filterNodes] 🔍 Starting filtering:', {
+    inputNodesCount: nodes.length,
+    filters,
+    nodeDetails: nodes.map(n => ({
+      id: n.id,
+      name: n.data.name,
+      medallion_layer: n.data.medallion_layer,
+      dataset_type: n.data.dataset_type,
+      relationshipCount: n.data.relationshipCount,
+      lineageCount: n.data.lineageCount
+    }))
+  });
+
   let filteredNodes = [...nodes];
 
   // Filter by medallion layers
   if (filters.medallionLayers && filters.medallionLayers.length > 0) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) =>
       filters.medallionLayers.includes(node.data.medallion_layer)
     );
+    console.log('[filterNodes] 📍 After medallion layer filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      filterLayers: filters.medallionLayers
+    });
   }
 
   // Filter by entity types
   if (filters.entityTypes && filters.entityTypes.length > 0) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) =>
       filters.entityTypes.includes(node.data.entity_type)
     );
+    console.log('[filterNodes] 📍 After entity type filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      filterTypes: filters.entityTypes
+    });
   }
 
   // Filter by entity subtypes
   if (filters.entitySubtypes && filters.entitySubtypes.length > 0) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) =>
       node.data.entity_subtype &&
       filters.entitySubtypes.includes(node.data.entity_subtype)
     );
+    console.log('[filterNodes] 📍 After entity subtype filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      filterSubtypes: filters.entitySubtypes
+    });
   }
 
   // Filter by relationships
   if (filters.hasRelationships) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter(
       (node) => node.data.relationshipCount && node.data.relationshipCount > 0
     );
+    console.log('[filterNodes] 📍 After relationships filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      requiresRelationships: filters.hasRelationships
+    });
   }
 
   // Filter by lineage
   if (filters.hasLineage) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) => {
       const lineage = node.data.lineageCount;
       return lineage && (lineage.upstream > 0 || lineage.downstream > 0);
+    });
+    console.log('[filterNodes] 📍 After lineage filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      requiresLineage: filters.hasLineage
     });
   }
 
   // Filter by AI confidence score
   if (filters.aiConfidenceMin !== undefined && filters.aiConfidenceMin > 0) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) =>
       node.data.ai_confidence_score !== undefined
         ? node.data.ai_confidence_score >= filters.aiConfidenceMin!
         : true // Include nodes without AI confidence score
     );
+    console.log('[filterNodes] 📍 After AI confidence filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      minConfidence: filters.aiConfidenceMin
+    });
   }
 
   // Filter by sync status
   if (filters.syncStatus && filters.syncStatus.length > 0) {
+    const beforeCount = filteredNodes.length;
     filteredNodes = filteredNodes.filter((node) =>
       node.data.sync_status
         ? filters.syncStatus!.includes(node.data.sync_status)
         : false
     );
+    console.log('[filterNodes] 📍 After sync status filter:', {
+      beforeCount,
+      afterCount: filteredNodes.length,
+      filterStatuses: filters.syncStatus
+    });
   }
+
+  console.log('[filterNodes] ✅ Filtering complete:', {
+    inputCount: nodes.length,
+    outputCount: filteredNodes.length,
+    removedCount: nodes.length - filteredNodes.length
+  });
 
   return filteredNodes;
 }
@@ -160,11 +236,24 @@ export function searchAndFilterNodes(
   searchQuery: string,
   filters: DiagramFilters
 ): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
+  console.log('[searchAndFilterNodes] 🔍 Starting combined search and filter:', {
+    inputNodesCount: nodes.length,
+    searchQuery,
+    hasSearchQuery: !!searchQuery && searchQuery.trim() !== ''
+  });
+
   // First apply filters
   let filteredNodes = filterNodes(nodes, filters);
+  console.log('[searchAndFilterNodes] 📍 After filterNodes:', filteredNodes.length);
 
   // Then apply search
   filteredNodes = searchNodes(filteredNodes, searchQuery);
+  console.log('[searchAndFilterNodes] 📍 After searchNodes:', filteredNodes.length);
+
+  console.log('[searchAndFilterNodes] ✅ Complete:', {
+    inputCount: nodes.length,
+    outputCount: filteredNodes.length
+  });
 
   return {
     nodes: filteredNodes,
@@ -181,14 +270,31 @@ export function getFilteredDiagram(
   searchQuery: string,
   filters: DiagramFilters
 ): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
+  console.log('[getFilteredDiagram] 🔍 Starting diagram filtering:', {
+    inputNodesCount: nodes.length,
+    inputEdgesCount: edges.length,
+    searchQuery,
+    filters
+  });
+
   // Apply search and filters to nodes
   const filteredNodes = searchAndFilterNodes(nodes, searchQuery, filters).nodes;
+
+  console.log('[getFilteredDiagram] 📍 After searchAndFilterNodes:', {
+    filteredNodesCount: filteredNodes.length,
+    nodeIds: filteredNodes.map(n => n.id)
+  });
 
   // Create set of visible node IDs
   const visibleNodeIds = new Set(filteredNodes.map((node) => node.id));
 
   // Filter edges to only show connections between visible nodes
   const filteredEdges = filterEdgesByNodes(edges, visibleNodeIds);
+
+  console.log('[getFilteredDiagram] ✅ Diagram filtering complete:', {
+    outputNodesCount: filteredNodes.length,
+    outputEdgesCount: filteredEdges.length
+  });
 
   return {
     nodes: filteredNodes,

@@ -51,6 +51,47 @@ export enum ConnectionVisibility {
   Locked = 'locked'
 }
 
+/**
+ * Medallion architecture layers
+ */
+export enum MedallionLayer {
+  SOURCE = 'Source',
+  RAW = 'Raw',
+  BRONZE = 'Bronze',
+  SILVER = 'Silver',
+  GOLD = 'Gold'
+}
+
+/**
+ * System types for connections (more granular than ConnectionType)
+ */
+export enum SystemType {
+  // Databases
+  MSSQL = 'Microsoft SQL Server',
+  POSTGRESQL = 'PostgreSQL',
+  ORACLE = 'Oracle Database',
+  MYSQL = 'MySQL',
+  MARIADB = 'MariaDB',
+
+  // Cloud Storage
+  AZURE_BLOB = 'Azure Blob Storage',
+  AZURE_DATA_LAKE = 'Azure Data Lake Store',
+  AWS_S3 = 'AWS S3',
+  GOOGLE_CLOUD_STORAGE = 'Google Cloud Storage',
+
+  // Data Platforms
+  DATABRICKS = 'Databricks',
+  SNOWFLAKE = 'Snowflake',
+  BIGQUERY = 'BigQuery',
+  SYNAPSE = 'Azure Synapse',
+  REDSHIFT = 'AWS Redshift',
+
+  // Other
+  REST_API = 'REST API',
+  FILE_SYSTEM = 'File System',
+  FTP = 'FTP/SFTP'
+}
+
 // =====================================================
 // Vendor-Specific Configuration Types
 // =====================================================
@@ -213,6 +254,18 @@ export interface Connection {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+
+  // Medallion layer (integration stage) - from migration 06
+  medallion_layer?: MedallionLayer | string | null;
+
+  // Metadata fields - from migration 07
+  record_source?: string | null;
+
+  // Type-specific fields - from migration 07
+  container?: string | null;  // For file connections
+  external_location?: string | null;  // For file/Databricks connections
+  catalog?: string | null;  // For Databricks connections
+  connection_string_encrypted?: string | null;  // For database connections
 }
 
 /**
@@ -394,6 +447,18 @@ export interface CreateConnectionInput {
   connection_type: ConnectionType;
   configuration: ConnectionConfiguration;
   visibility?: ConnectionVisibility;
+
+  // Medallion layer (integration stage)
+  medallion_layer?: MedallionLayer | string;
+
+  // Metadata fields
+  record_source?: string;
+
+  // Type-specific fields
+  container?: string;
+  external_location?: string;
+  catalog?: string;
+  connection_string_encrypted?: string;
 }
 
 /**
@@ -406,6 +471,18 @@ export interface UpdateConnectionInput {
   is_active?: boolean;
   visibility?: ConnectionVisibility;
   is_locked?: boolean;
+
+  // Medallion layer (integration stage)
+  medallion_layer?: MedallionLayer | string;
+
+  // Metadata fields
+  record_source?: string;
+
+  // Type-specific fields
+  container?: string;
+  external_location?: string;
+  catalog?: string;
+  connection_string_encrypted?: string;
 }
 
 // =====================================================

@@ -32,13 +32,18 @@ const getTreeStateKey = (workspaceId: string, diagramId: string) =>
   `uroq_diagram_tree_state_${workspaceId}_${diagramId}`;
 
 export function DatasetTreeView({ className = '', workspaceId, diagramId }: DatasetTreeViewProps) {
-  const { setSelectedDatasetId, selectedDatasetId, addNodeToDiagram } = useDiagramStore();
+  const { setSelectedDatasetId, selectedDatasetId, addNodeToDiagram, nodes } = useDiagramStore();
 
   // Fetch all workspace datasets
   const { data: workspaceDatasets = [], isLoading: datasetsLoading, error: datasetsError } = useDatasets(workspaceId);
 
-  // Fetch datasets in this specific diagram
+  // Fetch datasets in this specific diagram (from database)
   const { data: diagramDatasetIds = new Set<string>(), isLoading: diagramDatasetsLoading } = useDiagramDatasets(diagramId);
+
+  // Check if dataset is in diagram (either in DB or in memory)
+  const isDatasetInDiagram = (datasetId: string) => {
+    return diagramDatasetIds.has(datasetId) || nodes.some(n => n.id === datasetId);
+  };
 
   // Debug logging
   useEffect(() => {
@@ -75,6 +80,7 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const isLoading = datasetsLoading || diagramDatasetsLoading;
 
@@ -174,6 +180,12 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
 
   // Handle dataset click - selects dataset, adds to diagram if not present
   const handleDatasetClick = (datasetId: string) => {
+    // Skip add-to-diagram logic if currently dragging (will be handled by drop)
+    if (isDragging) {
+      console.log('[DatasetTreeView] Skipping click handler during drag');
+      return;
+    }
+
     const dataset = workspaceDatasets.find((d) => d.id === datasetId);
     if (!dataset) {
       console.warn('[DatasetTreeView] Dataset not found:', datasetId);
@@ -183,23 +195,25 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
     console.log('[DatasetTreeView] Dataset clicked:', {
       datasetId,
       datasetName: dataset.name,
-      isInDiagram: diagramDatasetIds.has(datasetId)
+      isInDiagram: isDatasetInDiagram(datasetId)
     });
 
     // Check if dataset is already in the diagram
-    const isInDiagram = diagramDatasetIds.has(datasetId);
+    const isInDiagram = isDatasetInDiagram(datasetId);
 
     if (!isInDiagram) {
       console.log('[DatasetTreeView] Adding dataset to diagram:', { datasetId, dataset });
 
-      // Create a diagram node from the dataset
+      // Create a diagram node from the dataset (with temporary position so addNodeToDiagram can position it)
       const newNode: any = {
         id: datasetId,
         type: 'dataset',
-        position: { x: 0, y: 0 }, // Will be repositioned by swimlane logic
+        position: { x: 0, y: 0 }, // Temporary position - will be repositioned by addNodeToDiagram
         data: {
+          needsPositioning: true, // Flag to indicate node needs swimlane positioning
+          dataset_id: datasetId, // IMPORTANT: Include dataset_id for diagram_datasets mapping
           name: dataset.name,
-          fqn: dataset.fully_qualified_name || dataset.name,
+          fully_qualified_name: dataset.fully_qualified_name || dataset.name,
           medallion_layer: dataset.medallion_layer || 'Unspecified',
           dataset_type: dataset.dataset_type || 'table',
           description: dataset.description,
@@ -211,14 +225,16 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
           columnCount: 0, // TODO: Get from actual column data
           relationshipCount: 0, // TODO: Calculate from edges
           lineageCount: { upstream: 0, downstream: 0 }, // TODO: Calculate from edges
+          isExpanded: false,
+          isHighlighted: false,
         },
       };
 
-      // Add the node to the store
+      // Add the node to the store (creates pending change)
       const { addNode } = useDiagramStore.getState();
       addNode(newNode);
 
-      // Then position it in the diagram
+      // Then position it in the swimlane
       setTimeout(() => {
         addNodeToDiagram(datasetId);
       }, 0);
@@ -231,20 +247,45 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
 
   // Handle drag start for datasets not in diagram
   const handleDragStart = (e: React.DragEvent, datasetId: string) => {
-    const dataset = workspaceDatasets.find((d) => d.id === datasetId);
-    if (!dataset) return;
+    console.log('[DatasetTreeView] 🎯 Drag started for dataset:', datasetId);
 
-    // Only allow dragging if dataset is not in diagram
-    const isInDiagram = diagramDatasetIds.has(datasetId);
+    const dataset = workspaceDatasets.find((d) => d.id === datasetId);
+    if (!dataset) {
+      console.log('[DatasetTreeView] ❌ Dataset not found in workspace datasets');
+      return;
+    }
+
+    // Only allow dragging if dataset is not in diagram (check both DB and in-memory nodes)
+    const isInDiagram = isDatasetInDiagram(datasetId);
+    console.log('[DatasetTreeView] Is dataset in diagram?', { isInDiagram, datasetId });
+
     if (isInDiagram) {
+      console.log('[DatasetTreeView] ❌ Preventing drag - dataset already in diagram');
       e.preventDefault();
       return;
     }
 
-    // Set drag data
+    // Set dragging state to prevent click handler from firing
+    setIsDragging(true);
+    console.log('[DatasetTreeView] ✅ Setting isDragging = true');
+
+    // Set drag data (including full dataset as JSON for drop handler)
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/reactflow', 'dataset');
     e.dataTransfer.setData('application/dataset-id', datasetId);
+    e.dataTransfer.setData('application/dataset-json', JSON.stringify(dataset));
+
+    console.log('[DatasetTreeView] ✅ Drag data set:', {
+      datasetId,
+      datasetName: dataset.name,
+      hasJsonData: true
+    });
+  };
+
+  // Handle drag end - reset dragging state
+  const handleDragEnd = () => {
+    console.log('[DatasetTreeView] 🏁 Drag ended, resetting isDragging = false');
+    setIsDragging(false);
   };
 
   // Get layer color badge
@@ -329,7 +370,7 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
                   <div className="ml-6 mt-1 space-y-0.5">
                     {group.datasets.map((dataset) => {
                       const isSelected = selectedDatasetId === dataset.id;
-                      const isInDiagram = diagramDatasetIds.has(dataset.id);
+                      const isInDiagram = isDatasetInDiagram(dataset.id);
 
                       return (
                         <button
@@ -337,6 +378,7 @@ export function DatasetTreeView({ className = '', workspaceId, diagramId }: Data
                           onClick={() => handleDatasetClick(dataset.id)}
                           draggable={!isInDiagram}
                           onDragStart={(e) => handleDragStart(e, dataset.id)}
+                          onDragEnd={handleDragEnd}
                           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors ${
                             isSelected
                               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'

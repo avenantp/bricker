@@ -19,9 +19,9 @@ export function DiagramTestPage() {
   const { setNodes, setEdges, applyLayout, setContext, selectedDatasetId } = useDiagramStore();
 
   useEffect(() => {
-    // Set context with actual route params
+    // Set context with actual route params (no account ID for test page)
     if (workspaceId && diagramId) {
-      setContext('test-account-id', workspaceId, diagramId);
+      setContext(null, workspaceId, diagramId);
     }
 
     // TODO: Load actual test data

@@ -126,18 +126,23 @@ export async function saveToSupabase(
       throw fetchError;
     }
 
+    // Build update object with individual columns
+    const stateUpdate = {
+      viewport: state.viewport || { x: 0, y: 0, zoom: 1 },
+      node_positions: state.node_positions || {},
+      node_expansions: state.node_expansions || {},
+      filters: state.filters || {},
+      layout_type: state.layout_type || 'hierarchical',
+      layout_direction: state.layout_direction || 'TB',
+    };
+
     let result;
     if (existing) {
       // Update existing record
       const { data, error } = await supabase
         .from('diagrams')
         .update({
-          view_mode: state.view_mode,
-          viewport: state.viewport,
-          node_positions: state.node_positions,
-          node_expansions: state.node_expansions,
-          edge_routes: state.edge_routes,
-          filters: state.filters,
+          ...stateUpdate,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -155,12 +160,7 @@ export async function saveToSupabase(
           workspace_id: workspaceId,
           name: `${diagramType} Diagram`,
           diagram_type: diagramType,
-          view_mode: state.view_mode,
-          viewport: state.viewport,
-          node_positions: state.node_positions,
-          node_expansions: state.node_expansions,
-          edge_routes: state.edge_routes,
-          filters: state.filters,
+          ...stateUpdate,
         })
         .select()
         .single();
@@ -286,16 +286,18 @@ export async function loadDiagramState(
     const supabaseResult = await loadFromSupabase(workspaceId, diagramType);
 
     if (supabaseResult.success && supabaseResult.found && supabaseResult.diagram_state) {
-      const record = supabaseResult.diagram_state;
+      const record = supabaseResult.diagram_state as any;
+
       return {
+        diagram_id: record.id, // Include the diagram ID from database
         workspace_id: record.workspace_id,
         diagram_type: record.diagram_type,
-        view_mode: record.view_mode,
-        viewport: record.viewport,
-        node_positions: record.node_positions,
-        node_expansions: record.node_expansions,
-        edge_routes: record.edge_routes,
-        filters: record.filters,
+        viewport: record.viewport || { x: 0, y: 0, zoom: 1 },
+        node_positions: record.node_positions || {},
+        node_expansions: record.node_expansions || {},
+        filters: record.filters || {},
+        layout_type: record.layout_type || 'hierarchical',
+        layout_direction: record.layout_direction || 'TB',
         last_saved: record.updated_at,
         version: record.version,
       };
@@ -339,17 +341,18 @@ export function resolveConflict(
 
     case 'theirs':
       // Use remote state
+      const remoteRecord = remoteState as any;
       return {
-        workspace_id: remoteState.workspace_id,
-        diagram_type: remoteState.diagram_type,
-        view_mode: remoteState.view_mode,
-        viewport: remoteState.viewport,
-        node_positions: remoteState.node_positions,
-        node_expansions: remoteState.node_expansions,
-        edge_routes: remoteState.edge_routes,
-        filters: remoteState.filters,
-        last_saved: remoteState.updated_at,
-        version: remoteState.version,
+        workspace_id: remoteRecord.workspace_id,
+        diagram_type: remoteRecord.diagram_type,
+        viewport: remoteRecord.viewport || { x: 0, y: 0, zoom: 1 },
+        node_positions: remoteRecord.node_positions || {},
+        node_expansions: remoteRecord.node_expansions || {},
+        filters: remoteRecord.filters || {},
+        layout_type: remoteRecord.layout_type || 'hierarchical',
+        layout_direction: remoteRecord.layout_direction || 'TB',
+        last_saved: remoteRecord.updated_at,
+        version: remoteRecord.version,
       };
 
     case 'manual':

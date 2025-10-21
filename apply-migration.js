@@ -17,9 +17,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function applyMigration() {
   try {
-    const sql = readFileSync('./supabase/migrations/014_add_deleted_at_to_datasets.sql', 'utf8');
+    const sql = readFileSync('./supabase/migrations/05_update_columns_schema.sql', 'utf8');
 
-    console.log('Applying migration: 014_add_deleted_at_to_datasets.sql');
+    console.log('Applying migration: 05_update_columns_schema.sql');
     console.log('Migration size:', sql.length, 'bytes');
 
     // Use pg client for DDL operations
