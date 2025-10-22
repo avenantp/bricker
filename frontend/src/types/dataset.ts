@@ -40,9 +40,9 @@ export interface Dataset {
   connection_id?: string; // UUID reference to connections (replaces workspace_id)
 
   // Identity
-  fully_qualified_name: string; // Auto-generated: connection.catalog.schema.name (replaces fqn)
   name: string;
   schema?: string; // Schema name within catalog
+  // Note: fully_qualified_name is computed at runtime, not stored in database
 
   // Classification
   // NOTE: medallion_layer is now stored on the connection, not the dataset
@@ -74,6 +74,37 @@ export interface Dataset {
   created_by?: string; // UUID
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+}
+
+/**
+ * Dataset with computed fields (for UI display)
+ */
+export interface DatasetWithComputed extends Dataset {
+  fully_qualified_name: string; // Computed: connection.database_name.schema.name
+  connection_database_name?: string; // From connection join
+}
+
+/**
+ * Helper function to compute fully qualified name for a dataset
+ * @param dataset - Dataset with connection info
+ * @param connectionDatabaseName - Database name from connection
+ * @returns Fully qualified name
+ */
+export function computeDatasetFQN(
+  dataset: Dataset,
+  connectionDatabaseName?: string
+): string {
+  if (!connectionDatabaseName) {
+    // Fallback to just schema.name if no connection
+    return dataset.schema
+      ? `${dataset.schema}.${dataset.name}`
+      : dataset.name;
+  }
+
+  // Full FQN: database.schema.name
+  return dataset.schema
+    ? `${connectionDatabaseName}.${dataset.schema}.${dataset.name}`
+    : `${connectionDatabaseName}.${dataset.name}`;
 }
 
 /**
@@ -181,7 +212,8 @@ export interface DatasetVersion {
  */
 export interface DatasetConflict {
   dataset_id: string;
-  fully_qualified_name: string; // Updated from fqn
+  dataset_name: string;
+  dataset_schema?: string;
   our_version: DatasetVersion;
   their_version: DatasetVersion;
   base_version?: DatasetVersion; // Common ancestor for three-way merge

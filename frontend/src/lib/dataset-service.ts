@@ -7,6 +7,7 @@
 import { supabase } from './supabase';
 import type {
   Dataset,
+  DatasetWithComputed,
   CreateDatasetInput,
   CreateDatasetPayload,
   UpdateDatasetInput,
@@ -15,6 +16,7 @@ import type {
   BatchDatasetOperationResult,
   DatasetWithPosition,
 } from '../types/dataset';
+import { computeDatasetFQN } from '../types/dataset';
 import type { CanvasNode } from '../types/canvas';
 
 /**
@@ -28,23 +30,19 @@ export async function createDataset(
 
   // Prepare dataset object
   // NOTE: medallion_layer is now set on the connection, not the dataset
+  // NOTE: fully_qualified_name is computed at runtime, not stored
   const dataset = {
     account_id: payload.account_id,
-    workspace_id: payload.workspace_id,
-    project_id: payload.project_id,
+    connection_id: payload.connection_id || null,
     name: payload.name,
-    fqn: payload.fqn,
+    schema: payload.schema || null,
     dataset_type: payload.dataset_type || null,
     description: payload.description || null,
     metadata: payload.metadata || null,
-    ai_confidence_score: null,
     owner_id: payload.owner_id || userId,
     visibility: payload.visibility || 'private',
-    is_locked: false,
     has_uncommitted_changes: true, // New dataset is uncommitted
     sync_status: 'not_synced' as const,
-    source_control_file_path: null,
-    source_control_commit_sha: null,
     last_synced_at: null,
     sync_error_message: null,
     created_by: userId,
@@ -55,20 +53,30 @@ export async function createDataset(
   const { data, error } = await supabase
     .from('datasets')
     .insert(dataset)
-    .select()
+    .select(`
+      *,
+      connections(database_name, medallion_layer)
+    `)
     .single();
 
   if (error) {
     throw new Error(`Failed to create dataset: ${error.message}`);
   }
 
+  // Flatten connection data into dataset
+  const result = {
+    ...data,
+    medallion_layer: data.connections?.medallion_layer || null,
+    connections: undefined, // Remove nested object
+  } as Dataset;
+
   // Log creation in audit_logs
-  await logAuditChange('dataset', data.id, 'create', userId, {
-    dataset_name: data.name,
-    fqn: data.fqn,
+  await logAuditChange('dataset', result.id, 'create', userId, {
+    dataset_name: result.name,
+    schema: result.schema,
   });
 
-  return data;
+  return result;
 }
 
 /**
@@ -80,7 +88,7 @@ export async function getDataset(datasetId: string): Promise<Dataset | null> {
     .from('datasets')
     .select(`
       *,
-      connections!inner(medallion_layer)
+      connections(database_name, medallion_layer)
     `)
     .eq('id', datasetId)
     .is('deleted_at', null)
@@ -94,7 +102,7 @@ export async function getDataset(datasetId: string): Promise<Dataset | null> {
     throw new Error(`Failed to fetch dataset: ${error.message}`);
   }
 
-  // Flatten the connection medallion_layer into the dataset object
+  // Flatten the connection data into the dataset object
   const dataset = {
     ...data,
     medallion_layer: data.connections?.medallion_layer || null,
@@ -168,7 +176,7 @@ export async function deleteDataset(
   if (dataset) {
     await logAuditChange('dataset', datasetId, 'soft_delete', userId, {
       dataset_name: dataset.name,
-      fqn: dataset.fqn,
+      schema: dataset.schema,
       columns_deleted: data.columns_deleted
     });
   }
@@ -291,11 +299,9 @@ export async function cloneDataset(
 
   const newDataset = {
     account_id: sourceDataset.account_id,
-    workspace_id: sourceDataset.workspace_id,
-    project_id: sourceDataset.project_id,
+    connection_id: sourceDataset.connection_id,
     name: newName,
-    fqn: sourceDataset.fqn.replace(sourceDataset.name, newName),
-    medallion_layer: sourceDataset.medallion_layer,
+    schema: sourceDataset.schema,
     dataset_type: sourceDataset.dataset_type,
     description: sourceDataset.description
       ? `Copy of ${sourceDataset.description}`
@@ -378,15 +384,15 @@ export async function batchDeleteDatasets(
 export function datasetToCanvasNode(
   dataset: DatasetWithPosition
 ): CanvasNode {
+  // Note: FQN should be computed when needed, not stored
   return {
     id: dataset.id,
     type: 'dataNode',
     position: dataset.position,
     data: {
       uuid: dataset.id,
-      fqn: dataset.fqn,
-      project_id: dataset.project_id || '',
       name: dataset.name,
+      schema: dataset.schema,
       medallion_layer: dataset.medallion_layer || 'Bronze',
       dataset_type: dataset.dataset_type || 'Table',
       description: dataset.description,

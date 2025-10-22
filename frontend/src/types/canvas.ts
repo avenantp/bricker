@@ -46,11 +46,11 @@ export type Cardinality = '1:1' | '1:M' | 'M:M';
 export interface CanvasNodeData {
   // Core identifiers
   uuid: string;
-  fqn: string;
-  project_id: string;
+  project_id?: string; // Optional, may not exist in current schema
 
   // Basic properties
   name: string;
+  schema?: string; // Schema name for display (e.g., "SalesLT")
   medallion_layer: MedallionLayer;
   dataset_type: DatasetType;
   description?: string;

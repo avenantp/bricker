@@ -78,7 +78,6 @@ export interface Column {
   // Reference information
   reference_column_id?: string;
   reference_type?: RelationshipType;
-  reference_description?: string;
 
   // Transformation
   transformation_logic?: string;

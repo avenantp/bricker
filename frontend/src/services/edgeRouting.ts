@@ -78,6 +78,7 @@ export function getNodeConnectionPoint(
 
 /**
  * Determine which side of the source node to connect from
+ * For same-side routing (e.g., right-to-right)
  */
 export function determineConnectionSides(
   sourceNode: DiagramNode,
@@ -89,21 +90,14 @@ export function determineConnectionSides(
   const dx = targetCenter.x - sourceCenter.x;
   const dy = targetCenter.y - sourceCenter.y;
 
-  // Determine primary direction
+  // For orthogonal routing with collision avoidance, prefer same-side connections
+  // This allows edges to route around nodes
   if (Math.abs(dx) > Math.abs(dy)) {
-    // Horizontal primary direction
-    if (dx > 0) {
-      return { source: 'right', target: 'left' };
-    } else {
-      return { source: 'left', target: 'right' };
-    }
+    // Horizontal primary direction - use right side for both
+    return { source: 'right', target: 'right' };
   } else {
-    // Vertical primary direction
-    if (dy > 0) {
-      return { source: 'bottom', target: 'top' };
-    } else {
-      return { source: 'top', target: 'bottom' };
-    }
+    // Vertical primary direction - use bottom side for both
+    return { source: 'bottom', target: 'bottom' };
   }
 }
 
@@ -210,6 +204,101 @@ export function generateSmoothStepPath(start: EdgePoint, end: EdgePoint): EdgePa
     path,
     controlPoints: [start, { x: midX, y: start.y }, { x: midX, y: end.y }, end],
     alignmentType: 'smooth-step',
+  };
+}
+
+/**
+ * Generate orthogonal path with collision avoidance
+ * Uses simplified A* pathfinding to route around nodes
+ */
+export function generateOrthogonalPathWithCollisionAvoidance(
+  start: EdgePoint,
+  end: EdgePoint,
+  nodes: DiagramNode[],
+  sourceNode: DiagramNode,
+  targetNode: DiagramNode
+): EdgePathResult {
+  const GRID_SIZE = 20; // Grid cell size for pathfinding
+  const MARGIN = 30; // Margin around nodes
+
+  // Helper: Check if a point intersects any node (with margin)
+  const intersectsNode = (x: number, y: number): boolean => {
+    for (const node of nodes) {
+      if (node.id === sourceNode.id || node.id === targetNode.id) continue;
+
+      const nodeWidth = 160; // DatasetNode width
+      const nodeHeight = 40; // Approximate DatasetNode height
+
+      if (
+        x >= node.position.x - MARGIN &&
+        x <= node.position.x + nodeWidth + MARGIN &&
+        y >= node.position.y - MARGIN &&
+        y <= node.position.y + nodeHeight + MARGIN
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Simple orthogonal pathfinding
+  const waypoints: EdgePoint[] = [start];
+
+  // Determine routing direction based on start/end relationship
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+
+  // For same-side routing (e.g., right-to-right), go out, around, and in
+  if (Math.abs(dx) < 10) {
+    // Vertical alignment - route horizontally first
+    const midX = start.x + 50; // Go out 50px
+    const midY = (start.y + end.y) / 2;
+
+    // Check if we need to avoid nodes
+    if (!intersectsNode(midX, start.y) && !intersectsNode(midX, midY) && !intersectsNode(midX, end.y)) {
+      // Simple 3-segment path
+      waypoints.push({ x: midX, y: start.y });
+      waypoints.push({ x: midX, y: end.y });
+    } else {
+      // Route around obstacles
+      const offset = dx > 0 ? 80 : -80;
+      waypoints.push({ x: start.x + offset, y: start.y });
+      waypoints.push({ x: start.x + offset, y: midY });
+      waypoints.push({ x: end.x + offset, y: midY });
+      waypoints.push({ x: end.x + offset, y: end.y });
+    }
+  } else {
+    // Horizontal routing
+    const midX = (start.x + end.x) / 2;
+    const midY = start.y;
+
+    // Check for obstacles
+    if (!intersectsNode(midX, start.y) && !intersectsNode(midX, end.y)) {
+      // Simple path
+      waypoints.push({ x: midX, y: start.y });
+      waypoints.push({ x: midX, y: end.y });
+    } else {
+      // Route around
+      const offset = dy > 0 ? 80 : -80;
+      waypoints.push({ x: start.x, y: start.y + offset });
+      waypoints.push({ x: midX, y: start.y + offset });
+      waypoints.push({ x: midX, y: end.y + offset });
+      waypoints.push({ x: end.x, y: end.y + offset });
+    }
+  }
+
+  waypoints.push(end);
+
+  // Build SVG path from waypoints
+  let path = `M ${waypoints[0].x} ${waypoints[0].y}`;
+  for (let i = 1; i < waypoints.length; i++) {
+    path += ` L ${waypoints[i].x} ${waypoints[i].y}`;
+  }
+
+  return {
+    path,
+    controlPoints: waypoints,
+    alignmentType: 'step',
   };
 }
 

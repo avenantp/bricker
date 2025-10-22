@@ -25,28 +25,11 @@ export async function createColumn(
 ): Promise<Column> {
   const now = new Date().toISOString();
 
-  // Auto-generate FQN if not provided
-  let fqn = payload.fqn;
-  if (!fqn) {
-    // Get dataset to build FQN
-    const { data: dataset } = await supabase
-      .from('datasets')
-      .select('fqn')
-      .eq('id', payload.dataset_id)
-      .single();
-
-    if (dataset) {
-      fqn = `${dataset.fqn}.${payload.name}`;
-    } else {
-      throw new Error('Dataset not found');
-    }
-  }
-
   // Prepare column object
+  // Note: FQN is computed at runtime, not stored in database
   const column = {
     dataset_id: payload.dataset_id,
     name: payload.name,
-    fqn: fqn,
     data_type: payload.data_type,
     description: payload.description || null,
     business_name: payload.business_name || null,
@@ -56,13 +39,12 @@ export async function createColumn(
     default_value: payload.default_value || null,
     reference_column_id: payload.reference_column_id || null,
     reference_type: payload.reference_type || null,
-    reference_description: payload.reference_description || null,
     transformation_logic: payload.transformation_logic || null,
     ai_confidence_score: null,
     ai_suggestions: null,
     last_ai_enhancement: null,
     custom_metadata: null,
-    position: payload.position || null,
+    ordinal_position: payload.ordinal_position || null,
     created_at: now,
     updated_at: now,
   };
@@ -168,31 +150,20 @@ export async function updateColumn(
 ): Promise<Column> {
   const now = new Date().toISOString();
 
-  // Get existing column to check if name changed
+  // Get existing column for dataset_id
   const existingColumn = await getColumn(columnId);
   if (!existingColumn) {
     throw new Error('Column not found');
   }
 
-  // Update FQN if name changed
-  let updates: any = {
+  // Prepare updates
+  // Note: FQN is computed at runtime, not stored
+  const updates: any = {
     ...payload,
     updated_at: now,
   };
 
-  if (payload.name && payload.name !== existingColumn.name) {
-    const { data: dataset } = await supabase
-      .from('datasets')
-      .select('fqn')
-      .eq('id', existingColumn.dataset_id)
-      .single();
-
-    if (dataset) {
-      updates.fqn = `${dataset.fqn}.${payload.name}`;
-    }
-  }
-
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('columns')
     .update(updates)
     .eq('id', columnId)
@@ -328,7 +299,7 @@ export async function reorderColumns(
   const updates = orderedColumnIds.map((columnId, index) =>
     supabase
       .from('columns')
-      .update({ position: index })
+      .update({ ordinal_position: index })
       .eq('id', columnId)
   );
 
@@ -442,7 +413,6 @@ export async function getWorkspaceColumnReferences(
       dataset_id,
       reference_column_id,
       reference_type,
-      reference_description,
       source_dataset:datasets!dataset_id(
         name,
         id
@@ -480,7 +450,6 @@ export async function getWorkspaceColumnReferences(
       target_dataset_id: col.target_column.dataset_id,
       target_dataset_name: col.target_column.target_dataset.name,
       reference_type: col.reference_type,
-      reference_description: col.reference_description,
     }));
 }
 
@@ -497,7 +466,6 @@ export async function createColumnReference(
   const updates: UpdateColumnPayload = {
     reference_column_id: targetColumnId,
     reference_type: referenceType,
-    reference_description: description,
     is_foreign_key: referenceType === 'FK',
   };
 
@@ -514,7 +482,6 @@ export async function removeColumnReference(
   const updates: UpdateColumnPayload = {
     reference_column_id: null,
     reference_type: null,
-    reference_description: null,
   };
 
   return updateColumn(columnId, updates, userId);

@@ -32,7 +32,10 @@
       "Bash(move:*)",
       "Bash(timeout /t 3)",
       "Bash(timeout /t 5)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node apply-fqn-migration.js:*)",
+      "Bash(node apply-ref-desc-migration.js:*)",
+      "Bash(netsh interface ipv4 show excludedportrange:*)"
     ],
     "deny": [],
     "ask": []

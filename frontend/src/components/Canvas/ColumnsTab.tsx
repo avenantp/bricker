@@ -129,8 +129,8 @@ export function ColumnsTab({
           bVal = (b.business_name || '').toLowerCase();
           break;
         default:
-          aVal = a.position || 0;
-          bVal = b.position || 0;
+          aVal = a.ordinal_position || 0;
+          bVal = b.ordinal_position || 0;
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;

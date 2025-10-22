@@ -12,13 +12,44 @@ import { calculateEdgeLabelPosition } from '../../services/edgeRouting';
 /**
  * Relationship Edge Component
  */
-export const RelationshipEdge = memo(({ id, source, target, data, selected }: EdgeProps<RelationshipEdgeData>) => {
+export const RelationshipEdge = memo(({ id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected, markerEnd }: EdgeProps<RelationshipEdgeData>) => {
   const edgeData = data as RelationshipEdgeData;
   const route = edgeData.route;
 
+  // Determine edge color based on state
+  const edgeColor = selected ? '#3b82f6' : '#6b7280';
+  const edgeWidth = selected ? 2 : 1.5;
+
+  // If no custom route, use orthogonal (step) path
   if (!route) {
-    // No route calculated yet, render basic edge
-    return null;
+    // Calculate orthogonal path with elbows
+    const offset = 50; // Distance to go out before turning
+    const midX = sourceX + offset;
+    const midY = (sourceY + targetY) / 2;
+
+    // Create step path: go right, then to middle, then to target
+    let edgePath: string;
+
+    if (Math.abs(targetX - sourceX) < 20) {
+      // Nodes are vertically aligned - use U-shaped path
+      edgePath = `M ${sourceX},${sourceY} L ${midX},${sourceY} L ${midX},${midY} L ${targetX + offset},${midY} L ${targetX + offset},${targetY} L ${targetX},${targetY}`;
+    } else {
+      // Standard path
+      const verticalMid = targetX + offset;
+      edgePath = `M ${sourceX},${sourceY} L ${midX},${sourceY} L ${midX},${midY} L ${verticalMid},${midY} L ${verticalMid},${targetY} L ${targetX},${targetY}`;
+    }
+
+    return (
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        style={{
+          stroke: edgeColor,
+          strokeWidth: edgeWidth,
+        }}
+        markerEnd={markerEnd}
+      />
+    );
   }
 
   // Calculate label position
@@ -27,10 +58,6 @@ export const RelationshipEdge = memo(({ id, source, target, data, selected }: Ed
     controlPoints: route.controlPoints,
     alignmentType: route.alignmentType as any,
   });
-
-  // Determine edge color based on state
-  const edgeColor = selected ? '#3b82f6' : '#6b7280';
-  const edgeWidth = selected ? 2 : 1.5;
 
   return (
     <>
@@ -42,7 +69,7 @@ export const RelationshipEdge = memo(({ id, source, target, data, selected }: Ed
           stroke: edgeColor,
           strokeWidth: edgeWidth,
         }}
-        markerEnd={selected ? 'url(#arrow-selected)' : 'url(#arrow)'}
+        markerEnd={markerEnd}
       />
 
       {/* Edge Label */}

@@ -34,7 +34,6 @@ interface YAMLDataset {
     default_value?: string;
     reference_column_id?: string;
     reference_type?: string;
-    reference_description?: string;
     transformation_logic?: string;
     ai_confidence_score?: number;
     position?: number;
@@ -86,10 +85,9 @@ export async function generateDatasetYAML(
       default_value: col.default_value || undefined,
       reference_column_id: col.reference_column_id || undefined,
       reference_type: col.reference_type || undefined,
-      reference_description: col.reference_description || undefined,
       transformation_logic: col.transformation_logic || undefined,
       ai_confidence_score: col.ai_confidence_score || undefined,
-      position: col.position || undefined,
+      ordinal_position: col.ordinal_position || undefined,
     })),
     lineage: lineages.map((lin) => ({
       lineage_id: lin.lineage_id,

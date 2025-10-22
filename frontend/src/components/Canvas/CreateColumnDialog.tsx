@@ -181,10 +181,10 @@ export function CreateColumnDialog({
 
       // Calculate position (add to end)
       const maxPosition = existingColumns.reduce(
-        (max, col) => Math.max(max, col.position || 0),
+        (max, col) => Math.max(max, col.ordinal_position || 0),
         0
       );
-      const position = maxPosition + 1;
+      const ordinal_position = maxPosition + 1;
 
       // Create column object
       const newColumn: Omit<Column, 'id' | 'created_at' | 'updated_at'> = {
@@ -198,7 +198,7 @@ export function CreateColumnDialog({
         is_nullable: formData.is_nullable,
         default_value: formData.default_value.trim() || undefined,
         transformation_logic: formData.transformation_logic.trim() || undefined,
-        position,
+        ordinal_position,
         ai_confidence_score: undefined,
         ai_suggestions: undefined,
         last_ai_enhancement: undefined,

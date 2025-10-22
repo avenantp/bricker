@@ -8,9 +8,10 @@
     "mcp-servers/*"
   ],
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --raw --kill-others-on-fail --prefix-colors \"cyan.bold,magenta.bold\" --names \"frontend,backend\" \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --raw --kill-others-on-fail --prefix-colors \"cyan.bold,magenta.bold,yellow.bold\" --names \"frontend,backend,dotnet\" \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:dotnet\"",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
+    "dev:dotnet": "dotnet run --project backend/sql-server-service/SqlServerService/SqlServerService.csproj --launch-profile http",
     "dev:mcp": "npm run dev --workspaces --if-present --workspace=mcp-servers/*",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

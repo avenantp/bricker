@@ -359,8 +359,8 @@ describe('column-service', () => {
   describe('getDatasetColumns', () => {
     it('should fetch all columns for a dataset', async () => {
       const mockColumns = [
-        createMockColumn({ column_id: 'col_1', name: 'column_1', position: 0 }),
-        createMockColumn({ column_id: 'col_2', name: 'column_2', position: 1 }),
+        createMockColumn({ column_id: 'col_1', name: 'column_1', ordinal_position: 0 }),
+        createMockColumn({ column_id: 'col_2', name: 'column_2', ordinal_position: 1 }),
       ];
 
       const mockChain = {
@@ -507,7 +507,6 @@ describe('column-service', () => {
         ...existingColumn,
         reference_column_id: null,
         reference_type: null,
-        reference_description: null,
       });
 
       const mockGetChain = {

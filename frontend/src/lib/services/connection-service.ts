@@ -152,6 +152,16 @@ export class ConnectionService {
     if (input.visibility !== undefined) updateData.visibility = input.visibility;
     if (input.is_locked !== undefined) updateData.is_locked = input.is_locked;
 
+    // Metadata fields
+    if (input.medallion_layer !== undefined) updateData.medallion_layer = input.medallion_layer;
+    if (input.record_source !== undefined) updateData.record_source = input.record_source;
+
+    // Type-specific fields
+    if (input.container !== undefined) updateData.container = input.container;
+    if (input.external_location !== undefined) updateData.external_location = input.external_location;
+    if (input.catalog !== undefined) updateData.catalog = input.catalog;
+    if (input.connection_string_encrypted !== undefined) updateData.connection_string_encrypted = input.connection_string_encrypted;
+
     const { data, error } = await this.supabase
       .from('connections')
       .update(updateData)

@@ -215,6 +215,27 @@ All UI components must support dark mode using Tailwind's `dark:` modifier:
 - Accent elements: `bg-accent-300` (light mode) / `bg-accent-500` (dark mode)
 - Focus rings: `focus:ring-primary-500`
 
+## Critical Development Constraints
+
+**IMPORTANT: The following constraints MUST be followed at all times:**
+
+### Supabase Development
+- **NEVER use Docker for Supabase development**
+  - Use the native Supabase CLI (`npx supabase`) for all local development
+  - All database migrations and operations should be performed via CLI commands
+  - Do not suggest or implement Docker-based Supabase workflows
+
+### Environment Variables
+- **NEVER modify any VITE_ prefixed variables in the .env file**
+  - The following values are locked and must not be changed:
+    - `VITE_API_URL`
+    - `VITE_SUPABASE_URL`
+    - `VITE_SUPABASE_ANON_KEY`
+    - `VITE_DEV_MODE`
+    - `VITE_DEV_ADMIN_ACCESS`
+  - These values are critical for frontend configuration and must remain unchanged
+  - Any changes to these values can break the application's connection to Supabase and backend services
+
 ## Security Notes
 
 - Databricks tokens stored encrypted in Supabase

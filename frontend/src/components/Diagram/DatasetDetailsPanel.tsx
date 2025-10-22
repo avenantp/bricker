@@ -3,12 +3,15 @@
  * Right sidebar showing dataset details for viewing and editing
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Edit3, Save, Database, GitBranch, Calendar, User } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDiagramStore } from '../../store/diagramStore';
 import { useUpdateDataset, datasetKeys } from '../../hooks/useDatasets';
-import { MEDALLION_COLORS } from '../../types/canvas';
+import { getDatasetStats, type DatasetStats } from '../../lib/dataset-stats-service';
+import { ColumnsGridDialog } from './ColumnsGridDialog';
+import { ColumnEditorDialog } from './ColumnEditorDialog';
+import type { Column } from '../../types/column';
 
 interface DatasetDetailsPanelProps {
   className?: string;
@@ -20,6 +23,17 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
   const { nodes, selectedDatasetId, setSelectedDatasetId, updateNode, updateNodePosition } = useDiagramStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [stats, setStats] = useState<DatasetStats>({
+    columnCount: 0,
+    relationshipCount: 0,
+    lineageCount: { upstream: 0, downstream: 0 },
+  });
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Dialog states
+  const [showColumnsDialog, setShowColumnsDialog] = useState(false);
+  const [showColumnEditor, setShowColumnEditor] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState<Column | null>(null);
 
   // Mutation for updating dataset in database
   const updateDatasetMutation = useUpdateDataset();
@@ -27,8 +41,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
   // Form state for all editable fields
   const [editedData, setEditedData] = useState({
     name: '',
-    fqn: '',
-    medallion_layer: '',
+    schema: '',
     dataset_type: '',
     description: '',
   });
@@ -36,11 +49,35 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
   // Get selected node
   const selectedNode = nodes.find((n) => n.id === selectedDatasetId);
 
+  // Fetch stats when selected dataset changes
+  useEffect(() => {
+    if (selectedDatasetId) {
+      setLoadingStats(true);
+      getDatasetStats(selectedDatasetId)
+        .then((fetchedStats) => {
+          setStats(fetchedStats);
+          // Also update the node in the store
+          updateNode(selectedDatasetId, {
+            columnCount: fetchedStats.columnCount,
+            relationshipCount: fetchedStats.relationshipCount,
+            lineageCount: fetchedStats.lineageCount,
+          });
+        })
+        .catch((error) => {
+          console.error('[DatasetDetailsPanel] Failed to fetch stats:', error);
+        })
+        .finally(() => {
+          setLoadingStats(false);
+        });
+    }
+  }, [selectedDatasetId, updateNode]);
+
   console.log('[DatasetDetailsPanel] Render state:', {
     selectedDatasetId,
     nodesCount: nodes.length,
     nodeIds: nodes.map(n => n.id),
-    selectedNode: selectedNode ? { id: selectedNode.id, name: selectedNode.data.name } : null
+    selectedNode: selectedNode ? { id: selectedNode.id, name: selectedNode.data.name } : null,
+    stats,
   });
 
   if (!selectedDatasetId || !selectedNode) {
@@ -64,8 +101,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
   const handleEdit = () => {
     setEditedData({
       name: data.name || '',
-      fqn: data.fqn || '',
-      medallion_layer: data.medallion_layer || '',
+      schema: data.schema || '',
       dataset_type: data.dataset_type || '',
       description: data.description || '',
     });
@@ -76,50 +112,17 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
     if (!selectedDatasetId || !selectedNode) return;
 
     setIsSaving(true);
-    const oldMedallionLayer = data.medallion_layer;
-    const newMedallionLayer = editedData.medallion_layer;
 
     try {
       // Update the node in the diagram store first (optimistic update)
       updateNode(selectedDatasetId, editedData);
-
-      // If medallion layer changed, reposition the node in the new swimlane
-      if (oldMedallionLayer !== newMedallionLayer) {
-        console.log('[DatasetDetailsPanel] Medallion layer changed, repositioning node:', {
-          from: oldMedallionLayer,
-          to: newMedallionLayer
-        });
-
-        // Calculate new position based on medallion layer
-        const SWIMLANE_WIDTH = 400;
-        const LAYER_X_POSITIONS: Record<string, number> = {
-          Source: 50,
-          Raw: SWIMLANE_WIDTH + 50,
-          Bronze: SWIMLANE_WIDTH * 2 + 50,
-          Silver: SWIMLANE_WIDTH * 3 + 50,
-          Gold: SWIMLANE_WIDTH * 4 + 50,
-          Unspecified: 50,
-        };
-
-        // Count nodes in the new layer
-        const nodesInNewLayer = nodes.filter(
-          (n) => n.data.medallion_layer === newMedallionLayer && n.id !== selectedDatasetId && n.position
-        );
-        const NODE_HEIGHT = 200;
-        const yPosition = nodesInNewLayer.length * NODE_HEIGHT + 50;
-        const xPosition = LAYER_X_POSITIONS[newMedallionLayer] || 50;
-
-        // Update position
-        updateNodePosition(selectedDatasetId, { x: xPosition, y: yPosition });
-      }
 
       // Persist to database
       await updateDatasetMutation.mutateAsync({
         datasetId: selectedDatasetId,
         updates: {
           name: editedData.name,
-          fully_qualified_name: editedData.fqn,
-          medallion_layer: editedData.medallion_layer as any,
+          schema: editedData.schema,
           dataset_type: editedData.dataset_type as any,
           description: editedData.description,
         },
@@ -139,8 +142,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
       // Revert optimistic update on error
       updateNode(selectedDatasetId, {
         name: data.name,
-        fqn: data.fqn,
-        medallion_layer: data.medallion_layer,
+        schema: data.schema,
         dataset_type: data.dataset_type,
         description: data.description,
       });
@@ -154,8 +156,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
     setIsEditing(false);
     setEditedData({
       name: '',
-      fqn: '',
-      medallion_layer: '',
+      schema: '',
       dataset_type: '',
       description: '',
     });
@@ -164,6 +165,34 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
   const handleClose = () => {
     setSelectedDatasetId(null);
     setIsEditing(false);
+  };
+
+  const handleColumnsDoubleClick = () => {
+    setShowColumnsDialog(true);
+  };
+
+  const handleEditColumn = (column: Column) => {
+    setSelectedColumn(column);
+    setShowColumnEditor(true);
+  };
+
+  const handleColumnSaved = () => {
+    // Refresh stats after column is saved
+    if (selectedDatasetId) {
+      getDatasetStats(selectedDatasetId).then((fetchedStats) => {
+        setStats(fetchedStats);
+      });
+    }
+  };
+
+  const handleColumnsDialogClose = () => {
+    setShowColumnsDialog(false);
+    // Refresh stats when dialog closes in case columns were edited
+    if (selectedDatasetId) {
+      getDatasetStats(selectedDatasetId).then((fetchedStats) => {
+        setStats(fetchedStats);
+      });
+    }
   };
 
   return (
@@ -207,52 +236,23 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
           )}
         </div>
 
-        {/* FQN */}
+        {/* Schema */}
         <div>
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Fully Qualified Name
+            Schema
           </h3>
           {isEditing ? (
             <input
               type="text"
-              value={editedData.fqn}
-              onChange={(e) => setEditedData({ ...editedData, fqn: e.target.value })}
+              value={editedData.schema}
+              onChange={(e) => setEditedData({ ...editedData, schema: e.target.value })}
               className="w-full px-3 py-2 text-sm font-mono border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-              placeholder="catalog.schema.table"
+              placeholder="e.g., SalesLT"
             />
           ) : (
             <p className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded">
-              {data.fqn}
+              {data.schema || 'No schema specified'}
             </p>
-          )}
-        </div>
-
-        {/* Medallion Layer */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Medallion Layer
-          </h3>
-          {isEditing ? (
-            <select
-              value={editedData.medallion_layer}
-              onChange={(e) => setEditedData({ ...editedData, medallion_layer: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">Select layer...</option>
-              <option value="Source">Source</option>
-              <option value="Raw">Raw</option>
-              <option value="Bronze">Bronze</option>
-              <option value="Silver">Silver</option>
-              <option value="Gold">Gold</option>
-              <option value="Unspecified">Unspecified</option>
-            </select>
-          ) : (
-            <div
-              className="inline-flex items-center px-3 py-1.5 rounded-lg text-white font-medium"
-              style={{ backgroundColor: MEDALLION_COLORS[data.medallion_layer] || '#9333ea' }}
-            >
-              {data.medallion_layer}
-            </div>
           )}
         </div>
 
@@ -361,14 +361,21 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
         <div>
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
             Statistics
+            {loadingStats && (
+              <span className="ml-2 text-xs text-gray-400">(loading...)</span>
+            )}
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded">
+            <div
+              className="bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onDoubleClick={handleColumnsDoubleClick}
+              title="Double-click to view columns"
+            >
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 Columns
               </div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {data.columnCount || 0}
+                {stats.columnCount}
               </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded">
@@ -376,7 +383,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
                 Relationships
               </div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {data.relationshipCount || 0}
+                {stats.relationshipCount}
               </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded">
@@ -384,7 +391,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
                 Upstream
               </div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {data.lineageCount?.upstream || 0}
+                {stats.lineageCount.upstream}
               </div>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 px-3 py-2 rounded">
@@ -392,7 +399,7 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
                 Downstream
               </div>
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {data.lineageCount?.downstream || 0}
+                {stats.lineageCount.downstream}
               </div>
             </div>
           </div>
@@ -492,6 +499,25 @@ export function DatasetDetailsPanel({ className = '', workspaceId }: DatasetDeta
           </button>
         )}
       </div>
+
+      {/* Columns Grid Dialog */}
+      {selectedDatasetId && selectedNode && (
+        <ColumnsGridDialog
+          datasetId={selectedDatasetId}
+          datasetName={selectedNode.data.name}
+          isOpen={showColumnsDialog}
+          onClose={handleColumnsDialogClose}
+          onEditColumn={handleEditColumn}
+        />
+      )}
+
+      {/* Column Editor Dialog */}
+      <ColumnEditorDialog
+        column={selectedColumn}
+        isOpen={showColumnEditor}
+        onClose={() => setShowColumnEditor(false)}
+        onSave={handleColumnSaved}
+      />
     </div>
   );
 }

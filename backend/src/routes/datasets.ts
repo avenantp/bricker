@@ -806,17 +806,14 @@ router.post('/import', async (req, res) => {
             return {
               dataset_id: dataset.id,
               name: columnName,
-              data_type: col.data_type,
-              ordinal_position: col.ordinal_position || index + 1,
-              is_nullable: col.is_nullable !== undefined ? col.is_nullable : true,
+              data_type: col.dataType || col.data_type || 'VARCHAR', // C# returns camelCase 'dataType'
+              ordinal_position: col.ordinalPosition || col.ordinal_position || index + 1,
+              is_nullable: col.isNullable !== undefined ? col.isNullable : (col.is_nullable !== undefined ? col.is_nullable : true),
               is_primary_key: primaryKeyColumns.has(columnName),
               is_foreign_key: false, // Will be set to true when we create references below
-              default_value: col.default_value || col.column_default || null,
-              max_length: col.max_length || null,
-              precision: col.precision || null,
-              scale: col.scale || null,
-              is_identity: col.is_identity || false,
-              is_computed: col.is_computed || false,
+              column_default: col.defaultValue || col.default_value || col.column_default || null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             };
           });
 
@@ -830,92 +827,127 @@ router.post('/import', async (req, res) => {
             errors.push({ table: fqn, error: `Column creation failed: ${columnsError.message}` });
           } else {
             console.log(`[Datasets] Created ${columns.length} column(s) for dataset ${dataset.id}`);
-
-            // Now process foreign keys to create references
-            if (table.keys && table.keys.length > 0) {
-              const foreignKeys = table.keys.filter((key: any) => key.type === 'FOREIGN KEY');
-
-              for (const fk of foreignKeys) {
-                try {
-                  // Find the referenced dataset by schema and table name
-                  const { data: referencedDataset, error: refDatasetError } = await getSupabaseClient()
-                    .from('datasets')
-                    .select('id')
-                    .eq('account_id', account_id)
-                    .eq('connection_id', connection_id)
-                    .eq('schema', fk.referenced_schema)
-                    .eq('name', fk.referenced_table)
-                    .is('deleted_at', null)
-                    .maybeSingle();
-
-                  if (refDatasetError || !referencedDataset) {
-                    console.warn(`[Datasets] Referenced dataset ${fk.referenced_schema}.${fk.referenced_table} not found for FK ${fk.name}`);
-                    continue;
-                  }
-
-                  // For each column in the foreign key, create a reference
-                  for (let i = 0; i < (fk.columns?.length || 0); i++) {
-                    const sourceColumnName = fk.columns[i];
-                    const targetColumnName = fk.referenced_columns?.[i];
-
-                    if (!sourceColumnName || !targetColumnName) {
-                      console.warn(`[Datasets] Missing column names for FK ${fk.name}`);
-                      continue;
-                    }
-
-                    // Find source column ID
-                    const sourceColumn = columns.find((c: any) => c.name === sourceColumnName);
-                    if (!sourceColumn) {
-                      console.warn(`[Datasets] Source column ${sourceColumnName} not found for FK ${fk.name}`);
-                      continue;
-                    }
-
-                    // Find target column ID
-                    const { data: targetColumns, error: targetColError } = await getSupabaseClient()
-                      .from('columns')
-                      .select('id')
-                      .eq('dataset_id', referencedDataset.id)
-                      .eq('name', targetColumnName)
-                      .is('deleted_at', null)
-                      .maybeSingle();
-
-                    if (targetColError || !targetColumns) {
-                      console.warn(`[Datasets] Target column ${targetColumnName} not found in ${fk.referenced_schema}.${fk.referenced_table}`);
-                      continue;
-                    }
-
-                    // Create the reference
-                    const { error: refError } = await getSupabaseClient()
-                      .from('references')
-                      .insert({
-                        source_column_id: sourceColumn.id,
-                        target_column_id: targetColumns.id,
-                        relationship_type: 'foreign_key',
-                        constraint_name: fk.name,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                      });
-
-                    if (refError) {
-                      console.error(`[Datasets] Error creating reference for FK ${fk.name}:`, refError);
-                    } else {
-                      console.log(`[Datasets] Created reference: ${sourceColumnName} -> ${fk.referenced_schema}.${fk.referenced_table}.${targetColumnName}`);
-
-                      // Mark source column as foreign key
-                      await getSupabaseClient()
-                        .from('columns')
-                        .update({ is_foreign_key: true })
-                        .eq('id', sourceColumn.id);
-                    }
-                  }
-                } catch (fkError: any) {
-                  console.error(`[Datasets] Error processing FK ${fk.name}:`, fkError);
-                }
-              }
-            }
           }
         } else if (existingColumns && existingColumns.length > 0) {
           console.log(`[Datasets] Dataset ${dataset.id} already has ${existingColumns.length} column(s), skipping column creation`);
+        }
+
+        // Process foreign keys for all datasets (both new and existing)
+        // Get columns for FK processing (either just created or existing)
+        const { data: datasetColumns } = await getSupabaseClient()
+          .from('columns')
+          .select('id, name')
+          .eq('dataset_id', dataset.id)
+          .is('deleted_at', null);
+
+        if (datasetColumns && datasetColumns.length > 0 && table.keys && table.keys.length > 0) {
+          console.log(`[Datasets] Processing ${table.keys.length} key(s) for ${fqn}`);
+          const foreignKeys = table.keys.filter((key: any) => key.type === 'FOREIGN KEY');
+          console.log(`[Datasets] Found ${foreignKeys.length} foreign key(s) for ${fqn}`);
+
+          for (const fk of foreignKeys) {
+            try {
+              console.log(`[Datasets] Processing FK: ${fk.name}`, {
+                type: fk.type,
+                columns: fk.columns || fk.Columns,
+                referencedSchema: fk.referencedSchema || fk.ReferencedSchema,
+                referencedTable: fk.referencedTable || fk.ReferencedTable,
+                referencedColumns: fk.referencedColumns || fk.ReferencedColumns
+              });
+
+              // Handle both PascalCase (from C#), camelCase, and snake_case field names
+              const refSchema = fk.ReferencedSchema || fk.referencedSchema || fk.referenced_schema;
+              const refTable = fk.ReferencedTable || fk.referencedTable || fk.referenced_table;
+              const fkColumns = fk.Columns || fk.columns || [];
+              const refColumns = fk.ReferencedColumns || fk.referencedColumns || fk.referenced_columns || [];
+
+              // Find the referenced dataset by schema and table name
+              console.log(`[Datasets] Looking for referenced dataset: ${refSchema}.${refTable}`);
+              const { data: referencedDataset, error: refDatasetError } = await getSupabaseClient()
+                .from('datasets')
+                .select('id')
+                .eq('account_id', account_id)
+                .eq('connection_id', connection_id)
+                .eq('schema', refSchema)
+                .eq('name', refTable)
+                .is('deleted_at', null)
+                .maybeSingle();
+
+              if (refDatasetError) {
+                console.error(`[Datasets] Error looking up referenced dataset ${refSchema}.${refTable}:`, refDatasetError);
+                continue;
+              }
+
+              if (!referencedDataset) {
+                console.warn(`[Datasets] Referenced dataset ${refSchema}.${refTable} not found for FK ${fk.name}`);
+                continue;
+              }
+
+              console.log(`[Datasets] Found referenced dataset: ${referencedDataset.id}`);
+
+              // For each column in the foreign key, create a reference
+              console.log(`[Datasets] Processing ${fkColumns.length} column pair(s) for FK ${fk.name}`);
+              for (let i = 0; i < fkColumns.length; i++) {
+                const sourceColumnName = fkColumns[i];
+                const targetColumnName = refColumns[i];
+
+                console.log(`[Datasets] Column pair ${i + 1}: ${sourceColumnName} -> ${targetColumnName}`);
+
+                if (!sourceColumnName || !targetColumnName) {
+                  console.warn(`[Datasets] Missing column names for FK ${fk.name}`);
+                  continue;
+                }
+
+                // Find source column ID from the dataset's columns
+                const sourceColumn = datasetColumns.find((c: any) => c.name === sourceColumnName);
+                if (!sourceColumn) {
+                  console.warn(`[Datasets] Source column ${sourceColumnName} not found for FK ${fk.name}`);
+                  console.log(`[Datasets] Available columns:`, datasetColumns.map((c: any) => c.name));
+                  continue;
+                }
+                console.log(`[Datasets] Found source column: ${sourceColumn.id}`);
+
+                // Find target column ID
+                console.log(`[Datasets] Looking for target column ${targetColumnName} in dataset ${referencedDataset.id}`);
+                const { data: targetColumns, error: targetColError } = await getSupabaseClient()
+                  .from('columns')
+                  .select('id')
+                  .eq('dataset_id', referencedDataset.id)
+                  .eq('name', targetColumnName)
+                  .is('deleted_at', null)
+                  .maybeSingle();
+
+                if (targetColError) {
+                  console.error(`[Datasets] Error looking up target column ${targetColumnName}:`, targetColError);
+                  continue;
+                }
+
+                if (!targetColumns) {
+                  console.warn(`[Datasets] Target column ${targetColumnName} not found in ${refSchema}.${refTable}`);
+                  continue;
+                }
+                console.log(`[Datasets] Found target column: ${targetColumns.id}`);
+
+                // Update the source column with reference information
+                const { error: updateError } = await getSupabaseClient()
+                  .from('columns')
+                  .update({
+                    is_foreign_key: true,
+                    reference_column_id: targetColumns.id,
+                    reference_type: 'FK',
+                  })
+                  .eq('id', sourceColumn.id);
+
+                if (updateError) {
+                  console.error(`[Datasets] Error updating column reference for FK ${fk.name}:`, updateError);
+                } else {
+                  console.log(`[Datasets] Set reference: ${sourceColumnName} -> ${refSchema}.${refTable}.${targetColumnName}`);
+                }
+              }
+            } catch (fkError: any) {
+              console.error(`[Datasets] Error processing FK ${fk.name}:`, fkError);
+            }
+          }
         }
       } catch (tableError: any) {
         console.error(`[Datasets] Error importing table ${table.schema}.${table.name}:`, tableError);

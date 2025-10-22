@@ -33,8 +33,8 @@ export interface Column {
   dataset_id: string; // UUID reference to datasets
 
   // Identity
-  fqn: string; // Fully Qualified Name
   name: string;
+  // Note: fqn (Fully Qualified Name) is computed at runtime, not stored in database
 
   // Data type
   data_type: string;
@@ -52,7 +52,6 @@ export interface Column {
   // Reference (replaces separate references table)
   reference_column_id?: string; // UUID pointing to another column
   reference_type?: ReferenceType;
-  reference_description?: string;
 
   // Transformation
   transformation_logic?: string;
@@ -64,11 +63,38 @@ export interface Column {
   custom_metadata?: Record<string, unknown>; // JSONB - custom user-defined metadata
 
   // Position in table
-  position?: number;
+  ordinal_position?: number;
 
   // Audit
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+}
+
+/**
+ * Column with computed fields (for UI display)
+ */
+export interface ColumnWithComputed extends Column {
+  fqn: string; // Computed: dataset_fqn.column_name
+  dataset_fqn?: string; // From dataset join
+}
+
+/**
+ * Helper function to compute fully qualified name for a column
+ * @param column - Column entity
+ * @param datasetFqn - Fully qualified name of the dataset
+ * @returns Fully qualified name
+ */
+export function computeColumnFQN(
+  column: Column,
+  datasetFqn?: string
+): string {
+  if (!datasetFqn) {
+    // Fallback to just column name if no dataset FQN
+    return column.name;
+  }
+
+  // Full FQN: dataset_fqn.column_name
+  return `${datasetFqn}.${column.name}`;
 }
 
 /**
@@ -78,7 +104,6 @@ export interface CreateColumnInput {
   dataset_id: string;
   name: string;
   data_type: string;
-  fqn?: string; // Auto-generated if not provided
   description?: string;
   business_name?: string;
   is_primary_key?: boolean;
@@ -87,9 +112,8 @@ export interface CreateColumnInput {
   default_value?: string;
   reference_column_id?: string;
   reference_type?: ReferenceType;
-  reference_description?: string;
   transformation_logic?: string;
-  position?: number;
+  ordinal_position?: number;
 }
 
 /**
@@ -103,7 +127,6 @@ export type CreateColumnPayload = CreateColumnInput;
 export interface UpdateColumnInput {
   name?: string;
   data_type?: string;
-  fqn?: string;
   description?: string;
   business_name?: string;
   is_primary_key?: boolean;
@@ -112,13 +135,12 @@ export interface UpdateColumnInput {
   default_value?: string;
   reference_column_id?: string;
   reference_type?: ReferenceType;
-  reference_description?: string;
   transformation_logic?: string;
   ai_confidence_score?: number;
   ai_suggestions?: AISuggestions;
   last_ai_enhancement?: string;
   custom_metadata?: Record<string, unknown>;
-  position?: number;
+  ordinal_position?: number;
 }
 
 /**
@@ -152,7 +174,6 @@ export interface ColumnReference {
   target_dataset_id: string;
   target_dataset_name: string;
   reference_type: ReferenceType;
-  reference_description?: string;
 }
 
 /**

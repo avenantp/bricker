@@ -107,6 +107,24 @@ export const DatasetNode = memo(({ data, selected, id }: NodeProps<DatasetNodeDa
 
   return (
     <>
+      {/* Target Handle (Left side - for incoming edges) */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className="w-2 h-2 !bg-blue-500 !border-2 !border-white opacity-0 hover:opacity-100 transition-opacity"
+        style={{ left: -4 }}
+      />
+
+      {/* Source Handle (Right side - for outgoing edges) */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="w-2 h-2 !bg-blue-500 !border-2 !border-white opacity-0 hover:opacity-100 transition-opacity"
+        style={{ right: -4 }}
+      />
+
       <div
         className={`
           w-[160px] rounded border-l-4 shadow-sm

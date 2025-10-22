@@ -55,7 +55,6 @@ const COLUMNS_REQUIRED_COLUMNS = [
   'default_value',
   'reference_column_id',
   'reference_type',
-  'reference_description',
   'transformation_logic',
   'ai_confidence_score',
   'ai_suggestions',
@@ -166,7 +165,7 @@ async function validateColumnsTable() {
     }
 
     // Specifically verify reference columns
-    const referenceColumns = ['reference_column_id', 'reference_type', 'reference_description'];
+    const referenceColumns = ['reference_column_id', 'reference_type'];
     for (const column of referenceColumns) {
       const { error: refError } = await supabase
         .from('columns')
@@ -482,7 +481,6 @@ CREATE TABLE IF NOT EXISTS columns (
   -- Reference (replaces separate references table)
   reference_column_id UUID REFERENCES columns(id) ON DELETE SET NULL,
   reference_type VARCHAR CHECK (reference_type IN ('FK', 'BusinessKey', 'NaturalKey')),
-  reference_description TEXT,
 
   -- Transformation
   transformation_logic TEXT,

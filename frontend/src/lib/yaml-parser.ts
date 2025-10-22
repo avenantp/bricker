@@ -71,10 +71,9 @@ export async function parseDatasetYAML(
           default_value: col.default_value || undefined,
           reference_column_id: col.reference_column_id || col.ref || undefined,
           reference_type: col.reference_type || undefined,
-          reference_description: col.reference_description || undefined,
           transformation_logic: col.transformation_logic || undefined,
           ai_confidence_score: col.ai_confidence_score || undefined,
-          position: col.position !== undefined ? col.position : index,
+          ordinal_position: col.ordinal_position !== undefined ? col.ordinal_position : index,
         });
       });
     }
@@ -280,7 +279,7 @@ export function parseDDLToDataset(
       is_primary_key: /PRIMARY\s+KEY/i.test(modifiers || ''),
       is_foreign_key: false,
       is_nullable: !/NOT\s+NULL/i.test(modifiers || ''),
-      position: index,
+      ordinal_position: index,
     };
 
     // Extract default value
@@ -353,7 +352,7 @@ export function parseCSVColumnsToDataset(
       is_nullable: nullableIdx !== -1 ? values[nullableIdx] === 'true' : true,
       is_primary_key: pkIdx !== -1 ? values[pkIdx] === 'true' : false,
       is_foreign_key: false,
-      position: index,
+      ordinal_position: index,
     };
 
     columns.push(column);

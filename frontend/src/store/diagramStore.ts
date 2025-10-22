@@ -860,6 +860,7 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
           data: {
             dataset_id: dataset.id,
             name: dataset.name,
+            schema: dataset.schema,
             fully_qualified_name: dataset.fully_qualified_name || dataset.name,
             medallion_layer: dataset.medallion_layer || 'Source',
             dataset_type: dataset.dataset_type || 'table',
@@ -880,12 +881,111 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
 
       console.log('[DiagramStore] Created nodes from datasets:', newNodes);
 
+      // Load relationships between these datasets
+      const datasetIdsSet = new Set(datasetIds);
+      console.log('[DiagramStore] Loading relationships for dataset IDs:', Array.from(datasetIdsSet));
+
+      // Get all columns for these datasets with their references
+      const { data: columnsData, error: columnsError } = await supabase
+        .from('columns')
+        .select(`
+          id,
+          dataset_id,
+          reference_column_id,
+          reference_type
+        `)
+        .in('dataset_id', datasetIds)
+        .not('reference_column_id', 'is', null);
+
+      if (columnsError) {
+        console.error('[DiagramStore] Error fetching relationships:', columnsError);
+      }
+
+      console.log('[DiagramStore] Found columns with references:', columnsData);
+
+      // Get the referenced columns to find their datasets
+      const referencedColumnIds = columnsData?.map(c => c.reference_column_id).filter(Boolean) || [];
+
+      let referencedColumns: any[] = [];
+      if (referencedColumnIds.length > 0) {
+        const { data: refColsData, error: refColsError } = await supabase
+          .from('columns')
+          .select('id, dataset_id')
+          .in('id', referencedColumnIds);
+
+        if (refColsError) {
+          console.error('[DiagramStore] Error fetching referenced columns:', refColsError);
+        } else {
+          referencedColumns = refColsData || [];
+        }
+      }
+
+      console.log('[DiagramStore] Referenced columns:', referencedColumns);
+
+      // Create a map of column_id -> dataset_id for quick lookup
+      const columnToDatasetMap = new Map<string, string>();
+      referencedColumns.forEach(col => {
+        columnToDatasetMap.set(col.id, col.dataset_id);
+      });
+
+      // Build edges from relationships
+      // Group by source_dataset -> target_dataset to create one edge per dataset pair
+      const datasetPairMap = new Map<string, {
+        source_dataset_id: string;
+        target_dataset_id: string;
+        source_columns: string[];
+        target_columns: string[];
+        relationship_type: string;
+      }>();
+
+      columnsData?.forEach(column => {
+        const targetDatasetId = columnToDatasetMap.get(column.reference_column_id);
+
+        // Only create edges between datasets that are both in the diagram
+        if (targetDatasetId && datasetIdsSet.has(targetDatasetId)) {
+          const pairKey = `${column.dataset_id}->${targetDatasetId}`;
+
+          if (!datasetPairMap.has(pairKey)) {
+            datasetPairMap.set(pairKey, {
+              source_dataset_id: column.dataset_id,
+              target_dataset_id: targetDatasetId,
+              source_columns: [],
+              target_columns: [],
+              relationship_type: column.reference_type || 'FK',
+            });
+          }
+
+          const pair = datasetPairMap.get(pairKey)!;
+          pair.source_columns.push(column.id);
+          pair.target_columns.push(column.reference_column_id);
+        }
+      });
+
+      // Convert to DiagramEdge format
+      const newEdges: DiagramEdge[] = Array.from(datasetPairMap.values()).map(pair => ({
+        id: `edge-${pair.source_dataset_id}-${pair.target_dataset_id}`,
+        source: pair.source_dataset_id,
+        target: pair.target_dataset_id,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'relationship',
+        data: {
+          relationship_type: pair.relationship_type as any,
+          cardinality: '1:M' as any, // Default cardinality
+          source_columns: pair.source_columns,
+          target_columns: pair.target_columns,
+        },
+      }));
+
+      console.log('[DiagramStore] Created relationship edges:', newEdges);
+
       set({
         nodes: newNodes,
+        edges: newEdges,
         isLoading: false,
       });
 
-      console.log('[DiagramStore] Diagram datasets loaded successfully');
+      console.log('[DiagramStore] Diagram datasets and relationships loaded successfully');
     } catch (error) {
       console.error('[DiagramStore] Failed to load diagram datasets:', error);
       set({ isLoading: false });

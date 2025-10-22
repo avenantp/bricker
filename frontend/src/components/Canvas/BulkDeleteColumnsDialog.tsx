@@ -66,7 +66,7 @@ export function BulkDeleteColumnsDialog({
       if (col.is_foreign_key) summary.foreignKeys++;
       if (!col.is_nullable) summary.notNullColumns++;
       if (col.transformation_logic) summary.hasTransformations++;
-      totalPosition += col.position || 0;
+      totalPosition += col.ordinal_position || 0;
     });
 
     summary.avgPosition = totalPosition / columns.length;

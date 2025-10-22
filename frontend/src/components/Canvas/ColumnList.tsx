@@ -33,7 +33,7 @@ export function ColumnList({
 
   // Sort columns by position
   const sortedColumns = [...columns].sort((a, b) =>
-    (a.position || 0) - (b.position || 0)
+    (a.ordinal_position || 0) - (b.ordinal_position || 0)
   );
 
   const handleColumnClick = (columnId: string) => {
@@ -258,7 +258,6 @@ function ColumnItem({
           <Link className="w-3 h-3 text-gray-400" />
           <span className="text-gray-500 dark:text-gray-400">
             {column.reference_type} reference
-            {column.reference_description && `: ${column.reference_description}`}
           </span>
         </div>
       )}

@@ -91,7 +91,6 @@ function generateDatasetYAML(dataset: any, columns: any[], lineage: any[]) {
         ? {
             column_id: col.reference_column_id,
             type: col.reference_type,
-            description: col.reference_description,
           }
         : null,
     })),

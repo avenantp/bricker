@@ -52,9 +52,11 @@ export const DataNode = memo(({ data, selected }: NodeProps<CanvasNodeData>) => 
             <div className="font-semibold text-white text-sm truncate">
               {data.name}
             </div>
-            <div className="text-xs text-white text-opacity-80 truncate">
-              {data.fqn}
-            </div>
+            {data.schema && (
+              <div className="text-xs text-white text-opacity-80 truncate">
+                {data.schema}.{data.name}
+              </div>
+            )}
           </div>
         </div>
       </div>

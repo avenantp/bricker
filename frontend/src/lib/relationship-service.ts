@@ -199,7 +199,6 @@ export async function createRelationship(
         .update({
           reference_column_id: targetItemUuid,
           reference_type: payload.relationship_type,
-          reference_description: payload.description || null,
           is_foreign_key: payload.relationship_type === 'FK',
         })
         .eq('column_id', sourceItemUuid);
@@ -235,7 +234,6 @@ export async function deleteRelationship(
       .update({
         reference_column_id: null,
         reference_type: null,
-        reference_description: null,
         is_foreign_key: false,
       })
       .eq('column_id', sourceItemUuid);
@@ -264,7 +262,6 @@ export async function getDatasetRelationships(
         name,
         reference_column_id,
         reference_type,
-        reference_description,
         datasets!inner(dataset_id, name, fqn)
       `)
       .eq('dataset_id', datasetId)
@@ -289,7 +286,6 @@ export async function getDatasetRelationships(
         name,
         reference_column_id,
         reference_type,
-        reference_description,
         datasets!inner(dataset_id, name, fqn)
       `)
       .in('reference_column_id', columnIds);
